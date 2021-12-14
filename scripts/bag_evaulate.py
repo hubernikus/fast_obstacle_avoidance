@@ -5,11 +5,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # import pandas as pd
-
 import rosbag
 
-# import rosbag
 from vartools.states import ObjectPose
+from vartools.dynamical_systems import LinearSystem 
 
 from fast_obstacle_avoidance.control_robot import ControlRobot
 from fast_obstacle_avoidance.obstacle_avoider import FastObstacleAvoider
@@ -55,8 +54,6 @@ def main():
     # my_bag = bagpy.bagreader(rosbag_name)
     my_bag = rosbag.Bag(rosbag_name)
 
-    
-
     frontscan = None
     rearscan = None
     
@@ -87,6 +84,12 @@ def main():
                                    ]),
         pose = ObjectPose(position=[0, 0], orientation=30*np.pi/180)
     )
+
+    fast_avoider = FastObstacleAvoider(robot=qolo)
+
+    dynamical_system = LinearSystem(attractor_position=np.array([2, 4]))
+    initial_velocity = dynamical_system.evaluate(qolo.pose.position)
+    modulated_velocity = fast_avoider.evaluate(initial_velocity, allscan)
 
     plt.ion()
     fig, ax = plt.subplots(figsize=(12, 6))

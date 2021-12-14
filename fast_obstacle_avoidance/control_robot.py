@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 import numpy as np
+from numpy import linalg as LA
 
 from vartools.states import ObjectPose
 
@@ -16,6 +17,16 @@ class ControlRobot:
     @property
     def num_control_points(self) -> int:
         return self.control_radiuses.shape[0]
+
+    def get_relative_positions_and_dists(self, positions):
+        """ Get normalized (relative) position and (relative) surface distance. """
+        rel_pos = positions - np.tile(self.pose.position, (positions.shape[1], 1)).T
+        rel_dist = LA.norm(rel_pos, axis=0)
+        
+        rel_pos = rel_pos / np.tile(rel_dist, (rel_pos.shape[0], 1))
+        rel_dist = rel_dist - self.control_radiuses[0]
+        
+        return rel_pos, rel_dist
 
     def plot2D(self, ax, num_points=30) -> None:
         if self.robot_image is not None:
