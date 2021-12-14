@@ -1,0 +1,3 @@
+bagpy
+
+# rosbag --extra-index-url https://rospypi.github.io/simple/
