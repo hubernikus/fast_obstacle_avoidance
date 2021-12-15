@@ -1,5 +1,13 @@
+"""
+
+"""
+# Author: Lukas Huber
+# Created: 2021-21-14
+# 
+
 import sys 
 import os
+from timeit import default_timer as timer
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -24,11 +32,16 @@ class LaserScanAnimator(Animator):
 
         self.fig, self.ax = plt.subplots(figsize=(12, 6))
 
+
     def update_step(self, ii):
         """ Update robot and position."""
         initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)
-        modulated_velocity = self.fast_avoider.evaluate(initial_velocity, self.static_laserscan)
+        start = timer()
 
+        modulated_velocity = self.fast_avoider.evaluate(initial_velocity, self.static_laserscan)
+        end = timer()
+        print("Time for modulation {}ms".format( np.round((end-start)*1000, 3)))
+        
         # Update qolo
         self.robot.pose.position = self.robot.pose.position + self.dt_simulation*modulated_velocity
         # self.robot.pose.orientation += self.dt_simulation*modulated_velocity
@@ -93,7 +106,7 @@ def get_topics(rosbag_name):
     import bagpy
     # get the list of topics
     print(bagpy.bagreader(rosbag_name).topic_table)
-
+    
 
 def static_plot(allscan, qolo, dynamical_system, fast_avoider):
     initial_velocity = dynamical_system.evaluate(qolo.pose.position)

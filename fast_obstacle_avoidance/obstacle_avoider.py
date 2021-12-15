@@ -106,7 +106,8 @@ class FastObstacleAvoider:
     def get_weight_from_norm(self, norm):
         return norm
     
-    def get_weight_from_distances(self, distances, weight_factor=0.1, weight_power=2.0, margin_weight=1e-3):
+    def get_weight_from_distances(
+        self, distances, weight_factor=0.1, weight_power=2.0, margin_weight=1e-3):
         # => get weighted evaluation along the robot
         # to obtain linear + angular velocity
         if any(distances < margin_weight):
