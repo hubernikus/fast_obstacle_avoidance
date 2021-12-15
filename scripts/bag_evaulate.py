@@ -21,6 +21,7 @@ from vartools.animator import Animator
 
 from fast_obstacle_avoidance.control_robot import ControlRobot
 from fast_obstacle_avoidance.obstacle_avoider import FastObstacleAvoider
+from fast_obstacle_avoidance.utils import laserscan_to_numpy
 
 
 class LaserScanAnimator(Animator):
@@ -41,8 +42,8 @@ class LaserScanAnimator(Animator):
         """ Update robot and position."""
         initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)
         start = timer()
-
-        modulated_velocity = self.fast_avoider.evaluate(initial_velocity, self.static_laserscan)
+        self.fast_avoider.update_laserscan(self.static_laserscan)
+        modulated_velocity = self.fast_avoider.evaluate(initial_velocity)
         end = timer()
         print("Time for modulation {}ms at it={}".format( np.round((end-start)*1000, 3), ii))
         
@@ -88,29 +89,6 @@ class LaserScanAnimator(Animator):
             return False
 
 
-def laserscan_to_numpy(msg, dimension=2, delta_angle=0, delta_position=None) -> np.ndarray:
-    num_points = len(msg.ranges)
-
-    ranges = np.array(msg.ranges)
-    ind_real = np.isfinite(ranges)
-
-    ranges = ranges[ind_real]
-    angles = np.arange(num_points)[ind_real]*msg.angle_increment + (msg.angle_min + delta_angle)
-    positions = np.tile(ranges, (dimension, 1)) * np.vstack((np.cos(angles), np.sin(angles)))
-
-    if delta_position is not None:
-        # Rotate
-        cos_val = np.cos(delta_angle)
-        sin_val = np.sin(delta_angle)
-        
-        rot_matr = np.array([[cos_val, sin_val],
-                             [-sin_val, cos_val]])
-        
-        delta_position = rot_matr @ delta_position
-
-        positions = positions + np.tile(delta_position, (positions.shape[1], 1)).T
-    
-    return positions
 
 def get_topics(rosbag_name):
     import bagpy
