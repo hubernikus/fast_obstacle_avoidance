@@ -12,8 +12,6 @@ import warnings
 import numpy as np
 from numpy import linalg as LA
 
-import matplotlib.pyplot as plt
-
 from fast_obstacle_avoidance.control_robot import ControlRobot
 
 from vartools.linalg import get_orthogonal_basis
@@ -97,14 +95,6 @@ class FastObstacleAvoider:
             relative_position * np.tile(weights, (relative_position.shape[0], 1)),
             axis=1
             )
-
-        # fig, ax = plt.subplots(figsize=(12, 6))
-        # ax.plot(laser_scan[0, :], laser_scan[1, :], '.', color='k')
-        # ax.plot(0, 0, 'o', color='r')
-
-        # ax.quiver(laser_scan[0, :], laser_scan[1, :],
-                  # relative_position[0, :]*weights,
-                  # relative_position[1, :]*weights, color='r', scale=2)
         
         return reference_direction
 
