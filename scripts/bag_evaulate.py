@@ -1,5 +1,5 @@
 """
-
+Script to evaluate the rosbag.
 """
 # Author: Lukas Huber
 # Created: 2021-21-14
@@ -34,6 +34,9 @@ class LaserScanAnimator(Animator):
 
         self.obstacle_color = np.array([177, 124, 124]) / 255.0
 
+        dimension = 2
+        self.position_list = np.zeros((dimension, self.it_max+1))
+
     def update_step(self, ii):
         """ Update robot and position."""
         initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)
@@ -41,11 +44,12 @@ class LaserScanAnimator(Animator):
 
         modulated_velocity = self.fast_avoider.evaluate(initial_velocity, self.static_laserscan)
         end = timer()
-        print("Time for modulation {}ms".format( np.round((end-start)*1000, 3)))
+        print("Time for modulation {}ms at it={}".format( np.round((end-start)*1000, 3), ii))
         
         # Update qolo
         self.robot.pose.position = self.robot.pose.position + self.dt_simulation*modulated_velocity
         # self.robot.pose.orientation += self.dt_simulation*modulated_velocity
+        self.position_list[:, ii] = self.robot.pose.position
 
         self.ax.clear()
         # Plot
@@ -76,8 +80,12 @@ class LaserScanAnimator(Animator):
         # print(tt)
         self.ax.grid()
         
-    # def has_converged(self):
-        # return (self.it > self.it_max)
+    def has_converged(self):
+        conv_margin = 1e-4
+        if (self.position_list[:, ii]-self.position_list[:, ii-1]) < conv_margin:
+            return True
+        else:
+            return False
 
 
 def laserscan_to_numpy(msg, dimension=2, delta_angle=0, delta_position=None) -> np.ndarray:
@@ -204,14 +212,14 @@ def main():
     # static_plot(allscan, qolo, dynamical_system, fast_avoider)
     # breakpoint()
 
-    main_animator = LaserScanAnimator(it_max=200, dt_simulation=0.04)
+    main_animator = LaserScanAnimator(it_max=160, dt_simulation=0.04)
     main_animator.setup(
         static_laserscan=allscan,
         initial_dynamics=dynamical_system,
         robot=qolo,
         )
 
-    main_animator.run()
+    main_animator.run(save_animation=True)
     # main_animator.update_step(ii=0)
 
 if (__name__) == "__main__":
