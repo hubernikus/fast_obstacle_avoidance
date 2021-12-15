@@ -1,3 +1,6 @@
-bagpy
+# bagpy
 
 # rosbag --extra-index-url https://rospypi.github.io/simple/
+# pycryptodome # I don't think this is needed...
+pycryptodomex
+rospkg

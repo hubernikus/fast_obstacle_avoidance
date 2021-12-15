@@ -24,6 +24,8 @@ class LaserScanAnimator(Animator):
 
         self.fig, self.ax = plt.subplots(figsize=(12, 6))
 
+        self.obstacle_color = np.array([177, 124, 124]) / 255.0
+
     def update_step(self, ii):
         """ Update robot and position."""
         initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)
@@ -37,10 +39,11 @@ class LaserScanAnimator(Animator):
         # Plot
         self.ax.plot(self.robot.pose.position[0],
                      self.robot.pose.position[1], 'o', color='k')
-        self.ax.plot(self.static_laserscan[0, :], self.static_laserscan[1, :], '.', color='k')
+        self.ax.plot(self.static_laserscan[0, :], self.static_laserscan[1, :], '.',
+                     color=self.obstacle_color, zorder=-1)
         
-        self.ax.set_xlim([-10, 5])
-        self.ax.set_ylim([-5, 5])
+        self.ax.set_xlim([-3, 4])
+        self.ax.set_ylim([-3, 3])
         self.ax.set_aspect('equal')
 
         self.ax.arrow(self.robot.pose.position[0], self.robot.pose.position[1],
