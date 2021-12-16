@@ -35,13 +35,11 @@ class LaserScanAnimator(Animator):
 
         self.obstacle_color = np.array([177, 124, 124]) / 255.0
 
-<<<<<<< HEAD
         self.x_lim = x_lim
         self.y_lim = y_lim
-=======
+        
         dimension = 2
         self.position_list = np.zeros((dimension, self.it_max+1))
->>>>>>> ba11d080d2bf05eb6327c202915293ec4b3ccc98
 
     def update_step(self, ii):
         """ Update robot and position."""
