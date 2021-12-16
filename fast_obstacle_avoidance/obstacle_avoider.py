@@ -32,9 +32,9 @@ class FastObstacleAvoider:
         self.reference_direction = self.get_reference_direction(
             laser_scan)
         
-    def evaluate(self,
-                 initial_velocity: np.ndarray, 
-                 limit_velocity_magnitude: bool = True) -> None:
+    def avoid(self,
+              initial_velocity: np.ndarray, 
+              limit_velocity_magnitude: bool = True) -> None:
         """ Modulate velocity and return DS. """
         # For each control_points
         # -> get distance (minus radius)
@@ -96,22 +96,27 @@ class FastObstacleAvoider:
             axis=1
             )
 
-        # import matplotlib.pyplot as plt
-        # fig, ax = plt.subplots(figsize=(12, 6))
-        # ax.plot(laser_scan[0, :], laser_scan[1, :], '.', color='k')
-        # ax.plot(0, 0, 'o', color='r')
+        if False:
+            # DEBUG
+            import matplotlib.pyplot as plt
+            fig, ax = plt.subplots(figsize=(12, 6))
+            ax.plot(laser_scan[0, :], laser_scan[1, :], '.', color='k')
+            ax.plot(self.robot.pose.position[0],
+                    self.robot.pose.position[1], 'o', color='r')
 
-        # ax.quiver(laser_scan[0, :], laser_scan[1, :],
-                  # relative_position[0, :]*weights,
-                  # relative_position[1, :]*weights, color='r', scale=2)
-        
+            ax.quiver(laser_scan[0, :], laser_scan[1, :],
+                      relative_position[0, :]*weights,
+                      relative_position[1, :]*weights, color='r', scale=2)
+            breakpoint()
+            plt.close()
+
         return reference_direction
 
     def get_weight_from_norm(self, norm):
         return norm
     
     def get_weight_from_distances(
-        self, distances, weight_factor=0.1, weight_power=2.0, margin_weight=1e-3):
+        self, distances, weight_factor=3, weight_power=2.0, margin_weight=1e-3):
         # => get weighted evaluation along the robot
         # to obtain linear + angular velocity
         if any(distances < margin_weight):
@@ -119,14 +124,15 @@ class FastObstacleAvoider:
 
             distances = distances - np.min(distances) + margin_weight
 
-        weight = (1 / distances)**weight_power * weight_factor
+        num_points = distances.shape[0]
+        weight = (1 / distances)**weight_power * (weight_factor/num_points)
 
         weight_sum = np.sum(weight)
         
         if weight_sum > 1:
             return weight / weight_sum
         else:
-            weight
+            return weight
             
     def limit_velocity(self):
         pass
