@@ -1,5 +1,13 @@
+"""
+Script to evaluate the rosbag.
+"""
+# Author: Lukas Huber
+# Created: 2021-21-14
+# 
+
 import sys 
 import os
+from timeit import default_timer as timer
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -13,6 +21,7 @@ from vartools.animator import Animator
 
 from fast_obstacle_avoidance.control_robot import ControlRobot
 from fast_obstacle_avoidance.obstacle_avoider import FastObstacleAvoider
+from fast_obstacle_avoidance.utils import laserscan_to_numpy
 
 
 class LaserScanAnimator(Animator):
@@ -26,17 +35,27 @@ class LaserScanAnimator(Animator):
 
         self.obstacle_color = np.array([177, 124, 124]) / 255.0
 
+<<<<<<< HEAD
         self.x_lim = x_lim
         self.y_lim = y_lim
+=======
+        dimension = 2
+        self.position_list = np.zeros((dimension, self.it_max+1))
+>>>>>>> ba11d080d2bf05eb6327c202915293ec4b3ccc98
 
     def update_step(self, ii):
         """ Update robot and position."""
         initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)
-        modulated_velocity = self.fast_avoider.evaluate(initial_velocity, self.static_laserscan)
-
+        start = timer()
+        self.fast_avoider.update_laserscan(self.static_laserscan)
+        modulated_velocity = self.fast_avoider.evaluate(initial_velocity)
+        end = timer()
+        print("Time for modulation {}ms at it={}".format( np.round((end-start)*1000, 3), ii))
+        
         # Update qolo
         self.robot.pose.position = self.robot.pose.position + self.dt_simulation*modulated_velocity
         # self.robot.pose.orientation += self.dt_simulation*modulated_velocity
+        self.position_list[:, ii] = self.robot.pose.position
 
         self.ax.clear()
         # Plot
@@ -67,39 +86,20 @@ class LaserScanAnimator(Animator):
         # print(tt)
         self.ax.grid()
         
-    # def has_converged(self):
-        # return (self.it > self.it_max)
+    def has_converged(self):
+        conv_margin = 1e-4
+        if (self.position_list[:, ii]-self.position_list[:, ii-1]) < conv_margin:
+            return True
+        else:
+            return False
 
 
-def laserscan_to_numpy(msg, dimension=2, delta_angle=0, delta_position=None) -> np.ndarray:
-    num_points = len(msg.ranges)
-
-    ranges = np.array(msg.ranges)
-    ind_real = np.isfinite(ranges)
-
-    ranges = ranges[ind_real]
-    angles = np.arange(num_points)[ind_real]*msg.angle_increment + (msg.angle_min + delta_angle)
-    positions = np.tile(ranges, (dimension, 1)) * np.vstack((np.cos(angles), np.sin(angles)))
-
-    if delta_position is not None:
-        # Rotate
-        cos_val = np.cos(delta_angle)
-        sin_val = np.sin(delta_angle)
-        
-        rot_matr = np.array([[cos_val, sin_val],
-                             [-sin_val, cos_val]])
-        
-        delta_position = rot_matr @ delta_position
-
-        positions = positions + np.tile(delta_position, (positions.shape[1], 1)).T
-    
-    return positions
 
 def get_topics(rosbag_name):
     import bagpy
     # get the list of topics
     print(bagpy.bagreader(rosbag_name).topic_table)
-
+    
 
 def static_plot(allscan, qolo, dynamical_system, fast_avoider):
     initial_velocity = dynamical_system.evaluate(qolo.pose.position)
@@ -195,14 +195,14 @@ def main():
     # static_plot(allscan, qolo, dynamical_system, fast_avoider)
     # breakpoint()
 
-    main_animator = LaserScanAnimator(it_max=200, dt_simulation=0.04)
+    main_animator = LaserScanAnimator(it_max=160, dt_simulation=0.04)
     main_animator.setup(
         static_laserscan=allscan,
         initial_dynamics=dynamical_system,
         robot=qolo,
         )
 
-    main_animator.run()
+    main_animator.run(save_animation=True)
     # main_animator.update_step(ii=0)
 
 if (__name__) == "__main__":

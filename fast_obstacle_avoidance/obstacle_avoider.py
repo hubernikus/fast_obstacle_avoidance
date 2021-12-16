@@ -12,8 +12,6 @@ import warnings
 import numpy as np
 from numpy import linalg as LA
 
-import matplotlib.pyplot as plt
-
 from fast_obstacle_avoidance.control_robot import ControlRobot
 
 from vartools.linalg import get_orthogonal_basis
@@ -26,28 +24,33 @@ class FastObstacleAvoider:
     -> No local minima (and maybe even convergence to attractor)
     -> add slight repulsion along the normal direction (when getting closer)
     """
-    def __init__(self, robot: ControlRobot):
+    def __init__(self, robot: ControlRobot) -> None:
         self.robot = robot
 
+    def update_laserscan(self, laser_scan: np.ndarray) -> None:
+        # self.laser_scan = laserscan
+        self.reference_direction = self.get_reference_direction(
+            laser_scan)
+        
     def evaluate(self,
-                 initial_velocity: np.ndarray, laser_scan: np.ndarray,
-                 limit_velocity_magnitude: bool = True):
+                 initial_velocity: np.ndarray, 
+                 limit_velocity_magnitude: bool = True) -> None:
         """ Modulate velocity and return DS. """
         # For each control_points
         # -> get distance (minus radius)
         # -> get closest points
         # -> get_weights => how?
-        reference_direction = self.get_reference_direction(laser_scan)
-
-        ref_norm = LA.norm(reference_direction)
+        ref_norm = LA.norm(self.reference_direction)
 
         if not ref_norm:
             # Not modulated when far away from everywhere
             return initial_velocity
 
-        deomposition_matrix = get_orthogonal_basis(reference_direction/ref_norm, normalize=False)
+        deomposition_matrix = get_orthogonal_basis(
+            self.reference_direction/ref_norm, normalize=False)
+        
         stretching_vector = self.get_stretching_vector(
-            ref_norm, reference_direction, initial_velocity)
+            ref_norm, self.reference_direction, initial_velocity)
         
         modulated_velocity = deomposition_matrix.T @ initial_velocity
         modulated_velocity = np.diag(stretching_vector) @ modulated_velocity
@@ -107,7 +110,8 @@ class FastObstacleAvoider:
     def get_weight_from_norm(self, norm):
         return norm
     
-    def get_weight_from_distances(self, distances, weight_factor=0.1, weight_power=2.0, margin_weight=1e-3):
+    def get_weight_from_distances(
+        self, distances, weight_factor=0.1, weight_power=2.0, margin_weight=1e-3):
         # => get weighted evaluation along the robot
         # to obtain linear + angular velocity
         if any(distances < margin_weight):
