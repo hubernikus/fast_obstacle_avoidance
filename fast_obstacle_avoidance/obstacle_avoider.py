@@ -93,6 +93,7 @@ class FastObstacleAvoider:
             axis=1
             )
 
+        # import matplotlib.pyplot as plt
         # fig, ax = plt.subplots(figsize=(12, 6))
         # ax.plot(laser_scan[0, :], laser_scan[1, :], '.', color='k')
         # ax.plot(0, 0, 'o', color='r')

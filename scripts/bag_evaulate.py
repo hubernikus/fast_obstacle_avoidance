@@ -16,7 +16,7 @@ from fast_obstacle_avoidance.obstacle_avoider import FastObstacleAvoider
 
 
 class LaserScanAnimator(Animator):
-    def setup(self, static_laserscan, initial_dynamics, robot):
+    def setup(self, static_laserscan, initial_dynamics, robot, x_lim=[-3, 4], y_lim=[-3, 3]):
         self.robot = robot
         self.initial_dynamics = initial_dynamics
         self.fast_avoider = FastObstacleAvoider(robot=self.robot)
@@ -25,6 +25,9 @@ class LaserScanAnimator(Animator):
         self.fig, self.ax = plt.subplots(figsize=(12, 6))
 
         self.obstacle_color = np.array([177, 124, 124]) / 255.0
+
+        self.x_lim = x_lim
+        self.y_lim = y_lim
 
     def update_step(self, ii):
         """ Update robot and position."""
@@ -42,8 +45,8 @@ class LaserScanAnimator(Animator):
         self.ax.plot(self.static_laserscan[0, :], self.static_laserscan[1, :], '.',
                      color=self.obstacle_color, zorder=-1)
         
-        self.ax.set_xlim([-3, 4])
-        self.ax.set_ylim([-3, 3])
+        self.ax.set_xlim(self.x_lim)
+        self.ax.set_ylim(self.y_lim)
         self.ax.set_aspect('equal')
 
         self.ax.arrow(self.robot.pose.position[0], self.robot.pose.position[1],
