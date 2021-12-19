@@ -1,6 +1,6 @@
 """ Script to evaluate the rosbag. """
 # Author: Lukas Huber
-# Created: 2021-21-14
+# Created: 2021-12-14
 # Email: lukas.huber@epfl.ch
 
 import sys 
@@ -19,7 +19,7 @@ from vartools.dynamical_systems import LinearSystem
 from vartools.animator import Animator
 
 from fast_obstacle_avoidance.control_robot import ControlRobot
-from fast_obstacle_avoidance.obstacle_avoider import FastObstacleAvoider
+from fast_obstacle_avoidance.obstacle_avoider import FastLidarAvoider
 from fast_obstacle_avoidance.utils import laserscan_to_numpy
 
 
@@ -27,7 +27,7 @@ class LaserScanAnimator(Animator):
     def setup(self, static_laserscan, initial_dynamics, robot, x_lim=[-3, 4], y_lim=[-3, 3]):
         self.robot = robot
         self.initial_dynamics = initial_dynamics
-        self.fast_avoider = FastObstacleAvoider(robot=self.robot)
+        self.fast_avoider = FastLidarAvoider(robot=self.robot)
         self.static_laserscan = static_laserscan
 
         self.fig, self.ax = plt.subplots(figsize=(12, 8))
@@ -173,7 +173,6 @@ def main_animator(bag_name='2021-12-13-18-33-06.bag'):
     allscan = import_first_scan(bag_name)
     # sample_freq = 20
     # allscan = allscan[:,  np.logical_not(np.mod(np.arange(allscan.shape[1]), sample_freq))]
-
     
     qolo = ControlRobot(
         control_points=np.array([[0, 0],
@@ -185,7 +184,7 @@ def main_animator(bag_name='2021-12-13-18-33-06.bag'):
         pose = ObjectPose(position=[0.7, -0.7], orientation=30*np.pi/180)
     )
     
-    fast_avoider = FastObstacleAvoider(robot=qolo)
+    fast_avoider = FastLidarAvoider(robot=qolo)
 
     dynamical_system = LinearSystem(
         attractor_position=np.array([-2, 2]), maximum_velocity=0.8)
@@ -197,8 +196,8 @@ def main_animator(bag_name='2021-12-13-18-33-06.bag'):
         robot=qolo,
         )
 
-    # main_animator.run(save_animation=False)
-    main_animator.run(save_animation=True)
+    main_animator.run(save_animation=False)
+    # main_animator.run(save_animation=True)
     # main_animator.update_step(ii=0)
 
 
@@ -208,7 +207,6 @@ def main_vectorfield(figure_name="vector_field_around_laserscan",
     allscan = import_first_scan(bag_name)
     # sample_freq = 20
     # allscan = allscan[:,  np.logical_not(np.mod(np.arange(allscan.shape[1]), sample_freq))]
-
     
     qolo = ControlRobot(
         control_points=np.array([[0, 0],
@@ -220,7 +218,7 @@ def main_vectorfield(figure_name="vector_field_around_laserscan",
         pose = ObjectPose(position=[0.7, -0.7], orientation=30*np.pi/180)
     )
     
-    fast_avoider = FastObstacleAvoider(robot=qolo)
+    fast_avoider = FastLidarAvoider(robot=qolo)
     dynamical_system = LinearSystem(
         attractor_position=np.array([-2, 2]), maximum_velocity=0.8)
 
@@ -252,10 +250,9 @@ def main_vectorfield(figure_name="vector_field_around_laserscan",
             
         fast_avoider.update_laserscan(allscan)
         
-        
         velocities[:, it] = dynamical_system.evaluate(positions[:, it])
         velocities_mod[:, it] = fast_avoider.avoid(velocities[:, it])
-        reference_dirs[:, it] = fast_avoider.reference_direction
+        reference_dirs[:, it] = fast_avoider.normal_direction
         
     fig, axs = plt.subplots(1, 2, figsize=(12, 8))
     
@@ -305,8 +302,7 @@ if (__name__) == "__main__":
     plt.close('all')
     plt.ion()
 
-    main_animator()
-    # main_vectorfield()
+    # main_animator()
+    main_vectorfield()
     
-
     pass
