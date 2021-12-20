@@ -123,14 +123,14 @@ class FastObstacleAvoider(SingleModulationAvoider):
             from scipy.spatial.transform import Rotation as R
 
             
-    def update_normal_direction(self, position):
+    def update_reference_direction(self, position):
         norm_dirs = np.zeros((self.obstacle_environment.dimension,
                              self.obstacle_environment.n_obstacles))
         ref_dirs = np.zeros(norm_dirs.shape)
         relative_distances = np.zeros((norm_dirs.shape[1]))
 
         for it, obs in enumerate(self.obstacle_environment):
-            norm_dirs[:, it] = obs.get_reference_direction(
+            norm_dirs[:, it] = obs.get_normal_direction(
                 position, in_global_frame=True)
             
             ref_dirs[:, it] = (-1)*obs.get_reference_direction(
@@ -165,6 +165,8 @@ class FastObstacleAvoider(SingleModulationAvoider):
             norm_angle += np.arctan2(unit_ref_dir[1], unit_ref_dir[0])
             
             self.normal_direction = np.array([np.cos(norm_angle), np.sin(norm_angle)])
+
+            # breakpoint()
             
         elif self.obstacle_environment.dimension == 3:
             norm_angles = np.cross(norm_dirs, ref_dirs, axisa=0, axisb=0)

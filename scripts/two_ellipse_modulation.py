@@ -24,9 +24,14 @@ def double_plot(
     fig, axs = plt.subplots(1, 2, figsize=(12, 6))
 
     for ax in axs:
+        ax.axis('equal')
+        ax.grid(True)
+        
         plot_obstacles(
             ax=ax, obs=obstacle_environment,
-            x_lim=x_lim, y_lim=y_lim)
+            x_lim=x_lim, y_lim=y_lim,
+            noTicks=True
+            )
 
     main_avoider = FastObstacleAvoider(obstacle_environment=obstacle_environment)
 
@@ -46,7 +51,7 @@ def double_plot(
     ref_dirs = np.zeros(positions.shape)
     
     for it in range(positions.shape[1]):
-        main_avoider.update_normal_direction(positions[:, it])
+        main_avoider.update_reference_direction(positions[:, it])
 
         initial_vel = initial_dynamics.evaluate(positions[:, it])
         
@@ -64,7 +69,7 @@ def double_plot(
 
     axs[0].quiver(positions[0, :], positions[1, :],
                   ref_dirs[0, :], ref_dirs[1, :],
-                  color="red", scale=30, alpha=0.8)
+                  color="black", scale=30, alpha=0.8)
 
     if plot_normal:
         axs[0].quiver(positions[0, :], positions[1, :],
@@ -86,7 +91,7 @@ def double_plot(
         )
 
 
-    return fig, ax
+    return fig, axs
 
     
     
@@ -142,24 +147,51 @@ def main_vectorfield_two_ellipse(
         )
     )
 
-    double_plot(obstacle_environment, x_lim=x_lim, y_lim=y_lim, plot_normal=True)
+    fig, axs = double_plot(obstacle_environment, x_lim=x_lim, y_lim=y_lim,
+                           # plot_normal=True
+                          )
+
+    nx = ny = 50
+    x_vals, y_vals = np.meshgrid(np.linspace(x_lim[0], x_lim[1], nx),
+                                 np.linspace(y_lim[0], y_lim[1], ny))
+
+    main_avoider = FastObstacleAvoider(obstacle_environment=obstacle_environment)
+    positions = np.vstack((x_vals.reshape(1, -1), y_vals.reshape(1, -1)))
+    deviation = np.zeros((positions.shape[1]))
+
+    # if False:
+    for it in range(positions.shape[1]):
+        main_avoider.update_reference_direction(positions[:, it])
+        
+        ref_dirs = main_avoider.reference_direction
+        
+        if main_avoider.normal_direction is not None:
+            norm_dirs = main_avoider.normal_direction
+
+        deviation[it] = np.arcsin(np.cross(ref_dirs, norm_dirs))
+    
+    pcm = axs[0].contourf(x_vals, y_vals,
+                    deviation.reshape(nx, ny),
+                    # cmap='PiYG',
+                    cmap='bwr',
+                    v_min=-np.pi/2, v_max=np.pi/2,
+                    zorder=-3,
+                    alpha=0.7,
+                    )
+
+    cbar = fig.colorbar(pcm, ax=axs[0], fraction=0.035,
+                        # ticks=[-np.pi/8, 0, np.pi/8],
+                        ticks=[-0.5, 0, 0.5],
+                        )
+    # cbar.ax.set_yticklabels([r"$-\frac{\pi}{8}$", "0", r"$\frac{\pi}{8}$"])
+
+    
 
     initial_dynamics = LinearSystem(
         # attractor_position=np.array([3, -3]), maximum_velocity=0.8)
         attractor_position=np.array([4, -0.1]), maximum_velocity=0.8)
 
     main_avoider = FastObstacleAvoider(obstacle_environment=obstacle_environment)
-
-    pos = np.array([-3.6, -2.6])
-    main_avoider.update_normal_direction(pos)
-
-    initial_vel = initial_dynamics.evaluate(pos)
-    mod_vel = main_avoider.avoid(initial_vel)
-        
-    ref_dirs = main_avoider.reference_direction
-    if main_avoider.normal_direction is not None:
-        norm_dirs = main_avoider.normal_direction
-    
 
     plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
 
@@ -168,5 +200,5 @@ if (__name__) == "__main__":
     # plt.close('all')
     plt.ion()
 
-    main_vectorfield_two_circle()
-    # main_vectorfield_two_ellipse()
+    # main_vectorfield_two_circle()
+    main_vectorfield_two_ellipse()
