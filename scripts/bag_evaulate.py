@@ -266,12 +266,14 @@ def main_vectorfield(figure_name="vector_field_around_laserscan",
         ax.set_xlim(x_lim)
         ax.set_ylim(y_lim)
         ax.set_aspect('equal')
+        
+        ax.grid(True)
 
     axs[0].quiver(
         positions[0, :], positions[1, :],
         reference_dirs[0, :], reference_dirs[1, :],
         scale=30,
-        color="red", alpha=0.8)
+        color="black", alpha=0.8)
     
     # axs[0].title("Reference Vectors")
 
@@ -281,8 +283,8 @@ def main_vectorfield(figure_name="vector_field_around_laserscan",
         dynamical_system.attractor_position[0],
         dynamical_system.attractor_position[1],
         "k*",
-        linewidth=18.0,
-        markersize=18,
+        linewidth=13.0,
+        markersize=12,
         zorder=5,
         )
     # axs[1].title("Modulated Vectorfield"]
