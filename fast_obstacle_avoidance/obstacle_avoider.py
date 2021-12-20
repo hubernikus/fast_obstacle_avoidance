@@ -130,7 +130,7 @@ class FastObstacleAvoider(SingleModulationAvoider):
         relative_distances = np.zeros((norm_dirs.shape[1]))
 
         for it, obs in enumerate(self.obstacle_environment):
-            norm_dirs[:, it] = obs.get_normal_direction(
+            norm_dirs[:, it] = obs.get_reference_direction(
                 position, in_global_frame=True)
             
             ref_dirs[:, it] = (-1)*obs.get_reference_direction(
@@ -205,7 +205,7 @@ class FastLidarAvoider(SingleModulationAvoider):
     
     def update_laserscan(self, laser_scan: np.ndarray) -> None:
         # self.laser_scan = laserscan
-        self.reference_direction = self.get_normal_direction(
+        self.reference_direction = self.get_reference_direction(
             laser_scan)
 
     def get_reference_direction(self, laser_scan: np.ndarray) -> np.ndarray:

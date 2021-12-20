@@ -252,7 +252,7 @@ def main_vectorfield(figure_name="vector_field_around_laserscan",
         
         velocities[:, it] = dynamical_system.evaluate(positions[:, it])
         velocities_mod[:, it] = fast_avoider.avoid(velocities[:, it])
-        reference_dirs[:, it] = fast_avoider.normal_direction
+        reference_dirs[:, it] = fast_avoider.reference_direction
         
     fig, axs = plt.subplots(1, 2, figsize=(12, 8))
     
@@ -267,11 +267,12 @@ def main_vectorfield(figure_name="vector_field_around_laserscan",
         ax.set_ylim(y_lim)
         ax.set_aspect('equal')
 
+    axs[0].quiver(
+        positions[0, :], positions[1, :],
+        reference_dirs[0, :], reference_dirs[1, :],
+        scale=30,
+        color="red", alpha=0.8)
     
-    axs[0].quiver(positions[0, :], positions[1, :],
-              reference_dirs[0, :], reference_dirs[1, :],
-              color="red", scale=30, alpha=0.8)
-
     # axs[0].title("Reference Vectors")
 
     axs[1].quiver(positions[0, :], positions[1, :],
