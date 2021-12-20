@@ -168,5 +168,5 @@ if (__name__) == "__main__":
     # plt.close('all')
     plt.ion()
 
-    main_vectorfield_two_circle()
-    # main_vectorfield_two_ellipse()
+    # main_vectorfield_two_circle()
+    main_vectorfield_two_ellipse()
