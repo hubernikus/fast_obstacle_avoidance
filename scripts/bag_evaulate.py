@@ -24,7 +24,8 @@ from fast_obstacle_avoidance.utils import laserscan_to_numpy
 
 
 class LaserScanAnimator(Animator):
-    def setup(self, static_laserscan, initial_dynamics, robot, x_lim=[-3, 4], y_lim=[-3, 3]):
+    def setup(self, static_laserscan, initial_dynamics, robot,
+              x_lim=[-3, 4], y_lim=[-3, 3]):
         self.robot = robot
         self.initial_dynamics = initial_dynamics
         self.fast_avoider = FastLidarAvoider(robot=self.robot)
@@ -157,11 +158,16 @@ def import_first_scan(bag_name='2021-12-13-18-33-06.bag',
         '/rear_lidar/scan'
         ]):
         if topic == '/front_lidar/scan':
-            frontscan = laserscan_to_numpy(msg)
+            frontscan = laserscan_to_numpy(
+                msg,
+                # angle_range=[-np.pi/2, np.pi/2],
+                )
             
         elif topic == '/rear_lidar/scan':
             rearscan = laserscan_to_numpy(
-                msg, delta_angle=np.pi, delta_position=[0.75, 0.0])
+                msg, delta_angle=np.pi, delta_position=[0.75, 0.0],
+                angle_range=[-np.pi/2, np.pi/2],
+                )
             
         if frontscan is not None and rearscan is not None:
             break

@@ -109,6 +109,47 @@ class SingleModulationAvoider:
             return weight / weight_sum
         else:
             return weight
+
+    def update_normal_direction(self, ref_dirs, norm_dirs, weights) -> np.ndarray:
+        """ Update the normal direction of an obstacle. """
+        if self.obstacle_environment.dimension == 2:
+            norm_angles = np.cross(ref_dirs, norm_dirs, axisa=0, axisb=0)
+
+            norm_angle = np.sum(norm_angles * weights)
+            norm_angle = np.arcsin(norm_angle)
+
+            # Add angle to reference direction
+            unit_ref_dir = self.reference_direction / norm_ref_dir
+            norm_angle += np.arctan2(unit_ref_dir[1], unit_ref_dir[0])
+            
+            self.normal_direction = np.array([np.cos(norm_angle), np.sin(norm_angle)])
+            
+        elif self.obstacle_environment.dimension == 3:
+            norm_angles = np.cross(norm_dirs, ref_dirs, axisa=0, axisb=0)
+
+            norm_angle = np.sum(
+                norm_angles * np.tile(weights, (relative_position.shape[0], 1)),
+                axis=1
+            )
+            norm_angle_mag = LA.norm(norm_angles)
+            if not norm_angle_mag: # Zero value
+                self.normal_direction = copy.deepcopy(self.reference_direction)
+                
+            else:
+                norm_rot = Rotation.from_vec(
+                    self.normal_direction / norm_angle_mag * np.arcsin(norm_angle_mag)
+                )
+
+                unit_ref_dir = self.reference_direction / norm_ref_dir
+                
+                self.normal_direction = norm_rot.apply(unit_ref_dir)
+
+        else:
+            raise NotImplementedError(
+                "For higher dimensions it is currently not defined.")
+
+        return self.normal_direction
+
     
 
 class FastObstacleAvoider(SingleModulationAvoider):
@@ -136,9 +177,6 @@ class FastObstacleAvoider(SingleModulationAvoider):
             ref_dirs[:, it] = (-1)*obs.get_reference_direction(
                 position, in_global_frame=True)
 
-            # relative_distances[it] = obs.get_distance_to_surface(
-                # position, in_global_frame=True)
-
             relative_distances[it] = obs.get_gamma(
                 position, in_global_frame=True)-1
 
@@ -153,45 +191,11 @@ class FastObstacleAvoider(SingleModulationAvoider):
         if not norm_ref_dir:
             self.normal_direction = np.zeros(reference_direction.shape)
             return
-        
-        if self.obstacle_environment.dimension == 2:
-            norm_angles = np.cross(ref_dirs, norm_dirs, axisa=0, axisb=0)
 
-            norm_angle = np.sum(norm_angles * weights)
-            norm_angle = np.arcsin(norm_angle)
-
-            # Add angle to reference direction
-            unit_ref_dir = self.reference_direction / norm_ref_dir
-            norm_angle += np.arctan2(unit_ref_dir[1], unit_ref_dir[0])
-            
-            self.normal_direction = np.array([np.cos(norm_angle), np.sin(norm_angle)])
-
-            # breakpoint()
-            
-        elif self.obstacle_environment.dimension == 3:
-            norm_angles = np.cross(norm_dirs, ref_dirs, axisa=0, axisb=0)
-
-            norm_angle = np.sum(
-                norm_angles * np.tile(weights, (relative_position.shape[0], 1)),
-                axis=1
+        self.normal_direction = self.get_normal_direction(
+            ref_dirs, norm_dirs, weights
             )
-            norm_angle_mag = LA.norm(norm_angles)
-            if not norm_angle_mag: # Zero value
-                self.normal_direction = copy.deepcopy(self.reference_direction)
-                
-            else:
-                norm_rot = Rotation.from_vec(
-                    self.normal_direction / norm_angle_mag * np.arcsin(norm_angle_mag)
-                )
-
-                unit_ref_dir = self.reference_direction / norm_ref_dir
-                
-                self.normal_direction = norm_rot.apply(unit_ref_dir)
-
-        else:
-            raise NotImplementedError("For higher dimensions it is currently not defined.")
-            
-
+    
 
 class FastLidarAvoider(SingleModulationAvoider):
     """ To proof:
@@ -200,11 +204,13 @@ class FastLidarAvoider(SingleModulationAvoider):
     -> No local minima (and maybe even convergence to attractor)
     -> add slight repulsion along the normal direction (when getting closer)
     """
-    def __init__(self, robot: ControlRobot) -> None:
+    def __init__(self, robot: ControlRobot, evaluate_normal: bool = False) -> None:
         self.robot = robot
+
+        self.evaluate_normal = evaluate_normal
+        self.max_angle_ref_norm = 80*np.pi/180
         super().__init__()
 
-    
     def update_laserscan(self, laser_scan: np.ndarray) -> None:
         # self.laser_scan = laserscan
         self.reference_direction = self.get_reference_direction(
@@ -220,6 +226,62 @@ class FastLidarAvoider(SingleModulationAvoider):
             relative_position * np.tile(weights, (relative_position.shape[0], 1)),
             axis=1
             )
+
+        if self.evaluate_normal and LA.norm(reference_direction):
+            # Only evaluate in presence of non-trivial reference direction
+            if self.obstacle_environment.dimension != 2:
+                raise NotImplementedError("Only done for ii>1")
+            # Reduce data to necesarry ones only
+            ind_nonzero = weights > 0
+            weights = weights[ind_nonzero]
+            ref_dirs = relative_position[:, ind_nonzero]
+            laser_scan = laser_scan[:, ind_nonzero]
+            
+            tangents = laser_scan - np.roll(laser_scan, shift=1, axis=1)
+
+            breakpoint() # Check if it's really pointing away
+            normals = np.vstack(((-1)*tangents[1, :], tangents[0, :]))
+            
+            # Remove any which happended through overlap
+            ind_bad = np.dot(ref, normals) < 0
+            normals[:, ind_bad] = 0
+
+            normals = normals / np.tile(LA.norm(normals, axis=0),
+                                        (normals.shape[0], 1))
+
+            # Average over two steps
+            normals = (normals + np.roll(normal, shift=1, axis=1)) / 2.0
+            normals / np.tile(LA.norm(normals, axis=0),
+                              (normals.shape[0], 1))
+
+            norm_angles = np.cross(ref_dirs, normals, axisa=0, axisb=0)
+            norm_angles = np.maximum(norm_angles, np.sin(self.max_angle_ref_norm))
+            # norm_angles = np.vstack((
+                # np.cross(ref_dirs, normals, axisa=0, axisb=0)
+                # np.cross(ref_dirs, (-1)*np.roll((normals, shift=1, axis=1),
+                                                # axisa=0, axisb=0)
+                         # )
+                # ))
+
+            # ind_large = (norm_angles > self.max_sin_ref_norm)
+
+            # if any(ind_large):
+                # TODO: make sure the assigning of a double array works
+                # breakpoint() 
+                # norm_angles[ind_large] = np.copysign(
+                    # self.max_sin_ref_norm, norm_angles[ind_large])
+                
+            # norm_angles = np.min(norm_angles, axis=0)
+            
+            norm_angle = np.sum(norm_angles * weights)
+            norm_angle = np.arcsin(norm_angle)
+
+            # Add angle to reference direction
+            unit_ref_dir = self.reference_direction / norm_ref_dir
+            norm_angle += np.arctan2(unit_ref_dir[1], unit_ref_dir[0])
+            
+            self.normal_direction = np.array([np.cos(norm_angle),
+                                              np.sin(norm_angle)])
 
         if False:
             # DEBUG
