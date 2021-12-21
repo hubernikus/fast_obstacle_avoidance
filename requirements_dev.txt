@@ -1,4 +1,7 @@
 ipython
 
-pre-commit
+
 pytest
+
+pre-commit
+black
