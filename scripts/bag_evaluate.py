@@ -23,6 +23,28 @@ from fast_obstacle_avoidance.obstacle_avoider import FastLidarAvoider
 from fast_obstacle_avoidance.utils import laserscan_to_numpy
 
 
+def reset_laserscan(allscan, position, angle_gap=np.pi/2):
+    # Find the largest gap
+    # -> if it's bigger than 90 degrees -> you're outside and should switch
+    scangle = np.arctan2(allscan[1, :], allscan[0, :])
+
+    ind_sortvals = np.argsort(scangle)
+    sort_vals = scangle[ind_sortvals]
+    d_angle = sort_vals - np.roll(sort_vals, shift=1)
+
+    ind_max = np.argmax(d_angle)
+
+    if ind_max > angle_gap:
+        flip_low = ind_sortvals[ind_max]
+        flip_high = ind_sortvals[ind_max+1]
+
+        # Reset the reference toa copy before assigning, since it's a mutable object
+        allscan = np.copy(allscan)
+        allscan[:, flip_low:flip_high] = np.flip(allscan[:, flip_low:flip_high], axis=1)
+        
+    return allscan
+    
+
 class LaserScanAnimator(Animator):
     def setup(self, static_laserscan, initial_dynamics, robot,
               x_lim=[-3, 4], y_lim=[-3, 3]):
@@ -136,6 +158,8 @@ def static_plot(allscan, qolo, dynamical_system, fast_avoider):
          # '/rear_lidar/scan'
     # ]):
         # breakpoint()
+
+
 def import_first_scan(bag_name='2021-12-13-18-33-06.bag',
                       bag_dir='/home/lukas/Code/data_qolo/'):
     # bag_name = '2021-12-13-18-32-13.bag'
@@ -166,12 +190,11 @@ def import_first_scan(bag_name='2021-12-13-18-33-06.bag',
         elif topic == '/rear_lidar/scan':
             rearscan = laserscan_to_numpy(
                 msg, delta_angle=np.pi, delta_position=[0.75, 0.0],
-                angle_range=[-np.pi/2, np.pi/2],
                 )
             
         if frontscan is not None and rearscan is not None:
             break
-
+        
     return np.hstack((rearscan, frontscan))
 
 
@@ -207,10 +230,17 @@ def main_animator(bag_name='2021-12-13-18-33-06.bag'):
     # main_animator.update_step(ii=0)
 
 
+
 def main_vectorfield(figure_name="vector_field_around_laserscan",
                      bag_name='2021-12-13-18-33-06.bag'):
     
     allscan = import_first_scan(bag_name)
+
+    # Check scan
+    # scangle = np.arctan2(allscan[1, :], allscan[0, :])
+    # is_larger = ((scangle - np.roll(scangle, shift=-1)) > 0)*1
+    # breakpoint()
+    
     # sample_freq = 20
     # allscan = allscan[:,  np.logical_not(np.mod(np.arange(allscan.shape[1]), sample_freq))]
     
@@ -224,7 +254,7 @@ def main_vectorfield(figure_name="vector_field_around_laserscan",
         pose = ObjectPose(position=[0.7, -0.7], orientation=30*np.pi/180)
     )
     
-    fast_avoider = FastLidarAvoider(robot=qolo)
+    fast_avoider = FastLidarAvoider(robot=qolo, evaluate_normal=True)
     dynamical_system = LinearSystem(
         attractor_position=np.array([-2, 2]), maximum_velocity=0.8)
 
@@ -243,18 +273,19 @@ def main_vectorfield(figure_name="vector_field_around_laserscan",
     velocities = np.zeros(positions.shape)
     velocities_mod = np.zeros(positions.shape)
     reference_dirs = np.zeros(positions.shape)
+    
     for it in range(positions.shape[1]):
-
         qolo.pose.position = positions[:, it]
+        temp_scan = reset_laserscan(allscan, positions[:, it])
 
-        _, relative_distances = (
-            qolo.get_relative_positions_and_dists(allscan)
+        _, _, relative_distances = (
+            qolo.get_relative_positions_and_dists(temp_scan)
             )
         
         if any(relative_distances < 0):
             continue
             
-        fast_avoider.update_laserscan(allscan)
+        fast_avoider.update_laserscan(temp_scan)
         
         velocities[:, it] = dynamical_system.evaluate(positions[:, it])
         velocities_mod[:, it] = fast_avoider.avoid(velocities[:, it])
@@ -293,16 +324,51 @@ def main_vectorfield(figure_name="vector_field_around_laserscan",
         markersize=12,
         zorder=5,
         )
-    # axs[1].title("Modulated Vectorfield"]
-    
-    
-    # ax.streamplot(positions[0, :].reshape(nx, ny),
-                  # positions[1, :].reshape(nx, ny),
-                  # velocities_mod[0, :].reshape(nx, ny),
-                  # velocities_mod[1, :].reshape(nx, ny), color="blue")
 
-            # velocities[0, :].reshape(nx, ny), velocities[1, :].reshape(nx, ny), color="blue")
+    nx = ny = 40
+    x_vals, y_vals = np.meshgrid(np.linspace(x_lim[0], x_lim[1], nx),
+                                 np.linspace(y_lim[0], y_lim[1], ny))
+
+    positions = np.vstack((x_vals.reshape(1, -1), y_vals.reshape(1, -1)))
+    deviation = np.zeros((positions.shape[1]))
+
+    # if False:
+    for it in range(positions.shape[1]):
+        qolo.pose.position = positions[:, it]
+        temp_scan = reset_laserscan(allscan, positions[:, it])
+
+        _, _, relative_distances = (
+            qolo.get_relative_positions_and_dists(temp_scan)
+            )
+        
+        if any(relative_distances < 0):
+            continue
+
+        fast_avoider.update_laserscan(temp_scan)
+            
+        ref_dirs = fast_avoider.reference_direction
+        
+        if fast_avoider.normal_direction is not None:
+            norm_dirs = fast_avoider.normal_direction
+            deviation[it] = np.arcsin(np.cross(ref_dirs, norm_dirs))
+
+            # breakpoint()
+        
     
+    pcm = axs[0].contourf(x_vals, y_vals,
+                    deviation.reshape(nx, ny),
+                    # cmap='PiYG',
+                    cmap='bwr',
+                    vmin=-np.pi/2, vmax=np.pi/2,
+                    zorder=-3,
+                    alpha=0.9,
+                    levels=101,
+                    )
+
+    cbar = fig.colorbar(pcm, ax=axs[0], fraction=0.035,
+                        ticks=[-0.5, 0, 0.5],
+                        extend='neither',
+                        )
     
     plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
     

@@ -251,7 +251,7 @@ def main_vectorfield_starshaped(
             norm_dirs = main_avoider.normal_direction
 
         deviation[it] = np.arcsin(np.cross(ref_dirs, norm_dirs))
-    
+
     pcm = axs[0].contourf(x_vals, y_vals,
                     deviation.reshape(nx, ny),
                     # cmap='PiYG',
@@ -259,7 +259,7 @@ def main_vectorfield_starshaped(
                     vmin=-np.pi/2, vmax=np.pi/2,
                     zorder=-3,
                     alpha=0.9,
-                    levels=20
+                    levels=101,
                     )
 
     cbar = fig.colorbar(pcm, ax=axs[0], fraction=0.035,
@@ -271,7 +271,6 @@ def main_vectorfield_starshaped(
     # cbar.ax.set_yticklabels([r"$-\frac{\pi}{8}$", "0", r"$\frac{\pi}{8}$"])
 
     
-
     initial_dynamics = LinearSystem(
         # attractor_position=np.array([3, -3]), maximum_velocity=0.8)
         attractor_position=np.array([4, -0.1]), maximum_velocity=0.8)

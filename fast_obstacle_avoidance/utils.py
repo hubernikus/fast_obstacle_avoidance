@@ -4,7 +4,7 @@ Various utils used for the fast-obstacle-avoidance
 import numpy as np
 
 def laserscan_to_numpy(
-    msg, dimension=2, delta_angle=0, delta_position=None, angle_range=None) -> np.ndarray:
+    msg, dimension=2, delta_angle=0, delta_position=None) -> np.ndarray:
     """ Returns a numpy array of the a ros-laserscan data."""
     num_points = len(msg.ranges)
 
@@ -15,12 +15,11 @@ def laserscan_to_numpy(
     angles = (np.arange(num_points)[ind_real]*msg.angle_increment
               + (msg.angle_min + delta_angle))
 
-    if angle_range is not None:
-        ind_range = np.logical_and(angles > angle_range[0]+delta_angle,
-                                   angles < angle_range[1]+delta_angle)
-        
-        angles = angles[ind_range]
-        ranges = ranges[ind_range]
+    # if angle_range is not None:
+        # ind_range = np.logical_and(angles > angle_range[0]+delta_angle,
+                                   # angles < angle_range[1]+delta_angle)
+        # angles = angles[ind_range]
+        # ranges = ranges[ind_range]
 
     positions = (np.tile(ranges, (dimension, 1))
                  * np.vstack((np.cos(angles), np.sin(angles))))

@@ -119,7 +119,7 @@ class SingleModulationAvoider:
             norm_angle = np.arcsin(norm_angle)
 
             # Add angle to reference direction
-            unit_ref_dir = self.reference_direction / norm_ref_dir
+            unit_ref_dir = self.reference_direction / LA.norm(self.reference_direction)
             norm_angle += np.arctan2(unit_ref_dir[1], unit_ref_dir[0])
             
             self.normal_direction = np.array([np.cos(norm_angle), np.sin(norm_angle)])
@@ -192,7 +192,7 @@ class FastObstacleAvoider(SingleModulationAvoider):
             self.normal_direction = np.zeros(reference_direction.shape)
             return
 
-        self.normal_direction = self.get_normal_direction(
+        self.normal_direction = self.update_normal_direction(
             ref_dirs, norm_dirs, weights
             )
     
@@ -212,66 +212,56 @@ class FastLidarAvoider(SingleModulationAvoider):
         super().__init__()
 
     def update_laserscan(self, laser_scan: np.ndarray) -> None:
-        # self.laser_scan = laserscan
         self.reference_direction = self.get_reference_direction(
             laser_scan)
 
     def get_reference_direction(self, laser_scan: np.ndarray) -> np.ndarray:
-        relative_position, relative_distances = (
+        laser_scan, ref_dirs, relative_distances = (
             self.robot.get_relative_positions_and_dists(laser_scan)
             )
         weights = self.get_weight_from_distances(relative_distances)
 
-        reference_direction = np.sum(
-            relative_position * np.tile(weights, (relative_position.shape[0], 1)),
+        self.reference_direction = (-1)*np.sum(
+            ref_dirs * np.tile(weights, (ref_dirs.shape[0], 1)),
             axis=1
             )
 
-        if self.evaluate_normal and LA.norm(reference_direction):
+        norm_ref_dir = LA.norm(self.reference_direction)
+        
+        if self.evaluate_normal and norm_ref_dir:
             # Only evaluate in presence of non-trivial reference direction
-            if self.obstacle_environment.dimension != 2:
+            if laser_scan.shape[0] != 2:
                 raise NotImplementedError("Only done for ii>1")
+            
             # Reduce data to necesarry ones only
             ind_nonzero = weights > 0
             weights = weights[ind_nonzero]
-            ref_dirs = relative_position[:, ind_nonzero]
+            ref_dirs = ref_dirs[:, ind_nonzero]
             laser_scan = laser_scan[:, ind_nonzero]
-            
-            tangents = laser_scan - np.roll(laser_scan, shift=1, axis=1)
 
-            breakpoint() # Check if it's really pointing away
+            tangents = laser_scan - np.roll(laser_scan, shift=1, axis=1)
+            
             normals = np.vstack(((-1)*tangents[1, :], tangents[0, :]))
             
             # Remove any which happended through overlap
-            ind_bad = np.dot(ref, normals) < 0
-            normals[:, ind_bad] = 0
+            # Matrix dot-product
+            ind_bad = (np.sum(ref_dirs*normals, axis=0) < 0)
 
-            normals = normals / np.tile(LA.norm(normals, axis=0),
-                                        (normals.shape[0], 1))
+            if any(ind_bad):
+                normals[:, ind_bad] = ref_dirs[:, ind_bad]
+
+            normals = normals / np.tile(LA.norm(normals, axis=0), (normals.shape[0], 1))
 
             # Average over two steps
-            normals = (normals + np.roll(normal, shift=1, axis=1)) / 2.0
-            normals / np.tile(LA.norm(normals, axis=0),
-                              (normals.shape[0], 1))
+            normals = (normals + np.roll(normals, shift=1, axis=1)) / 2.0
+            normals = normals / np.tile(LA.norm(normals, axis=0), (normals.shape[0], 1))
 
             norm_angles = np.cross(ref_dirs, normals, axisa=0, axisb=0)
-            norm_angles = np.maximum(norm_angles, np.sin(self.max_angle_ref_norm))
-            # norm_angles = np.vstack((
-                # np.cross(ref_dirs, normals, axisa=0, axisb=0)
-                # np.cross(ref_dirs, (-1)*np.roll((normals, shift=1, axis=1),
-                                                # axisa=0, axisb=0)
-                         # )
-                # ))
-
-            # ind_large = (norm_angles > self.max_sin_ref_norm)
-
-            # if any(ind_large):
-                # TODO: make sure the assigning of a double array works
-                # breakpoint() 
-                # norm_angles[ind_large] = np.copysign(
-                    # self.max_sin_ref_norm, norm_angles[ind_large])
-                
-            # norm_angles = np.min(norm_angles, axis=0)
+            ind_critical = np.abs(norm_angles) > np.sin(self.max_angle_ref_norm)
+            if any(ind_critical):
+                norm_angles[ind_critical] = np.copysign(
+                    np.sin(self.max_angle_ref_norm), norm_angles[ind_critical]
+                    )
             
             norm_angle = np.sum(norm_angles * weights)
             norm_angle = np.arcsin(norm_angle)
@@ -283,22 +273,11 @@ class FastLidarAvoider(SingleModulationAvoider):
             self.normal_direction = np.array([np.cos(norm_angle),
                                               np.sin(norm_angle)])
 
-        if False:
-            # DEBUG
-            import matplotlib.pyplot as plt
-            fig, ax = plt.subplots(figsize=(12, 6))
-            ax.plot(laser_scan[0, :], laser_scan[1, :], '.', color='k')
-            ax.plot(self.robot.pose.position[0],
-                    self.robot.pose.position[1], 'o', color='r')
-
-            ax.quiver(laser_scan[0, :], laser_scan[1, :],
-                      relative_position[0, :]*weights,
-                      relative_position[1, :]*weights, color='r', scale=2)
-            breakpoint()
-            plt.close()
-
         # Make sure reference direction points away from center
-        return (-1)*reference_direction
+        print('devi', np.arcsin(np.cross(self.reference_direction,
+                                         self.normal_direction))
+              )
+        return self.reference_direction
             
     def limit_velocity(self):
         raise NotImplementedError()

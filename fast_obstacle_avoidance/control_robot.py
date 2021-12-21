@@ -23,10 +23,10 @@ class ControlRobot:
         rel_pos = positions - np.tile(self.pose.position, (positions.shape[1], 1)).T
         rel_dist = LA.norm(rel_pos, axis=0)
         
-        rel_pos = rel_pos / np.tile(rel_dist, (rel_pos.shape[0], 1))
+        rel_dir = rel_pos / np.tile(rel_dist, (rel_pos.shape[0], 1))
         rel_dist = rel_dist - self.control_radiuses[0]
         
-        return rel_pos, rel_dist
+        return rel_pos, rel_dir, rel_dist
 
     def plot2D(self, ax, num_points=30) -> None:
         if self.robot_image is not None:
