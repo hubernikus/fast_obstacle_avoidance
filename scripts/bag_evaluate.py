@@ -297,7 +297,7 @@ def main_vectorfield(
     # x_lim = [-4, 5]
     # y_lim = [-4, 4]
 
-    nx = ny = 30
+    nx = ny = 40
 
     x_vals, y_vals = np.meshgrid(
         np.linspace(x_lim[0], x_lim[1], nx), np.linspace(y_lim[0], y_lim[1], ny)
