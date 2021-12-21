@@ -19,8 +19,8 @@ from vartools.dynamical_systems import LinearSystem
 from vartools.animator import Animator
 
 from fast_obstacle_avoidance.control_robot import ControlRobot
-from fast_obstacle_avoidance.obstacle_avoider import FastLidarAvoider
 from fast_obstacle_avoidance.utils import laserscan_to_numpy
+from fast_obstacle_avoidance.obstacle_avoider import FastLidarAvoider
 
 
 def reset_laserscan(allscan, position, angle_gap=np.pi/2):
@@ -213,7 +213,7 @@ def main_animator(bag_name='2021-12-13-18-33-06.bag'):
         pose = ObjectPose(position=[0.7, -0.7], orientation=30*np.pi/180)
     )
     
-    fast_avoider = FastLidarAvoider(robot=qolo)
+    fast_avoider = FastLidarAvoider(robot=qolo, evaluate_normal=True)
 
     dynamical_system = LinearSystem(
         attractor_position=np.array([-2, 2]), maximum_velocity=0.8)
@@ -377,7 +377,7 @@ if (__name__) == "__main__":
     plt.close('all')
     plt.ion()
 
-    # main_animator()
-    main_vectorfield()
+    main_animator()
+    # main_vectorfield()
     
     pass
