@@ -12,6 +12,10 @@ pip install rosbag --extra-index-url https://rospypi.github.io/simple/
 Various Tools [Algebra & Dynamical Systems]
 https://github.com/hubernikus/various_tools
 
-# 
 
-# Tests
+# Development Setup
+Install the dev-requirements
+``` bash
+pip install -r requirements_dev.txt
+```
+
