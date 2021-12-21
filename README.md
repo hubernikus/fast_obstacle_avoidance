@@ -1,7 +1,6 @@
 # fast_obstacle_avoidance
 Dynamic but Fast Obstacle Avoidance
 
-
 # Install
 Setup your environment, with Python>3.7 (here Python 3.9):
 ``` bash
@@ -27,8 +26,7 @@ Install the dev-requirements
 pip install -r requirements_dev.txt
 ```
 
-In case of using the pre-commit hook, do once:
-
+Try to use pre-commit-hooks if actively contributing to the repository:
 ``` bash
 pre-commit install
 ```

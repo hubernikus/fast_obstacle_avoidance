@@ -1,12 +1,14 @@
 """
 Various Robot models
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 from numpy import linalg as LA
 
 from vartools.states import ObjectPose
+
+from .utils import laserscan_to_numpy
 
 
 class BaseRobot:
@@ -37,12 +39,17 @@ class BaseRobot:
             ctrl_point = self.pose.transform_position_from_local_to_reference(
                 self.control_points[:, ii]
             )
+
             temp_cicle = (
                 unit_circle * self.control_radiuses[ii]
                 + np.tile(ctrl_point, (num_points, 1)).T
             )
 
             ax.plot(temp_cicle[0, :], temp_cicle[1, :], "--", color="k")
+
+            ax.plot(ctrl_point[0], ctrl_point[1], ".", color="k")
+
+        ax.plot(self.pose.position[0], self.pose.position[1], "H", color="k")
 
 
 @dataclass
@@ -54,7 +61,6 @@ class GeneralRobot(BaseRobot):
     robot_image = None
 
 
-@dataclass
 class QoloRobot(BaseRobot):
     """
     The Qolo has following properties [m]
@@ -67,16 +73,40 @@ class QoloRobot(BaseRobot):
 
     Wheel position (front): [0, +/- 0.545/2]
     Wheel distance (front): [-0.605, +/- 0.200/2]
+
     """
 
-    pose: ObjectPose = None
+    def __init__(self, pose: ObjectPose = None):
+        self.pose = pose
 
-    control_points: np.ndarray = np.array([[0.035, 0]])
-    control_radiuses: np.ndarray = np.array([350])
+        # self.control_points: np.ndarray = np.array([[0.035, 0]]).T
+        self.control_points: np.ndarray = np.array([[0.035, 0]]).T
+        # self.control_radiuses: np.ndarray = np.array([0.350])
+        self.control_radiuses: np.ndarray = np.array([0.380])
 
-    laser_positions: dict = {
-        "/front_lidar/scan": np.array([0.035, 0]),
-        "/rear_lidar/scan": np.array([-0.505, 0]),
-    }
+        self.laser_poses: dict = {
+            "/front_lidar/scan": ObjectPose(
+                position=np.array([0.035, 0]), orientation=0
+            ),
+            "/rear_lidar/scan": ObjectPose(
+                position=np.array([-0.505, 0]), orientation=np.pi
+            ),
+            # '/front_lidar/scan': ObjectPose(position=np.array([0, 0]), orientation=0),
+            # '/rear_lidar/scan': ObjectPose(position=np.array([0, 0]), orientation=np.pi),
+        }
 
-    robot_image = None
+        self.laser_data = {}
+        self.robot_image = None
+
+    def get_allscan(self):
+        return np.hstack(scan for scan in self.laser_data.values())
+
+    def set_laserscan(self, data, topic_name):
+        try:
+            self.laser_data[topic_name] = laserscan_to_numpy(
+                data, pose=self.laser_poses[topic_name]
+            )
+
+        except KeyError:
+            print("Key <{topic_name}> not found; nothing was updated.")
+            return
