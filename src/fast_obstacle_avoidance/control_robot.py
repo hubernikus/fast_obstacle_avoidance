@@ -77,6 +77,7 @@ class QoloRobot(BaseRobot):
     """
 
     def __init__(self, pose: ObjectPose = None):
+        self._got_new_scan = False
         self.pose = pose
 
         # self.control_points: np.ndarray = np.array([[0.035, 0]]).T
@@ -98,7 +99,12 @@ class QoloRobot(BaseRobot):
         self.laser_data = {}
         self.robot_image = None
 
+    @property
+    def has_newscan(self):
+        return self._got_new_scan
+
     def get_allscan(self):
+        self._got_new_scan = False
         return np.hstack(scan for scan in self.laser_data.values())
 
     def set_laserscan(self, data, topic_name):
@@ -106,6 +112,7 @@ class QoloRobot(BaseRobot):
             self.laser_data[topic_name] = laserscan_to_numpy(
                 data, pose=self.laser_poses[topic_name]
             )
+            self._got_new_scan = True
 
         except KeyError:
             print("Key <{topic_name}> not found; nothing was updated.")
