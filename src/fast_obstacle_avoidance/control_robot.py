@@ -76,6 +76,7 @@ class QoloRobot(BaseRobot):
 
     """
 
+    # [WARNING] (min) lidar radius is around 0.47 - BUT door width is 0.97
     def __init__(self, pose: ObjectPose = None):
         self._got_new_scan = False
         self.pose = pose
@@ -83,7 +84,8 @@ class QoloRobot(BaseRobot):
         # self.control_points: np.ndarray = np.array([[0.035, 0]]).T
         self.control_points: np.ndarray = np.array([[0.035, 0]]).T
         # self.control_radiuses: np.ndarray = np.array([0.350])
-        self.control_radiuses: np.ndarray = np.array([0.380])
+        # self.control_radiuses: np.ndarray = np.array([0.470])
+        self.control_radiuses: np.ndarray = np.array([0.43])
 
         self.laser_poses: dict = {
             "/front_lidar/scan": ObjectPose(
@@ -105,7 +107,7 @@ class QoloRobot(BaseRobot):
 
     def get_allscan(self):
         self._got_new_scan = False
-        return np.hstack(scan for scan in self.laser_data.values())
+        return np.hstack([scan for scan in self.laser_data.values()])
 
     def set_laserscan(self, data, topic_name):
         try:

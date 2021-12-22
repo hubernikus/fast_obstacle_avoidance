@@ -286,16 +286,17 @@ def main_vectorfield(
     import_first_scans(qolo, bag_name)
     allscan = qolo.get_allscan()
 
-    fast_avoider = FastLidarAvoider(robot=qolo, evaluate_normal=True)
+    # fast_avoider = FastLidarAvoider(robot=qolo, evaluate_normal=True)
+    fast_avoider = FastLidarAvoider(robot=qolo, evaluate_normal=False)
     dynamical_system = LinearSystem(
         attractor_position=np.array([2, 0]), maximum_velocity=0.8
     )
 
-    x_lim = [-3, 4]
-    y_lim = [-3, 3]
+    # x_lim = [-3, 4]
+    # y_lim = [-3, 3]
 
-    # x_lim = [-4, 5]
-    # y_lim = [-4, 4]
+    x_lim = [0.4, 1.2]
+    y_lim = [-0.3, 0.5]
 
     nx = ny = 40
 
