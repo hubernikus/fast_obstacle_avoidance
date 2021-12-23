@@ -20,6 +20,8 @@ class SingleModulationAvoider:
         self.reference_direction = None
         self.normal_direction = None
 
+        self.norm_power = 3
+
     def avoid(
         self, initial_velocity: np.ndarray, limit_velocity_magnitude: bool = True
     ) -> None:
@@ -81,7 +83,6 @@ class SingleModulationAvoider:
             # No tail-effect
             normal_stretch = 1
         else:
-
             normal_stretch = 1 - weight
 
         stretching_vector = np.hstack(
@@ -91,7 +92,7 @@ class SingleModulationAvoider:
         return np.diag(stretching_vector)
 
     def get_weight_from_norm(self, norm):
-        return norm
+        return norm ** (1.0 / self.norm_power)
 
     def get_weight_from_distances(
         self, distances, weight_factor=3, weight_power=2.0, margin_weight=1e-3
