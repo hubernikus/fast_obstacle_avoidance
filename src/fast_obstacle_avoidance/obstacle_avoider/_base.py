@@ -55,7 +55,6 @@ class SingleModulationAvoider:
             ref_norm, self.reference_direction, initial_velocity
         )
 
-        # breakpoint()
         modulated_velocity = inv_decomposition @ initial_velocity
         modulated_velocity = stretching_matrix @ modulated_velocity
         modulated_velocity = decomposition_matrix @ modulated_velocity
@@ -63,7 +62,7 @@ class SingleModulationAvoider:
         if limit_velocity_magnitude:
             mod_norm = LA.norm(modulated_velocity)
             init_norm = LA.norm(initial_velocity)
-
+            # breakpoint()
             if mod_norm > init_norm:
                 modulated_velocity = modulated_velocity * (init_norm / mod_norm)
 
@@ -79,15 +78,24 @@ class SingleModulationAvoider:
         """Get the diagonal stretching matix which plays the main part in the modulation."""
         weight = self.get_weight_from_norm(ref_norm)
 
-        if free_tail_flow and np.dot(normal_direction, initial_velocity) > 0:
+        dot_prod = np.dot(normal_direction, initial_velocity)
+        if free_tail_flow and dot_prod > 0:
+
+            dot_prod = dot_prod / (
+                LA.norm(normal_direction) * LA.norm(initial_velocity)
+            )
+
             # No tail-effect
             normal_stretch = 1
-        else:
-            normal_stretch = 1 - weight
 
-        stretching_vector = np.hstack(
-            (normal_stretch, 1 + weight * np.ones(normal_direction.shape[0] - 1))
-        )
+            stretching_vector = np.hstack(
+                (1 + (1 - dot_prod) * weight * np.ones(normal_direction.shape[0]))
+            )
+        else:
+
+            stretching_vector = np.hstack(
+                (1 - weight, 1 + weight * np.ones(normal_direction.shape[0] - 1))
+            )
 
         return np.diag(stretching_vector)
 
