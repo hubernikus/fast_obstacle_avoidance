@@ -4,6 +4,8 @@ Various utils used for the fast-obstacle-avoidance
 import numpy as np
 from numpy import linalg as LA
 
+from scipy.spatial.transform import Rotation as R
+
 
 def laserscan_to_numpy(
     msg, dimension=2, delta_angle=0, delta_position=None, pose=None
@@ -40,3 +42,40 @@ def laserscan_to_numpy(
         positions = positions + np.tile(delta_position, (positions.shape[1], 1)).T
 
     return positions
+
+
+def depreciated(*args, **kwargs):
+    # def obstacle_list_in_local_frame(msg, robot):
+    breakpoint()
+
+    tt = gmsg.TransformStamped()
+
+    # Prepare broadcast message
+    # Copy in pose values to transform
+    # tt.transform.translation = pose.position
+    position_qolo = np.array([qolo_pose.x, qolo_pose.y])
+    orientation_qolo = np.array([qolo_pose.theta])
+
+    cos_, sin_ = np.cos(ori), np.sin(ori)
+    orientatin_matrix = np.array([[cos_, sin_], [sin_, cos_]])
+
+    # tt.transform.translation.x = qolo_pose.x
+    # tt.transform.translation.y = qolo_pose.y
+    # quat = Rotation.from_quat([qolo_pose.theta, 0, 0], 'zyx').as_quat()
+    # tt.transform.rotation = quat
+
+    obs_list = []
+    for track in range(msg.tracks):
+        # pose_local = tf2.do_transform_pose(tt, track.pose)
+
+        pose_local = (tt, track.pose)
+        euler = Rotation.from_quat(
+            [
+                pose_local.pose.quaternion.x,
+                pose_local.pose.quaternion.y,
+                pose_local.pose.quaternion.z,
+                pose_local.pose.quaternion.w,
+            ]
+        ).as_euler("zyx")
+
+    return obs_list

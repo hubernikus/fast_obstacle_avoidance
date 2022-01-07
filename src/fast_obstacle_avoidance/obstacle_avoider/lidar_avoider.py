@@ -7,10 +7,9 @@ import warnings
 import numpy as np
 from numpy import linalg as LA
 
-from fast_obstacle_avoidance.control_robot import BaseRobot
-
 from vartools.linalg import get_orthogonal_basis
 
+from fast_obstacle_avoidance.control_robot import BaseRobot
 from ._base import SingleModulationAvoider
 
 
@@ -29,15 +28,20 @@ class FastLidarAvoider(SingleModulationAvoider):
         self.max_angle_ref_norm = 80 * np.pi / 180
         super().__init__()
 
-    def update_laserscan(self, laser_scan: np.ndarray) -> None:
-        self.reference_direction = self.get_reference_direction(laser_scan)
+    def update_reference_direction(
+        self, laser_scan: np.ndarray = None, in_robot_frame: bool = True
+    ) -> np.ndarray:
+        if laser_scan is None:
+            laser_scan = self.laser_scan
 
-    def get_reference_direction(self, laser_scan: np.ndarray) -> np.ndarray:
         (
             laser_scan,
             ref_dirs,
             relative_distances,
-        ) = self.robot.get_relative_positions_and_dists(laser_scan)
+        ) = self.robot.get_relative_positions_and_dists(
+            laser_scan, in_robot_frame=in_robot_frame
+        )
+
         weights = self.get_weight_from_distances(relative_distances)
 
         self.reference_direction = (-1) * np.sum(
@@ -81,22 +85,18 @@ class FastLidarAvoider(SingleModulationAvoider):
                     np.sin(self.max_angle_ref_norm), norm_angles[ind_critical]
                 )
 
-            norm_angle = np.sum(norm_angles * weights)
-            norm_angle = np.arcsin(norm_angle)
+            self.norm_angle = np.sum(norm_angles * weights)
+            self.norm_angle = np.arcsin(norm_angle)
 
             # Add angle to reference direction
             unit_ref_dir = self.reference_direction / norm_ref_dir
             norm_angle += np.arctan2(unit_ref_dir[1], unit_ref_dir[0])
 
-            self.normal_direction = np.array([np.cos(norm_angle), np.sin(norm_angle)])
+            self.normal_direction = np.array(
+                [np.cos(self.norm_angle), np.sin(self.norm_angle)]
+            )
 
             # print('devi', np.arcsin(np.cross(self.reference_direction,
             # self.normal_direction))
             # )
         return self.reference_direction
-
-    def limit_velocity(self):
-        raise NotImplementedError()
-
-    def limit_acceleration(self):
-        raise NotImplementedError()

@@ -10,6 +10,7 @@ import rosbag
 import numpy as np
 
 # from numpy import linalg as LA
+# from .utils import obstacle_list_in_local_frame
 
 
 def reset_laserscan(allscan, position, angle_gap=np.pi / 2):
@@ -67,4 +68,55 @@ def import_first_scans(
 
         if len(robot.laser_data) == len(robot.laser_poses):
             # Make sure go one per element
+            break
+
+
+def import_first_scan_and_crowd(
+    robot,
+    bag_name="2021-12-13-18-33-06.bag",
+    bag_dir="/home/lukas/Code/data_qolo/outdoor_recording/",
+    start_time=None,
+):
+    rosbag_name = bag_dir + bag_name
+
+    # my_bag = bagpy.bagreader(rosbag)
+    # my_bag = bagpy.bagreader(rosbag_name)
+    my_bag = rosbag.Bag(rosbag_name)
+
+    msg_persons = None
+    msg_qolo = None
+
+    # for tt in my_bag.topics:
+    for topic, msg, t in my_bag.read_messages(
+        topics=[
+            "/front_lidar/scan",
+            "/rear_lidar/scan",
+            "/rwth_tracker/tracked_persons",
+            "/qolo/pose2D",
+        ]
+    ):
+        if start_time is not None and t.to_sec() < start_time:
+            continue
+
+        if topic == "/front_lidar/scan" or topic == "/rear_lidar/scan":
+            breakpoint()
+            robot.set_laserscan(msg, topic_name=topic)
+
+        if topic == "/rwth_tracker/tracked_persons":
+            msg_persons = msg
+
+        if topic == "/qolo/pose2D":
+            msg_qolo = msg
+            robot.pose.position = np.array([msg.x, msg.y])
+            robot.pose.orientation = msg.theta
+
+        if msg_persons is not None and msg_qolo is not None:
+            # obstacle_list = obstacle_list_in_local_frame(msg)
+            robot.set_crowdtracker(msg)
+
+        if len(robot.laser_data) == len(robot.laser_poses) and len(
+            robot.obstacle_environment
+        ):
+            # Make sure go one per element
+            print("Got 'em all.")
             break

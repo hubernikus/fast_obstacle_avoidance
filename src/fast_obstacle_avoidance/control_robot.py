@@ -6,7 +6,12 @@ from dataclasses import dataclass, field
 import numpy as np
 from numpy import linalg as LA
 
+from scipy.spatial.transform import Rotation
+
 from vartools.states import ObjectPose
+
+from dynamic_obstacle_avoidance.containers import ObstacleContainer
+from dynamic_obstacle_avoidance.obstacles import Sphere
 
 from .utils import laserscan_to_numpy
 
@@ -18,9 +23,15 @@ class BaseRobot:
     def num_control_points(self) -> int:
         return self.control_radiuses.shape[0]
 
-    def get_relative_positions_and_dists(self, positions: np.ndarray) -> np.ndarray:
+    def get_relative_positions_and_dists(
+        self, positions: np.ndarray, in_robot_frame: bool = True
+    ) -> np.ndarray:
         """Get normalized (relative) position and (relative) surface distance."""
-        rel_pos = positions - np.tile(self.pose.position, (positions.shape[1], 1)).T
+        if in_robot_frame:
+            rel_pos = positions
+        else:
+            rel_pos = positions - np.tile(self.pose.position, (positions.shape[1], 1)).T
+
         rel_dist = LA.norm(rel_pos, axis=0)
 
         rel_dir = rel_pos / np.tile(rel_dist, (rel_pos.shape[0], 1))
@@ -52,13 +63,13 @@ class BaseRobot:
         ax.plot(self.pose.position[0], self.pose.position[1], "H", color="k")
 
 
-@dataclass
-class GeneralRobot(BaseRobot):
-    control_points: np.ndarray
-    control_radiuses: np.ndarray
+# @dataclass
+# class GeneralRobot(BaseRobot):
+# control_points: np.ndarray
+# control_radiuses: np.ndarray
 
-    pose: ObjectPose = None
-    robot_image = None
+# pose: ObjectPose = None
+# robot_image = None
 
 
 class QoloRobot(BaseRobot):
@@ -79,6 +90,7 @@ class QoloRobot(BaseRobot):
     # [WARNING] (min) lidar radius is around 0.47 - BUT door width is 0.97
     def __init__(self, pose: ObjectPose = None):
         self._got_new_scan = False
+        self._got_new_obstacles = False
         self.pose = pose
 
         # self.control_points: np.ndarray = np.array([[0.035, 0]]).T
@@ -98,12 +110,21 @@ class QoloRobot(BaseRobot):
             # '/rear_lidar/scan': ObjectPose(position=np.array([0, 0]), orientation=np.pi),
         }
 
+        self.obstacle_environment = ObstacleContainer()
+
         self.laser_data = {}
         self.robot_image = None
 
     @property
     def has_newscan(self):
         return self._got_new_scan
+
+    @property
+    def has_new_obstacles(self):
+        return self._got_new_obstacles
+
+    def retrieved_obstacles(self):
+        self._got_new_obstacles = False
 
     def get_allscan(self):
         self._got_new_scan = False
@@ -119,3 +140,62 @@ class QoloRobot(BaseRobot):
         except KeyError:
             print("Key <{topic_name}> not found; nothing was updated.")
             return
+
+    def set_crowdtracker(
+        self,
+        crowd_msg,
+        sigma=7,
+        reactivity=3,
+        repulsion_coeff=1.5,
+        human_radius=0.6,
+        margin_absolut=0,
+    ):
+        """Update the obstacle list based on the crowd-input.
+
+        CrowdList: List of obstacles.
+        """
+        # Remove all existing crowd (human) obstacles
+        # Make sure not to 'overwrite' the reference (but only modify)
+
+        it = 0
+        while it < len(self.obstacle_environment):
+            if hasattr(
+                self.obstacle_environment[it],
+                "is_human" and self.obstacle_environment[it].is_human,
+            ):
+                del self.obstacle_environment[it]
+            else:
+                it += 1
+
+        for person in crowd_msg.tracks:
+            euler = Rotation.from_quat(
+                [
+                    person.pose.pose.orientation.x,
+                    person.pose.pose.orientation.y,
+                    person.pose.pose.orientation.z,
+                    person.pose.pose.orientation.w,
+                ]
+            ).as_euler("zyx")
+
+            human_obs = Sphere(
+                center_position=self.pose.transform_position_from_reference_to_local(
+                    np.array([person.pose.pose.position.x, person.pose.pose.position.y])
+                ),
+                orientation=(euler[0] - self.pose.orientation),
+                linear_velocity=self.pose.transform_direction_from_reference_to_local(
+                    np.array([person.twist.twist.linear.x, person.twist.twist.linear.y])
+                ),
+                angular_velocity=0,
+                tail_effect=False,
+                radius=human_radius,
+                margin_absolut=margin_absolut,
+                # Veloctiy reduction
+                reactivity=reactivity,
+                repulsion_coeff=repulsion_coeff,
+            )
+
+            human_obs.is_human = True
+
+            self.obstacle_environment.append(human_obs)  # TODO: add robot margin
+
+        self._got_new_obstacles = True

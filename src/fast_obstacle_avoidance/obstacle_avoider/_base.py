@@ -16,9 +16,23 @@ from vartools.linalg import get_orthogonal_basis
 
 
 class SingleModulationAvoider:
+    """
+    Encapsulated the modulation in one single obstacle
+    """
+
     def __init__(self):
         self.reference_direction = None
+        # TODO: initialize as np.zeros(dim), but for now this is easier deugging!
+
+        # Normal direction (for inverted modulation)
         self.normal_direction = None
+
+        # Normal angle -> can be useful for further calculation
+        self.norm_angle = None
+
+        # Distance weight sum (before normalization):
+        # this is used for in the mixed environments
+        self.distance_weight_sum = None
 
         self.norm_power = 3
 
@@ -115,49 +129,15 @@ class SingleModulationAvoider:
         num_points = distances.shape[0]
         weight = (1 / distances) ** weight_power * (weight_factor / num_points)
 
-        weight_sum = np.sum(weight)
+        self.distance_weight_sum = np.sum(weight)
 
-        if weight_sum > 1:
-            return weight / weight_sum
+        if self.distance_weight_sum > 1:
+            return weight / self.distance_weight_sum
         else:
             return weight
 
-    def update_normal_direction(self, ref_dirs, norm_dirs, weights) -> np.ndarray:
-        """Update the normal direction of an obstacle."""
-        if self.obstacle_environment.dimension == 2:
-            norm_angles = np.cross(ref_dirs, norm_dirs, axisa=0, axisb=0)
+    def limit_velocity(self):
+        raise NotImplementedError()
 
-            norm_angle = np.sum(norm_angles * weights)
-            norm_angle = np.arcsin(norm_angle)
-
-            # Add angle to reference direction
-            unit_ref_dir = self.reference_direction / LA.norm(self.reference_direction)
-            norm_angle += np.arctan2(unit_ref_dir[1], unit_ref_dir[0])
-
-            self.normal_direction = np.array([np.cos(norm_angle), np.sin(norm_angle)])
-
-        elif self.obstacle_environment.dimension == 3:
-            norm_angles = np.cross(norm_dirs, ref_dirs, axisa=0, axisb=0)
-
-            norm_angle = np.sum(
-                norm_angles * np.tile(weights, (relative_position.shape[0], 1)), axis=1
-            )
-            norm_angle_mag = LA.norm(norm_angles)
-            if not norm_angle_mag:  # Zero value
-                self.normal_direction = copy.deepcopy(self.reference_direction)
-
-            else:
-                norm_rot = Rotation.from_vec(
-                    self.normal_direction / norm_angle_mag * np.arcsin(norm_angle_mag)
-                )
-
-                unit_ref_dir = self.reference_direction / norm_ref_dir
-
-                self.normal_direction = norm_rot.apply(unit_ref_dir)
-
-        else:
-            raise NotImplementedError(
-                "For higher dimensions it is currently not defined."
-            )
-
-        return self.normal_direction
+    def limit_acceleration(self):
+        raise NotImplementedError()

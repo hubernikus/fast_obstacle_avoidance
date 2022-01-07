@@ -10,5 +10,6 @@ from .mixed_avoider import MixedEnvironmentAvoider
 __all__ = [
     "SingleModulationAvoider",
     "FastObstacleAvoider",
-    "FastLidarAvoider" "MixedEnvironmentAvoider",
+    "FastLidarAvoider",
+    "MixedEnvironmentAvoider",
 ]

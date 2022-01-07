@@ -195,12 +195,15 @@ def main_animator(
     # bag_name="2021-12-23-18-23-16.bag",
     bag_name="2021-12-23-18-23-16.bag",
     eval_time=1640280207.915730,
+    start_position=None,
 ):
     # sample_freq = 20
     # allscan = allscan[:,  np.logical_not(np.mod(np.arange(allscan.shape[1]), sample_freq))]
 
+    if start_position is None:
+        start_position = np.array([-1.0, -1.0])
     qolo = QoloRobot(
-        pose=ObjectPose(position=np.array([-1.0, -1.0]), orientation=0 * np.pi / 180)
+        pose=ObjectPose(position=start_position, orientation=0 * np.pi / 180)
     )
 
     import_first_scans(qolo, bag_name, start_time=eval_time)
@@ -225,10 +228,15 @@ def main_animator(
     # main_animator.update_step(ii=0)
 
 
+def animator_office_room():
+    main_animator(bag_name="2021-12-23-18-23-16.bag", start_position=np.array([-1, 1]))
+
+
 if (__name__) == "__main__":
     plt.close("all")
     plt.ion()
 
-    main_animator()
+    # main_animator()
+    animator_office_room()
 
     pass
