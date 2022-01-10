@@ -82,12 +82,14 @@ def main_vectorfield(
         qolo.pose.position = positions[:, it]
         temp_scan = reset_laserscan(allscan, positions[:, it])
 
-        _, _, relative_distances = qolo.get_relative_positions_and_dists(temp_scan)
+        _, _, relative_distances = qolo.get_relative_positions_and_dists(
+            temp_scan, in_robot_frame=False
+        )
 
         if any(relative_distances < 0):
             continue
 
-        fast_avoider.update_reference_direction(temp_scan)
+        fast_avoider.update_reference_direction(temp_scan, in_robot_frame=False)
 
         velocities_init[:, it] = dynamical_system.evaluate(positions[:, it])
         velocities_mod[:, it] = fast_avoider.avoid(velocities_init[:, it])
@@ -193,7 +195,7 @@ def main_vectorfield(
         if any(relative_distances < 0):
             continue
 
-        fast_avoider.update_reference_direction(temp_scan)
+        fast_avoider.update_reference_direction(temp_scan, in_robot_frame=False)
 
         ref_dirs = fast_avoider.reference_direction
 

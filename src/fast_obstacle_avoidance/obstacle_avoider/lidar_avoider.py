@@ -51,7 +51,6 @@ class FastLidarAvoider(SingleModulationAvoider):
         if self.evaluate_normal:
             self.update_normal_direction(laser_scan, weights, ref_dirs)
 
-        print("ref dir", self.reference_direction)
         return self.reference_direction
 
     def update_normal_direction(self, laser_scan, weights, ref_dirs):
