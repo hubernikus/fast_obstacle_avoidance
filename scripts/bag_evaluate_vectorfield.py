@@ -52,7 +52,7 @@ def main_vectorfield(
 
     pos = np.array([-0.29, -0.33])
     temp_scan = reset_laserscan(allscan, pos)
-    fast_avoider.update_laserscan(temp_scan)
+    fast_avoider.update_reference_direction(temp_scan)
     vel_init = dynamical_system.evaluate(pos)
     vel_mod = fast_avoider.avoid(vel_init)
 
@@ -87,7 +87,7 @@ def main_vectorfield(
         if any(relative_distances < 0):
             continue
 
-        fast_avoider.update_laserscan(temp_scan)
+        fast_avoider.update_reference_direction(temp_scan)
 
         velocities_init[:, it] = dynamical_system.evaluate(positions[:, it])
         velocities_mod[:, it] = fast_avoider.avoid(velocities_init[:, it])
@@ -174,7 +174,7 @@ def main_vectorfield(
         zorder=5,
     )
 
-    nx = ny = 40
+    nx = ny = 10
     x_vals, y_vals = np.meshgrid(
         np.linspace(x_lim[0], x_lim[1], nx), np.linspace(y_lim[0], y_lim[1], ny)
     )
@@ -193,7 +193,7 @@ def main_vectorfield(
         if any(relative_distances < 0):
             continue
 
-        fast_avoider.update_laserscan(temp_scan)
+        fast_avoider.update_reference_direction(temp_scan)
 
         ref_dirs = fast_avoider.reference_direction
 
@@ -232,5 +232,5 @@ if (__name__) == "__main__":
     plt.close("all")
     plt.ion()
 
-    vectorfield_inside()
-    # main_vectorfield()
+    # vectorfield_inside()
+    main_vectorfield()
