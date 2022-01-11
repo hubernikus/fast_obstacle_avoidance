@@ -15,12 +15,75 @@ from numpy import linalg as LA
 from vartools.linalg import get_orthogonal_basis
 
 
+
+def get_stretching_matrix_basic(
+    weight: float,
+    normal_direction: np.ndarray = None,
+    initial_velocity: np.ndarray = None,
+    free_tail_flow: bool = True,
+    ) -> np.ndarray:
+    """Get the diagonal stretching matix which plays the main part in the modulation."""
+    dot_prod = np.dot(normal_direction, initial_velocity)
+    if free_tail_flow and dot_prod > 0:
+        dot_prod = dot_prod / (
+            LA.norm(normal_direction) * LA.norm(initial_velocity)
+            )
+
+        # No tail-effect
+        normal_stretch = 1
+        stretching_vector = np.hstack(
+            (1 + (1 - dot_prod) * weight * np.ones(normal_direction.shape[0]))
+            )
+        
+    else:
+
+        stretching_vector = np.hstack(
+            (1 - weight, 1 + weight * np.ones(normal_direction.shape[0] - 1))
+        )
+
+        return np.diag(stretching_vector)
+
+
+class StretchingMatrixDecreasingFunctor:
+    def __init__(free_tail_flow: bool = True):
+        self.free_tail_flow = free_tail_flow
+
+    def get_tail_negicence_matrix(self, lambda_r, dimension, normal_vector, ):
+        """ Returns uniform matrix away from tail."""
+        return 
+
+    def __call__(self, weight: float
+                 normal_direction: np.ndarray = None,
+                 initial_velocity: np.ndarray = None) -> np.ndarray:
+        dot_prod = np.dot(normal_direction, initial_velocity)
+        if free_tail_flow and dot_prod > 0:
+            dot_prod = dot_prod / (
+                LA.norm(normal_direction) * LA.norm(initial_velocity)
+                )
+
+            # No tail-effect
+            normal_stretch = 1
+            stretching_vector = np.hstack(
+                (1 + (1 - dot_prod) * weight * np.ones(normal_direction.shape[0]))
+            )
+        
+        else:
+
+            stretching_vector = np.hstack(
+                (1 - weight, 1 + weight * np.ones(normal_direction.shape[0] - 1))
+                )
+
+        return np.diag(stretching_vector)
+
+
+
+
 class SingleModulationAvoider:
     """
     Encapsulated the modulation in one single obstacle
     """
 
-    def __init__(self):
+    def __init__(self, get_stretching_matrix = get_stretching_matrix_basic):
         self.reference_direction = None
         # TODO: initialize as np.zeros(dim), but for now this is easier deugging!
 
@@ -35,6 +98,9 @@ class SingleModulationAvoider:
         self.distance_weight_sum = None
 
         self.norm_power = 3
+
+        # Define the function
+        self.get_stretching_matrix = get_stretching_matrix
 
     def avoid(
         self, initial_velocity: np.ndarray, limit_velocity_magnitude: bool = True
@@ -65,8 +131,9 @@ class SingleModulationAvoider:
 
             inv_decomposition = LA.pinv(decomposition_matrix)
 
+        weight = self.get_weight_from_norm(ref_norm)
         stretching_matrix = self.get_stretching_matrix(
-            ref_norm, self.reference_direction, initial_velocity
+            weight, self.reference_direction, initial_velocity
         )
 
         modulated_velocity = inv_decomposition @ initial_velocity
@@ -76,42 +143,12 @@ class SingleModulationAvoider:
         if limit_velocity_magnitude:
             mod_norm = LA.norm(modulated_velocity)
             init_norm = LA.norm(initial_velocity)
-            # breakpoint()
+            
             if mod_norm > init_norm:
                 modulated_velocity = modulated_velocity * (init_norm / mod_norm)
 
         return modulated_velocity
 
-    def get_stretching_matrix(
-        self,
-        ref_norm: float,
-        normal_direction: np.ndarray = None,
-        initial_velocity: np.ndarray = None,
-        free_tail_flow: bool = True,
-    ) -> np.ndarray:
-        """Get the diagonal stretching matix which plays the main part in the modulation."""
-        weight = self.get_weight_from_norm(ref_norm)
-
-        dot_prod = np.dot(normal_direction, initial_velocity)
-        if free_tail_flow and dot_prod > 0:
-
-            dot_prod = dot_prod / (
-                LA.norm(normal_direction) * LA.norm(initial_velocity)
-            )
-
-            # No tail-effect
-            normal_stretch = 1
-
-            stretching_vector = np.hstack(
-                (1 + (1 - dot_prod) * weight * np.ones(normal_direction.shape[0]))
-            )
-        else:
-
-            stretching_vector = np.hstack(
-                (1 - weight, 1 + weight * np.ones(normal_direction.shape[0] - 1))
-            )
-
-        return np.diag(stretching_vector)
 
     def get_weight_from_norm(self, norm):
         return norm ** (1.0 / self.norm_power)
