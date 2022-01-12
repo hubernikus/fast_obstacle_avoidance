@@ -236,7 +236,7 @@ def main_vectorfield(
         )
 
     plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
-    print("savisave")
+    print("safisave")
 
 if (__name__) == "__main__":
     # plt.close("all")

@@ -132,10 +132,7 @@ class SingleModulationAvoider:
         # this is used for in the mixed environments
         self.distance_weight_sum = None
 
-        self.norm_power = 1.0
-
-        # Define the functor
-
+        
 
     def avoid(
         self, initial_velocity: np.ndarray, limit_velocity_magnitude: bool = True
@@ -166,9 +163,8 @@ class SingleModulationAvoider:
 
             inv_decomposition = LA.pinv(decomposition_matrix)
 
-        importance_value = self.get_weight_from_norm(ref_norm)
         stretching_matrix = self.stretching_matrix.get(
-            importance_value, self.reference_direction, initial_velocity
+            ref_norm, self.reference_direction, initial_velocity
         )
         
         modulated_velocity = inv_decomposition @ initial_velocity
@@ -183,10 +179,6 @@ class SingleModulationAvoider:
                 modulated_velocity = modulated_velocity * (init_norm / mod_norm)
 
         return modulated_velocity
-
-
-    def get_weight_from_norm(self, norm):
-        return norm ** (1.0 / self.norm_power)
 
     def get_weight_from_distances(
         self, distances, weight_factor=3, weight_power=2.0, margin_weight=1e-3

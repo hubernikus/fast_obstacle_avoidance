@@ -85,7 +85,7 @@ if (__name__) == "__main__":
     plt.ion()
 
     # run_vectorfield_mixed()
-    do_the_import = True
+    do_the_import = False
     if do_the_import:
         qolo = QoloRobot(
             pose=ObjectPose(position=[0.7, -0.7], orientation=30 * np.pi / 180)

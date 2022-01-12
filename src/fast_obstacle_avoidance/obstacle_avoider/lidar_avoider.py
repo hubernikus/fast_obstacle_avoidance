@@ -105,6 +105,3 @@ class FastLidarAvoider(SingleModulationAvoider):
         )
 
         return self.normal_direction
-        # print('devi', np.arcsin(np.cross(self.reference_direction,
-        # self.normal_direction))
-        # )
