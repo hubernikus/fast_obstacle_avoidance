@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 # import pandas as pd
 import rosbag
 
-from vartools.states import ObjectPose
+from vartools.states import ObjectPose 
 from vartools.dynamical_systems import LinearSystem
 from vartools.animator import Animator
 
@@ -27,34 +27,35 @@ from fast_obstacle_avoidance.laserscan_utils import import_first_scans, reset_la
 
 def main_vectorfield(
     figure_name="vector_field_around_laserscan",
-    # bag_name='2021-12-13-18-33-06.bag',
+    bag_name='2021-12-13-18-33-06.bag',
     # bag_name="2021-12-21-14-21-00.bag",
-    bag_name="2021-12-23-18-23-16.bag",
+    # bag_name="2021-12-23-18-23-16.bag",
     eval_time=1640280207.915730,
 ):
-    nx = ny = 30
+    nx = ny = 25
 
     qolo = QoloRobot(
         pose=ObjectPose(position=[0.7, -0.7], orientation=30 * np.pi / 180)
     )
 
-    import_first_scans(qolo, bag_name, start_time=eval_time)
+    import_first_scans(qolo, bag_name, start_time=None)
+    
     allscan = qolo.get_allscan()
 
     # fast_avoider = FastLidarAvoider(robot=qolo, evaluate_normal=True)
     fast_avoider = FastLidarAvoider(robot=qolo, evaluate_normal=False)
     dynamical_system = LinearSystem(
         # attractor_position=np.array([1.5, 0.5]),
-        # attractor_position=np.array([1.5, 0.5]),
-        attractor_position=np.array([2.0, 0.0]),
+        attractor_position=np.array([-1.5, 1.5]),
+        # attractor_position=np.array([2.0, 0.0]),
         maximum_velocity=0.8,
     )
 
-    pos = np.array([-0.29, -0.33])
-    temp_scan = reset_laserscan(allscan, pos)
-    fast_avoider.update_reference_direction(temp_scan)
-    vel_init = dynamical_system.evaluate(pos)
-    vel_mod = fast_avoider.avoid(vel_init)
+    # pos = np.array([4., 3.])
+    # temp_scan = reset_laserscan(allscan, pos)
+    # fast_avoider.update_reference_direction(temp_scan)
+    # vel_init = dynamical_system.evaluate(pos)
+    # vel_mod = fast_avoider.avoid(vel_init)
 
     # print("vel_init", vel_init)
     # print("vel_mod", vel_mod)
@@ -95,7 +96,7 @@ def main_vectorfield(
         velocities_mod[:, it] = fast_avoider.avoid(velocities_init[:, it])
         reference_dirs[:, it] = fast_avoider.reference_direction
 
-    fig, axs = plt.subplots(1, 2, figsize=(18, 8))
+    fig, axs = plt.subplots(1, 2, figsize=(10, 6))
 
     # ax.quiver(positions[0, :], positions[1, :],
     # velocities[0, :], velocities[1, :],
@@ -115,6 +116,8 @@ def main_vectorfield(
 
         ax.grid(True)
 
+    arrow_width = 0.004
+
     axs[0].quiver(
         positions[0, :],
         positions[1, :],
@@ -123,20 +126,24 @@ def main_vectorfield(
         # angles='xy', scale_units='xy', scale=scale_vel,
         scale=30,
         color="black",
+        width=arrow_width,
         alpha=0.8,
     )
 
     # axs[0].title("Reference Vectors")
-    scale_vel = 4  #
+    scale_vel = 3  #
     if scale_vel is not None:
-        # axs[1].quiver(
-        # positions[0, :],
-        # positions[1, :],
-        # velocities_init[0, :],
-        # velocities_init[1, :],
-        # angles='xy', scale_units='xy', scale=scale_vel,
-        # color="green",
-        # )
+        axs[1].quiver(
+        positions[0, :],
+        positions[1, :],
+        velocities_init[0, :],
+        velocities_init[1, :],
+        angles='xy', scale_units='xy',
+        scale=scale_vel,
+        width=arrow_width,
+        color="black",
+        alpha=0.3,
+        )
 
         axs[1].quiver(
             positions[0, :],
@@ -146,6 +153,7 @@ def main_vectorfield(
             angles="xy",
             scale_units="xy",
             scale=scale_vel,
+            width=arrow_width,
             color="blue",
         )
     else:
@@ -228,10 +236,10 @@ def main_vectorfield(
         )
 
     plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
-
+    print("savisave")
 
 if (__name__) == "__main__":
-    plt.close("all")
+    # plt.close("all")
     plt.ion()
 
     # vectorfield_inside()

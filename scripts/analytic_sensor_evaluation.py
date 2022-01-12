@@ -3,20 +3,25 @@ Test how the normal behaves when integrating along a flat-surface (2D)
 """
 import numpy as np
 
-def test_lambda_functions(pow_e=1.0, pow_r=2.0, fact_r=0.1):
-    mag_value = np.linspace(0, 6, 1000)
+def test_lambda_functions(pow_r=1.0, pow_e=1.0, fact_e=0.1):
+    # mag_value = np.linspace(0.1, 1000, 200)
+    mag_value = np.logspace(-2, 3, num=200)
 
     ln2 = np.log(2)
-    lambda_r = np.exp(-1*mag_value**pow_r * fact_r)
-    lambda_e = np.exp(-1*ln2*(mag_value**pow_e-1)) -1
+    lambda_e = np.exp(-1 * fact_e * mag_value**pow_e)
+    lambda_r = np.exp(-1*ln2*(mag_value**pow_r-1)) - 1
 
-    import matplotlib.pyplot as plt
+    # import matplotlib.pyplot as plt
 
     plt.ion()
-    fig = plt.figure()
+    plt.close('all')
+    fig, ax = plt.subplots(figsize=(7, 2))
+    
     plt.plot(mag_value, lambda_r, label="lambda_r")
     plt.plot(mag_value, lambda_e, label="lambda_e")
-    
+
+    ax.set_xscale('log')
+
     plt.legend()
     plt.grid()
     
