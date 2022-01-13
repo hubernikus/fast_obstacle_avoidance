@@ -84,8 +84,9 @@ class StretchingMatrixBasic(StretchingMatrixFunctor):
         return lambda_ref, lambda_tang
 
 
-class StretchingMatrixDecreasing(StretchingMatrixFunctor):
-    def __init__(self, power_ref: float = 1, const_ref: float = 0.1, power_tang: float = 1, *args, **kwargs):
+class StretchingMatrixExponential(StretchingMatrixFunctor):
+    def __init__(self, power_ref: float = 1, const_ref: float = 0.1,
+                 power_tang: float = 1, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         # Define lambda-variable paramteres
@@ -102,6 +103,25 @@ class StretchingMatrixDecreasing(StretchingMatrixFunctor):
 
         return lambda_ref, lambda_tang
 
+class StretchingMatrixTrigonometric(StretchingMatrixFunctor):
+    # def __init__(self,*args, **kwargs):
+        # super().__init__(*args, **kwargs)
+    
+    def get_lambda_weights(self, weight, weight_vel):
+        if weight < 2:
+            lambda_tang = 1 + np.sin(np.pi/2*weight)
+            lambda_ref = np.cos(np.pi/2*weight)
+            
+        else:
+            lambda_tang = 1
+            lambda_ref = (-1)
+            
+        if weight_vel < 0 and weight > 1:
+            lambda_ref = (-1)*lambda_ref
+
+        return lambda_ref, lambda_tang
+
+
 
 class SingleModulationAvoider:
     """
@@ -115,7 +135,7 @@ class SingleModulationAvoider:
     
     def __init__(self, stretching_matrix: StretchingMatrixFunctor = None):
         if stretching_matrix is None:
-            self.stretching_matrix = StretchingMatrixDecreasing()
+            self.stretching_matrix = StretchingMatrixTrigonometric()
         else:
             self.stretching_matrix = stretching_matrix
             
