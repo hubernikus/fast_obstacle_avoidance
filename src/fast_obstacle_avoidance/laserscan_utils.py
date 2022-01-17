@@ -99,7 +99,6 @@ def import_first_scan_and_crowd(
             continue
 
         if topic == "/front_lidar/scan" or topic == "/rear_lidar/scan":
-            breakpoint()
             robot.set_laserscan(msg, topic_name=topic)
 
         if topic == "/rwth_tracker/tracked_persons":
