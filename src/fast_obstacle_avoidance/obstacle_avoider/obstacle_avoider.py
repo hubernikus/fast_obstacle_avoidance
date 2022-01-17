@@ -31,17 +31,47 @@ class FastObstacleAvoider(SingleModulationAvoider):
         ) or dimension == 2:
             from scipy.spatial.transform import Rotation as R
 
+        self.update_relative_velocity = True
+        self.linear_velocity = None
+        self.angular_velocity = None
+
+    @property
+    def dimension(self):
+        return self.obstacle_environment.dimension
+
+    def update_linear_and_angular_velocity(self, weights):
+        """ Update linear and angular velocity (without deformation). """
+        linear_velocities = np.zeros((self.dimension, weights.shape[0]))
+        angular_velocities = np.zeros((weights.shape[0]))
+        
+        for it, obs in enumerate(self.obstacle_environment):
+            if weights[it] <= 0:
+                continue
+            
+            linear_velocities[:, it]  = obs.linear_velocity
+            angular_velocities[it]  = obs.angular_velocity
+
+        self.linear_velocity = np.sum((np.tile(weights, (linear_velocities.shape[0], 1)) * linear_velocities), axis=1)
+        
+        self.angular_velocity = np.sum(weights * angular_velocities)
+
+        return (self.linear_velocity, self.angular_velocity)
+
+
     def update_reference_direction(self, in_robot_frame=True):
         if in_robot_frame:
             position = np.zeros(self.obstacle_environment.dimension)
         else:
-            position = robot.pose.position
+            position = self.robot.pose.position
 
         norm_dirs = np.zeros(
             (self.obstacle_environment.dimension, self.obstacle_environment.n_obstacles)
         )
         ref_dirs = np.zeros(norm_dirs.shape)
         relative_distances = np.zeros((norm_dirs.shape[1]))
+
+        if self.update_relative_velocity:
+            relative_velocities = np.zeros(ref_dirs.shape)
 
         # breakpoint()
         for it, obs in enumerate(self.obstacle_environment):
@@ -67,6 +97,9 @@ class FastObstacleAvoider(SingleModulationAvoider):
         self.normal_direction = self.update_normal_direction(
             ref_dirs, norm_dirs, weights
         )
+
+        if self.update_relative_velocity:
+            self.update_linear_and_angular_velocity(weights)
 
         if self.robot is not None:
             self.robot.retrieved_obstacles()
@@ -112,3 +145,5 @@ class FastObstacleAvoider(SingleModulationAvoider):
             )
 
         return self.normal_direction
+
+

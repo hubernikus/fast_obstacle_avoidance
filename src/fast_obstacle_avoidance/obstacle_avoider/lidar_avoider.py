@@ -21,12 +21,13 @@ class FastLidarAvoider(SingleModulationAvoider):
     -> add slight repulsion along the normal direction (when getting closer)
     """
 
-    def __init__(self, robot: BaseRobot, evaluate_normal: bool = False) -> None:
+    def __init__(self, robot: BaseRobot, evaluate_normal: bool = False, *args, **kwargs) -> None:
         self.robot = robot
 
         self.evaluate_normal = evaluate_normal
         self.max_angle_ref_norm = 80 * np.pi / 180
-        super().__init__()
+        super().__init__(*args, **kwargs)
+
 
     def update_reference_direction(
         self, laser_scan: np.ndarray = None, in_robot_frame: bool = True

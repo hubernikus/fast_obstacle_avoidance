@@ -10,7 +10,7 @@ from scipy.spatial.transform import Rotation
 
 from vartools.states import ObjectPose
 
-from dynamic_obstacle_avoidance.containers import ObstacleContainer
+from dynamic_obstacle_avoidance import containers 
 from dynamic_obstacle_avoidance.obstacles import Sphere
 
 from .utils import laserscan_to_numpy
@@ -90,7 +90,7 @@ class QoloRobot(BaseRobot):
     # [WARNING] (min) lidar radius is around 0.47 - BUT door width is 0.97
     def __init__(self, pose: ObjectPose = None):
         self._got_new_scan = False
-        self._got_new_obstacles = False
+        self._got_new_obstacles = True
         self.pose = pose
 
         # self.control_points: np.ndarray = np.array([[0.035, 0]]).T
@@ -110,10 +110,15 @@ class QoloRobot(BaseRobot):
             # '/rear_lidar/scan': ObjectPose(position=np.array([0, 0]), orientation=np.pi),
         }
 
-        self.obstacle_environment = ObstacleContainer()
+        # self.obstacle_environment = containers.ObstacleContainer()
+        # self.obstacle_environment = containers.GradientContainer()
+        self.obstacle_environment = containers.SphereContainer()
 
         self.laser_data = {}
         self.robot_image = None
+
+        # Maximum normalization - above this full repulsion is taking effect!
+        self.weight_max_norm = 6.99580150e+04
 
     @property
     def has_newscan(self):
@@ -148,7 +153,7 @@ class QoloRobot(BaseRobot):
         reactivity=3,
         repulsion_coeff=1.5,
         human_radius=0.6,
-        margin_absolut=0,
+        margin_absolut=None,
     ):
         """Update the obstacle list based on the crowd-input.
 
@@ -156,7 +161,9 @@ class QoloRobot(BaseRobot):
         """
         # Remove all existing crowd (human) obstacles
         # Make sure not to 'overwrite' the reference (but only modify)
-
+        if margin_absolut is None:
+            margin_absolut = self.control_radiuses[0]
+        
         it = 0
         while it < len(self.obstacle_environment):
             if hasattr(

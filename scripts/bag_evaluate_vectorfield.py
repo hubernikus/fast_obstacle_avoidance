@@ -43,7 +43,9 @@ def main_vectorfield(
     allscan = qolo.get_allscan()
 
     # fast_avoider = FastLidarAvoider(robot=qolo, evaluate_normal=True)
-    fast_avoider = FastLidarAvoider(robot=qolo, evaluate_normal=False)
+    fast_avoider = FastLidarAvoider(robot=qolo, evaluate_normal=False,
+        weight_max_norm=6.99580150e+04)
+    
     dynamical_system = LinearSystem(
         # attractor_position=np.array([1.5, 0.5]),
         attractor_position=np.array([-1.5, 1.5]),
@@ -234,9 +236,6 @@ def main_vectorfield(
             ticks=[-0.5, 0, 0.5],
             extend="neither",
         )
-
-    plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
-    print("safisave")
 
 if (__name__) == "__main__":
     # plt.close("all")

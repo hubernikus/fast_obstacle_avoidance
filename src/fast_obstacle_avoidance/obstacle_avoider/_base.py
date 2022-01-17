@@ -133,7 +133,8 @@ class SingleModulationAvoider:
     returns the stretching matrix based on the input f
     """
     
-    def __init__(self, stretching_matrix: StretchingMatrixFunctor = None):
+    def __init__(self, stretching_matrix: StretchingMatrixFunctor = None,
+                 weight_max_norm: float = None):
         if stretching_matrix is None:
             self.stretching_matrix = StretchingMatrixTrigonometric()
         else:
@@ -152,6 +153,8 @@ class SingleModulationAvoider:
         # this is used for in the mixed environments
         self.distance_weight_sum = None
 
+        # The maximum possible distance weight sum
+        self.weight_max_norm = weight_max_norm
         
 
     def avoid(
@@ -213,7 +216,12 @@ class SingleModulationAvoider:
         num_points = distances.shape[0]
         weight = (1 / distances) ** weight_power * (weight_factor / num_points)
 
+        
         self.distance_weight_sum = np.sum(weight)
+
+        if (self.weight_max_norm is not None
+            and self.distance_weight_sum > self.weight_max_norm):
+            self.distance_weight_sum = self.weight_max_norm
 
         if self.distance_weight_sum > 1:
             return weight / self.distance_weight_sum

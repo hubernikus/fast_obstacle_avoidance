@@ -27,7 +27,24 @@ def test_lambda_functions(pow_r=1.0, pow_e=1.0, fact_e=0.1):
     
     plt.show()
 
+def simple_normal_weight_stretching():
+
+    vec_prod = np.linspace(-1, 1, 300)
+    ind_close = vec_prod < (-np.sqrt(2)/2)
     
+    stretch = np.ones(vec_prod.shape)
+    # stretch[ind_close] = (1./2 + np.sqrt(2)/2) +  (1.0/2 - np.sqrt(2)/2) * np.cos(
+        # - np.pi* (vec_prod[ind_close] + np.sqrt(2)/2)/ (1- np.sqrt(2)/2))
+    # stretch[ind_close] = np.sqrt(2)*np.cos(-1*vec_prod[ind_close])
+    stretch[ind_close] = np.sqrt(2)*(-1)*vec_prod[ind_close]
+    plt.close('all')
+    fig, ax = plt.subplots(figsize=(7, 2))
+    
+    plt.plot(vec_prod, stretch)
+    plt.show()
+    
+
+
 class QoloRobot:
     def __init__(self, delta_angle=0.007000000216066837):
         self.delta_angle = delta_angle
@@ -37,11 +54,18 @@ class QoloRobot:
 
         self.weight_power = 2
 
-        self.weight_max_norm = 1 / (self.radius_min_norm - self.radius_robot)
+        # self.weight_max_norm = 1 / (self.radius_min_norm - self.radius_robot)
         # 9.26948535e
-        self.weight_max_norm = 12151.17294101414
+        # self.weight_max_norm = 12151.17294101414
 
-    def evaluate_reference(self, dist_horizontal, delta_angle0=0):
+        self.weight_max_norm = 6.99580150e+04
+
+    def evaluate_reference(self,
+                           dist_horizontal_rel,
+                           dist_horizontal=None, delta_angle0=0):
+        
+        dist_horizontal = (1+dist_horizontal_rel)*self.radius_robot
+        
         angles = np.hstack(
             (
                 np.flip(np.arange(delta_angle0, -np.pi / 2.0, (-1) * self.delta_angle)),
@@ -64,7 +88,6 @@ class QoloRobot:
         sum_weights = np.sum(weights)
 
         if sum_weights > self.weight_max_norm:
-            print("max norm", self.weight_max_norm)
             sum_weights = self.weight_max_norm
 
         if sum_weights > 1:
@@ -78,7 +101,7 @@ class QoloRobot:
 def evaluation_reference_dir():
     my_qolo = QoloRobot()
 
-    my_qolo.evaluate_reference(dist_horizontal=0.45)
+    my_qolo.evaluate_reference(dist_horizontal_rel=0.1)
 
 
 def evaluation_parameters():
@@ -117,6 +140,8 @@ if (__name__) == "__main__":
     # evaluation_parameters()
     # evaluation_reference_dir()
     
-    test_lambda_functions()
+    # test_lambda_functions()
+
+    simple_normal_weight_stretching()
     
     pass

@@ -20,7 +20,8 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
         self.robot = robot
         # One for obstacles one for environments
         self.lidar_avoider = FastLidarAvoider(self.robot, evaluate_normal)
-        self.obstacle_avoider = FastObstacleAvoider(self.robot.obstacle_environment)
+        self.obstacle_avoider = FastObstacleAvoider(
+            self.robot.obstacle_environment, robot=self.robot)
 
         self.evaluate_normal = evaluate_normal
 
@@ -61,7 +62,7 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
             self.lidar_avoider.distance_weight_sum,
             self.obstacle_avoider.distance_weight_sum,
         ]
-
+        
         if np.sum(weights) > 1:
             weights = weights / np.sum(weights)
 
@@ -114,7 +115,7 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
 
             # Get gamma from array for circular obstacles only (!)
             dirs = laserscan - np.tile(obs.position, (laserscan.shape[1], 1)).T
-            gamma_vals = LA.norm(dirs, axis=0) - obs.radius_with_margin
+            gamma_vals = LA.norm(dirs, axis=0) - obs.radius
 
             is_outside = gamma_vals > 0
 
