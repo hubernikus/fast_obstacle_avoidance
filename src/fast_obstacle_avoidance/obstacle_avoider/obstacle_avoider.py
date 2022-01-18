@@ -58,11 +58,13 @@ class FastObstacleAvoider(SingleModulationAvoider):
         
         return self.relative_velocity
 
-    def update_reference_direction(self, in_robot_frame=True):
-        if in_robot_frame:
-            position = np.zeros(self.obstacle_environment.dimension)
-        else:
-            position = self.robot.pose.position
+    def update_reference_direction(self, in_robot_frame=True, position=None):
+        """ Take position from robot position if not given as argument."""
+        if position is None:
+            if in_robot_frame:
+                position = np.zeros(self.obstacle_environment.dimension)
+            else:
+                position = self.robot.pose.position
 
         norm_dirs = np.zeros(
             (self.obstacle_environment.dimension, self.obstacle_environment.n_obstacles)
@@ -73,7 +75,6 @@ class FastObstacleAvoider(SingleModulationAvoider):
         if self.consider_relative_velocity:
             relative_velocities = np.zeros(ref_dirs.shape)
 
-        # breakpoint()
         for it, obs in enumerate(self.obstacle_environment):
             norm_dirs[:, it] = obs.get_normal_direction(position, in_global_frame=True)
 
@@ -145,5 +146,3 @@ class FastObstacleAvoider(SingleModulationAvoider):
             )
 
         return self.normal_direction
-
-

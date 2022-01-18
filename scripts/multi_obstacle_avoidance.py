@@ -32,7 +32,8 @@ def double_plot(
         ax.grid(True)
 
         plot_obstacles(
-            ax=ax, obs=obstacle_environment, x_lim=x_lim, y_lim=y_lim, noTicks=True
+        ax=ax, obstacle_container=obstacle_environment,
+        x_lim=x_lim, y_lim=y_lim, noTicks=True
         )
 
     main_avoider = FastObstacleAvoider(obstacle_environment=obstacle_environment)
@@ -56,9 +57,9 @@ def double_plot(
     ref_dirs = np.zeros(positions.shape)
 
     for it in range(positions.shape[1]):
-        main_avoider.update_reference_direction(positions[:, it])
+        main_avoider.update_reference_direction(position=positions[:, it])
 
-        initial_vel = initial_dynamics.evaluate(positions[:, it])
+        initial_vel = initial_dynamics.evaluate(position=positions[:, it])
 
         ref_dirs[:, it] = main_avoider.reference_direction
         if main_avoider.normal_direction is not None:
@@ -265,7 +266,7 @@ def main_vectorfield_starshaped(
 
     # if False:
     for it in range(positions.shape[1]):
-        main_avoider.update_reference_direction(positions[:, it])
+        main_avoider.update_reference_direction(position=positions[:, it])
 
         ref_dirs = main_avoider.reference_direction
 
