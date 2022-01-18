@@ -155,8 +155,10 @@ class SingleModulationAvoider:
 
         # The maximum possible distance weight sum
         self.weight_max_norm = weight_max_norm
-        
 
+        self.relative_velocity = None
+
+        
     def avoid(
         self, initial_velocity: np.ndarray, limit_velocity_magnitude: bool = True
     ) -> None:
@@ -189,10 +191,17 @@ class SingleModulationAvoider:
         stretching_matrix = self.stretching_matrix.get(
             ref_norm, self.reference_direction, initial_velocity
         )
+
+        if self.relative_velocity is not None:
+            initial_velocity = initial_velocity - self.relative_velocity
         
         modulated_velocity = inv_decomposition @ initial_velocity
         modulated_velocity = stretching_matrix @ modulated_velocity
         modulated_velocity = decomposition_matrix @ modulated_velocity
+
+        # TODO: limit velocity with respect to maximum velocity
+        if self.relative_velocity is not None:
+            initial_velocity = initial_velocity - self.relative_velocity
 
         if limit_velocity_magnitude:
             mod_norm = LA.norm(modulated_velocity)

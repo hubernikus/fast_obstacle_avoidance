@@ -71,6 +71,15 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
             + weights[1] * self.obstacle_avoider.reference_direction
         )
 
+        if self.lidar_avoider.relative_velocity is not None:
+            raise NotImplementedError("Not implemented for relative lidar velocity.")
+        
+        # Update velocity
+        if self.obstacle_avoider.relative_velocity is not None:
+            self.relative_velocity = (
+                weights[1]*self.obstacle_avoider.relative_velocity
+                )
+            
         # Potentially update normal direction
         if self.evaluate_normal:
             ref_norm = LA.norm(self.reference_direction)
