@@ -32,8 +32,11 @@ def double_plot(
         ax.grid(True)
 
         plot_obstacles(
-        ax=ax, obstacle_container=obstacle_environment,
-        x_lim=x_lim, y_lim=y_lim, noTicks=True
+            ax=ax,
+            obstacle_container=obstacle_environment,
+            x_lim=x_lim,
+            y_lim=y_lim,
+            noTicks=True,
         )
 
     main_avoider = FastObstacleAvoider(obstacle_environment=obstacle_environment)
@@ -273,7 +276,9 @@ def main_vectorfield_starshaped(
         if main_avoider.normal_direction is not None:
             norm_dirs = main_avoider.normal_direction
 
-        deviation[it] = np.arcsin(np.cross(ref_dirs, norm_dirs))
+        deviation[it] = np.arcsin(
+            np.cross(ref_dirs / LA.norm(ref_dirs), norm_dirs / LA.norm(norm_dirs))
+        )
 
     pcm = axs[0].contourf(
         x_vals,
@@ -292,12 +297,17 @@ def main_vectorfield_starshaped(
         pcm,
         ax=axs[0],
         fraction=0.035,
-        # ticks=[-np.pi/8, 0, np.pi/8],
+        ticks=[-np.pi / 8, 0, np.pi / 8],
         # ticks=[-1.0, 0, 1.0],
-        ticks=[-0.5, 0, 0.5],
+        # ticks=[-0.5, 0, 0.5],
         extend="neither",
     )
-    # cbar.ax.set_yticklabels([r"$-\frac{\pi}{8}$", "0", r"$\frac{\pi}{8}$"])
+    cbar.ax.set_yticklabels([r"$-\frac{\pi}{8}$", "0", r"$\frac{\pi}{8}$"])
+    # cbar.set_label(r"sin${}^{-1}(\mathbf{r} \times \mathbf{n})$")
+    # cbar.ax.set_title(r"sin${}^{-1}(\mathbf{r} \times \mathbf{n})$", loc='left')
+    # cbar.ax.set_title(r"$\mathbf{r} \times \mathbf{n}$", loc='left')
+    # cbar.set_label("a", loc='left')
+    # cbar.ax.set_xlabel("a")
 
     initial_dynamics = LinearSystem(
         # attractor_position=np.array([3, -3]), maximum_velocity=0.8)
@@ -308,6 +318,7 @@ def main_vectorfield_starshaped(
     main_avoider = FastObstacleAvoider(obstacle_environment=obstacle_environment)
 
     plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
+    print("Safisave")
 
 
 if (__name__) == "__main__":

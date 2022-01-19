@@ -32,34 +32,35 @@ class FastObstacleAvoider(SingleModulationAvoider):
             from scipy.spatial.transform import Rotation as R
 
         self.consider_relative_velocity = True
-        
 
     @property
     def dimension(self):
         return self.obstacle_environment.dimension
 
     def update_relative_velocity(self, weights, position):
-        """ Update linear and angular velocity (without deformation). """
+        """Update linear and angular velocity (without deformation)."""
         linear_velocities = np.zeros((self.dimension, weights.shape[0]))
         angular_velocities = np.zeros((weights.shape[0]))
-        
+
         for it, obs in enumerate(self.obstacle_environment):
             if weights[it] <= 0:
                 continue
-            
-            linear_velocities[:, it]  = obs.linear_velocity
-            angular_velocities[it]  = obs.angular_velocity
+
+            linear_velocities[:, it] = obs.linear_velocity
+            angular_velocities[it] = obs.angular_velocity
 
         if any(angular_velocities):
             warnings.warn("Not yet implemented for angular velocity.")
 
-        self.relative_velocity = np.sum((
-            np.tile(weights, (linear_velocities.shape[0], 1)) * linear_velocities), axis=1)
-        
+        self.relative_velocity = np.sum(
+            (np.tile(weights, (linear_velocities.shape[0], 1)) * linear_velocities),
+            axis=1,
+        )
+
         return self.relative_velocity
 
     def update_reference_direction(self, in_robot_frame=True, position=None):
-        """ Take position from robot position if not given as argument."""
+        """Take position from robot position if not given as argument."""
         if position is None:
             if in_robot_frame:
                 position = np.zeros(self.obstacle_environment.dimension)
@@ -105,8 +106,43 @@ class FastObstacleAvoider(SingleModulationAvoider):
         if self.robot is not None:
             self.robot.retrieved_obstacles()
 
+    # def passpass():
     def update_normal_direction(self, ref_dirs, norm_dirs, weights) -> np.ndarray:
-        """Update the normal direction of an obstacle."""
+        """Update normal direction as mentioned in the paper xy."""
+        delta_normals = norm_dirs - ref_dirs
+        delta_normal = np.sum(
+            delta_normals * np.tile(weights, (delta_normals.shape[0], 1)), axis=1
+        )
+
+        dot_prod = (-1) * (
+            np.dot(delta_normal, self.reference_direction)
+            / (LA.norm(delta_normal) * LA.norm(self.reference_direction))
+        )
+
+        if dot_prod < np.sqrt(2) / 2:
+            normal_scaling = 1
+        else:
+            normal_scaling = np.sqrt(2) * dot_prod
+
+        self.normal_direction = (
+            normal_scaling
+            * self.reference_direction
+            / LA.norm(self.reference_direction)
+            + delta_normal
+        )
+        self.normal_direction = self.normal_direction / LA.norm(self.normal_direction)
+
+        return self.normal_direction
+
+    # def update_normal_direction(self, ref_dirs, norm_dirs, weights) -> np.ndarray:
+    def update_normal_direction_with_relative_rotation(
+        self, ref_dirs, norm_dirs, weights
+    ) -> np.ndarray:
+        """Update the normal direction of an obstacle.
+        This approach is based on relative rotation, it would potentially be nicer,
+        but we could not extend it to d>3."""
+        # breakpoint()
+
         if self.obstacle_environment.dimension == 2:
             norm_angles = np.cross(ref_dirs, norm_dirs, axisa=0, axisb=0)
 
