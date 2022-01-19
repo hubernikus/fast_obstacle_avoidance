@@ -37,6 +37,7 @@ def double_plot(
             x_lim=x_lim,
             y_lim=y_lim,
             noTicks=True,
+            draw_reference=True,
         )
 
     main_avoider = FastObstacleAvoider(obstacle_environment=obstacle_environment)
