@@ -226,6 +226,7 @@ class SingleModulationAvoider:
             initial_velocity = initial_velocity - self.relative_velocity
 
         if not LA.norm(initial_velocity):
+            breakpoint()
             # Trivial velocity modulation
             if self.relative_velocity is None:
                 return initial_velocity
