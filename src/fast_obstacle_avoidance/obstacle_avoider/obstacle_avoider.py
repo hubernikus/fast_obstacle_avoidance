@@ -78,10 +78,11 @@ class FastObstacleAvoider(SingleModulationAvoider):
 
         for it, obs in enumerate(self.obstacle_environment):
             norm_dirs[:, it] = obs.get_normal_direction(position, in_global_frame=True)
-
             ref_dirs[:, it] = (-1) * obs.get_reference_direction(
                 position, in_global_frame=True
             )
+
+            # breakpoint()
 
             relative_distances[it] = obs.get_gamma(position, in_global_frame=True) - 1
 
