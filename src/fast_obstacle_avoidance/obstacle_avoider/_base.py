@@ -73,7 +73,8 @@ class StretchingMatrixFunctor(ABC):
 
         weight_normvel = np.maximum(
             0, np.dot(normal_direction, initial_velocity)
-        ) / LA.norm(initial_velocity)
+            ) / LA.norm(initial_velocity)
+            
 
         if self.free_tail_flow and weight_normvel:
             # breakpoint()
@@ -221,12 +222,19 @@ class SingleModulationAvoider:
 
             inv_decomposition = LA.pinv(decomposition_matrix)
 
+        if self.relative_velocity is not None:
+            initial_velocity = initial_velocity - self.relative_velocity
+
+        if not LA.norm(initial_velocity):
+            # Trivial velocity modulation
+            if self.relative_velocity is None:
+                return initial_velocity
+            else:
+                return (initial_velocity + self.relative_velocity)
+            
         stretching_matrix = self.stretching_matrix.get(
             ref_norm, self.reference_direction, self.normal_direction, initial_velocity
         )
-
-        if self.relative_velocity is not None:
-            initial_velocity = initial_velocity - self.relative_velocity
 
         modulated_velocity = inv_decomposition @ initial_velocity
         modulated_velocity = stretching_matrix @ modulated_velocity
@@ -234,7 +242,7 @@ class SingleModulationAvoider:
 
         # TODO: limit velocity with respect to maximum velocity
         if self.relative_velocity is not None:
-            initial_velocity = initial_velocity - self.relative_velocity
+            initial_velocity = initial_velocity + self.relative_velocity
 
         if limit_velocity_magnitude:
             mod_norm = LA.norm(modulated_velocity)
