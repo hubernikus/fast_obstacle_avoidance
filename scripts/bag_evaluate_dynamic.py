@@ -240,7 +240,7 @@ def main_animator(
         robot=qolo,
     )
 
-    main_animator.run(save_animation=True)
+    # main_animator.run(save_animation=False)
     # main_animator.run(save_animation=True)
     # main_animator.update_step(ii=0)
 
@@ -250,6 +250,13 @@ def animator_office_room():
                   start_position=np.array([-0.5, 1.5]),
                   attractor_position=np.array([3, -1])
                   )
+
+def evaluation_shared_control():
+    main_animator(bag_name="2021-12-23-18-23-16.bag",
+                  start_position=np.array([-0.5, 1.5]),
+                  attractor_position=np.array([3, -1])
+                  )
+
 
 
 if (__name__) == "__main__":
