@@ -14,11 +14,16 @@ from ._base import SingleModulationAvoider
 
 
 class FastLidarAvoider(SingleModulationAvoider):
-    """To proof:
+    """
+    To proof:
     -> reference direction becomes normal (!) when getting very close (!)
     -> obstacle is being avoided when very close(!) [reference -> normal]
     -> No local minima (and maybe even convergence to attractor)
     -> add slight repulsion along the normal direction (when getting closer)
+
+    TODO:
+    > put into 'global' frame, robot updates faster than laserscan;
+    >>> hence global frame is needed
     """
 
     def __init__(self, robot: BaseRobot, evaluate_normal: bool = False, *args, **kwargs) -> None:

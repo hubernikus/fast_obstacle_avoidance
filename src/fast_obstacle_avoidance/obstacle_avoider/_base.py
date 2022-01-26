@@ -25,6 +25,9 @@ class StretchingMatrixFunctor(ABC):
 
     def get_weight_vel(self, reference_dir, velocity):
         """ Returns velocity weight weight(<reference_dir, velocity>) [-1, 1] -> [0, 1]"""
+        if not LA.norm(reference_dir) or not LA.norm(velocity):
+            return 0
+        
         return np.maximum(
             0.0, (np.dot(reference_dir, velocity)
                   / (LA.norm(reference_dir) * LA.norm(velocity)))
