@@ -22,8 +22,15 @@ from fast_obstacle_avoidance.control_robot import QoloRobot
 
 
 def double_plot(
-    obstacle_environment, x_lim=[-5, 5], y_lim=[-5, 5], n_grid=40, plot_normal=False
+    obstacle_environment,
+    x_lim=[-5, 5],
+    y_lim=[-5, 5],
+    n_grid=40,
+    plot_normal=False,
+    attractor_position=None,
 ):
+    if attractor_position is None:
+        attractor_position = np.array([4, -0.1])
 
     fig, axs = plt.subplots(1, 2, figsize=(12, 6))
 
@@ -44,7 +51,7 @@ def double_plot(
 
     initial_dynamics = LinearSystem(
         # attractor_position=np.array([3, -3]), maximum_velocity=0.8)
-        attractor_position=np.array([4, -0.1]),
+        attractor_position=attractor_position,
         maximum_velocity=0.8,
     )
 
@@ -199,7 +206,9 @@ def main_vectorfield_multi_circle(
 
 
 def main_vectorfield_starshaped(
-    x_lim=[-5, 5], y_lim=[-5, 5], figure_name="vectorfield_starshaped"
+    x_lim=[-5, 5],
+    y_lim=[-5, 5],
+    figure_name="vectorfield_starshaped",
 ):
     obstacle_environment = ObstacleContainer()
     obstacle_environment.append(
@@ -251,11 +260,14 @@ def main_vectorfield_starshaped(
         in_global_frame=True,
     )
 
+    attractor_position = np.array([4, -0.1])
+
     fig, axs = double_plot(
         obstacle_environment,
         x_lim=x_lim,
         y_lim=y_lim,
         n_grid=30,
+        attractor_position=attractor_position,
         # plot_normal=True
     )
 
@@ -267,6 +279,22 @@ def main_vectorfield_starshaped(
     main_avoider = FastObstacleAvoider(obstacle_environment=obstacle_environment)
     positions = np.vstack((x_vals.reshape(1, -1), y_vals.reshape(1, -1)))
     deviation = np.zeros((positions.shape[1]))
+
+    # DEBUG
+    if False:
+        # position = np.array([0, 0])
+        position = np.array([2.932, 0.858])
+        main_avoider.update_reference_direction(position=position)
+        initial_dynamics = LinearSystem(
+            # attractor_position=np.array([3, -3]), maximum_velocity=0.8)
+            attractor_position=attractor_position,
+            maximum_velocity=0.8,
+        )
+
+        initial_vel = initial_dynamics.evaluate(position=position)
+
+        mod_vel = main_avoider.avoid(initial_vel)
+        breakpoint()
 
     # if False:
     for it in range(positions.shape[1]):
@@ -298,12 +326,12 @@ def main_vectorfield_starshaped(
         pcm,
         ax=axs[0],
         fraction=0.035,
-        ticks=[-np.pi / 8, 0, np.pi / 8],
+        ticks=[-np.pi / 4, 0, np.pi / 4],
         # ticks=[-1.0, 0, 1.0],
         # ticks=[-0.5, 0, 0.5],
         extend="neither",
     )
-    cbar.ax.set_yticklabels([r"$-\frac{\pi}{8}$", "0", r"$\frac{\pi}{8}$"])
+    cbar.ax.set_yticklabels([r"$-\frac{\pi}{4}$", "0", r"$\frac{\pi}{4}$"])
     # cbar.set_label(r"sin${}^{-1}(\mathbf{r} \times \mathbf{n})$")
     # cbar.ax.set_title(r"sin${}^{-1}(\mathbf{r} \times \mathbf{n})$", loc='left')
     # cbar.ax.set_title(r"$\mathbf{r} \times \mathbf{n}$", loc='left')
@@ -312,7 +340,7 @@ def main_vectorfield_starshaped(
 
     initial_dynamics = LinearSystem(
         # attractor_position=np.array([3, -3]), maximum_velocity=0.8)
-        attractor_position=np.array([4, -0.1]),
+        attractor_position=attractor_position,
         maximum_velocity=0.8,
     )
 
@@ -322,9 +350,78 @@ def main_vectorfield_starshaped(
     print("Safisave")
 
 
+def main_vectorfield_multi_ellipse(
+    # x_lim=[-2, 2], y_lim=[-2, 2],
+    x_lim=[-1, 0],
+    y_lim=[-1, 0],
+    figure_name="multi_ellipse_comparison",
+):
+    n_ellipse = 10
+
+    obstacle_environment = ObstacleContainer()
+    for ii in range(n_ellipse):
+        delta_ang = ii * 2 * np.pi / n_ellipse
+
+        pos = np.array([np.cos(delta_ang), np.sin(delta_ang)])
+
+        obstacle_environment.append(
+            Ellipse(
+                center_position=pos,
+                axes_length=np.array([0.6, 0.12]),
+                orientation=(delta_ang + 50 * pi / 180),
+                tail_effect=False,
+            )
+        )
+
+        obstacle_environment[-1].set_reference_point(
+            np.array([-obstacle_environment[-1].axes_length[0] * 0.8, 0]),
+            in_global_frame=False,
+        )
+
+    double_plot(
+        obstacle_environment,
+        x_lim=x_lim,
+        y_lim=y_lim,
+        n_grid=30,
+        attractor_position=np.array([0, 0]),
+    )
+
+    plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
+
+
+def main_vectorfield_single_ellipse(
+    x_lim=[-2, 2], y_lim=[-2, 2], figure_name="single_ellipse_with_reference"
+):
+    obstacle_environment = ObstacleContainer()
+    obstacle_environment.append(
+        Ellipse(
+            center_position=np.array([-0, 0.0]),
+            axes_length=np.array([1.0, 0.4]),
+            orientation=(40 * pi / 180),
+            tail_effect=False,
+        )
+    )
+    obstacle_environment[-1].set_reference_point(
+        np.array([-obstacle_environment[-1].axes_length[0] * 0.8, 0]),
+        in_global_frame=False,
+    )
+
+    double_plot(
+        obstacle_environment,
+        x_lim=x_lim,
+        y_lim=y_lim,
+        n_grid=30,
+        attractor_position=np.array([1, 0.4]),
+    )
+
+    plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
+
+
 if (__name__) == "__main__":
     # plt.close('all')
     plt.ion()
 
     # main_vectorfield_multi_circle()
     main_vectorfield_starshaped()
+    # main_vectorfield_multi_ellipse()
+    # main_vectorfield_single_ellipse()
