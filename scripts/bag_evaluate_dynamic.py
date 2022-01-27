@@ -240,7 +240,7 @@ def main_animator(
         robot=qolo,
     )
 
-    # main_animator.run(save_animation=False)
+    main_animator.run(save_animation=False)
     # main_animator.run(save_animation=True)
     # main_animator.update_step(ii=0)
 
@@ -265,5 +265,6 @@ if (__name__) == "__main__":
 
     # main_animator()
     animator_office_room()
-
+    # evaluation_shared_control()
+    
     pass

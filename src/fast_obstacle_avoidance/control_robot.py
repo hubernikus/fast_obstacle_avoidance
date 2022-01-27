@@ -1,12 +1,15 @@
 """
 Various Robot models
 """
+import os
+
 from dataclasses import dataclass, field
 
 import numpy as np
 from numpy import linalg as LA
 
 from scipy.spatial.transform import Rotation
+from scipy import ndimage
 
 from vartools.states import ObjectPose
 
@@ -89,9 +92,17 @@ class QoloRobot(BaseRobot):
 
     # [WARNING] (min) lidar radius is around 0.47 - BUT door width is 0.97
     def __init__(self, pose: ObjectPose = None):
+        self.dimension = 2
+
+        self.robot_image = None
+        
         self._got_new_scan = False
         self._got_new_obstacles = True
-        self.pose = pose
+        
+        if pose is None:
+            self.pose = ObjectPose(position=np.zeros(self.dimension))
+        else:
+            self.pose = pose
 
         # self.control_points: np.ndarray = np.array([[0.035, 0]]).T
         self.control_points: np.ndarray = np.array([[0.035, 0]]).T
@@ -117,8 +128,15 @@ class QoloRobot(BaseRobot):
         self.laser_data = {}
         self.robot_image = None
 
+        self.intensity_data = {}
+
         # Maximum normalization - above this full repulsion is taking effect!
         self.weight_max_norm = 6.99580150e+04
+
+    @property
+    def rotation_matrix(self):
+        cos_, sin_ = np.cos(self.pose.orientation), np.sin(self.pose.orientation)
+        return np.array([[cos_, sin_], [(-1)*sin_, cos_]])
 
     @property
     def has_newscan(self):
@@ -131,20 +149,37 @@ class QoloRobot(BaseRobot):
     def retrieved_obstacles(self):
         self._got_new_obstacles = False
 
-    def get_allscan(self):
-        self._got_new_scan = False
-        return np.hstack([scan for scan in self.laser_data.values()])
+    def get_all_intensities(self):
+        return np.hstack([insenties for insenties in  self.intensity_data.values()])
 
-    def set_laserscan(self, data, topic_name):
+    def get_allscan(self, in_robot_frame=True):
+        self._got_new_scan = False
+        laserscan = np.hstack([scan for scan in self.laser_data.values()])
+
+        if not in_robot_frame:
+            if LA.norm(self.pose.orientation):
+                laserscan = self.rotation_matrix.T @ laserscan
+
+            if LA.norm(self.pose.position):
+                # laserscan = self.pose.transform_position_from_local_to_reference(laserscan)
+                laserscan = laserscan + np.tile(self.pose.position, (laserscan.shape[1], 1)).T
+            
+        return laserscan
+
+    def set_laserscan(self, data, topic_name, save_intensity=False):
         try:
             self.laser_data[topic_name] = laserscan_to_numpy(
                 data, pose=self.laser_poses[topic_name]
             )
-            self._got_new_scan = True
-
         except KeyError:
             print("Key <{topic_name}> not found; nothing was updated.")
             return
+
+        self._got_new_scan = True
+
+        if save_intensity:
+            is_finite = np.isfinite(np.array(data.ranges))
+            self.intensity_data[topic_name] = np.squeeze(np.array(data.intensities))[is_finite]
 
     def set_crowdtracker(
         self,
@@ -206,3 +241,37 @@ class QoloRobot(BaseRobot):
             self.obstacle_environment.append(human_obs)  # TODO: add robot margin
 
         self._got_new_obstacles = True
+
+
+    def plot_robot(self, ax, bag_dir='figures/qolo'):
+        if self.robot_image is None:
+            import matplotlib.image as mpimg
+            self.robot_image = (mpimg.imread(os.path.join(bag_dir, 'Qolo_T_CB_top_bumper.png'))
+                *255
+                ).astype('uint8')
+
+            # Length of robot
+            # self.length_x = 0.92817
+            self.length_x = 1019.23*1e-3
+            self.length_y = (self.robot_image.shape[0]/self.robot_image.shape[1] * self.length_x)
+
+            self.pose_reference = np.array([-self.length_x/2 * 341.23*1e-3, 0])
+
+        rot = self.pose.orientation
+        img_rotated = ndimage.rotate(self.robot_image, rot*180.0/np.pi, cval=255)
+
+        lenght_x_rotated = (np.abs(np.cos(rot))*self.length_x + 
+                            np.abs(np.sin(rot))*self.length_y )
+        
+        lenght_y_rotated = (np.abs(np.sin(rot))*self.length_x + 
+                            np.abs(np.cos(rot))*self.length_y )
+        
+        pos_ref = self.rotation_matrix.T @ self.pose_reference
+        pos_ref = pos_ref + self.pose.position
+        
+        ax.imshow(img_rotated, extent=[
+            pos_ref[0] - lenght_x_rotated/2.0,
+            pos_ref[0] + lenght_x_rotated/2.0,
+            pos_ref[1] - lenght_y_rotated/2.0,
+            pos_ref[1] + lenght_y_rotated/2.0
+            ], zorder=-2)
