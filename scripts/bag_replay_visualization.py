@@ -316,7 +316,7 @@ def evaluate_bag(
                 break
 
             elif m == ":":
-                # Minute -> seconds
+                # Transform minutes to seconds [rest the minute string]
                 duration = 60 * float(duration_str)
                 duration_str = ""
                 continue
@@ -326,7 +326,7 @@ def evaluate_bag(
 
     it_max = int(duration / dt_simulation)
 
-    qolo = qolo = QoloRobot(
+    qolo = QoloRobot(
         pose=ObjectPose(position=np.array([0, 0]), orientation=0 * np.pi / 180)
     )
 
@@ -352,38 +352,7 @@ def evaluate_bag(
     # replayer.run(save_animation=True)
 
 
-first_simulation_options = {
-    "bag_dir": "../data_qolo/indoor_working/",
-    "bag_name": "2022-01-24-18-33-30.bag",
-    # "x_lim": [-9.5, 1.5],
-    # "y_lim": [-4.0, 4.0],
-    # "t_max": 58,
-    "dt_simulation": 0.1,
-    # "animation_name": "animation_first_indoor",
-}
-
-second_simulation_options = {
-    "bag_dir": "../data_qolo/indoor_working/",
-    "bag_name": "2022-01-24-18-34-48.bag",
-    "x_lim": [-9.0, 2.0],
-    "y_lim": [-3.0, 5.0],
-    "t_max": 15,
-    "dt_simulation": 0.1,
-    "animation_name": "animation_second_indoor",
-}
-
-Third_simulation_options = {
-    "bag_dir": "../data_qolo/indoor_working/",
-    "bag_name": "2022-01-26-18-21-31.bag",
-    # "x_lim": [-9.0, 3.0],
-    # "y_lim": [-3.0, 5.0],
-    # "t_max": 100,
-    "dt_simulation": 0.1,
-    # "animation_name": "animation_upperbody_first",
-}
-
-
-def evaluate_multibags(
+def evaluate_multibags_outdoor(
     bag_dir="../data_qolo/marketplace_lausanne_2022_01_28/",
     save_animation=True,
     dt_evaluation=0.1,
@@ -412,11 +381,43 @@ def evaluate_multibags(
         )
 
 
+def evaluate_multibags_indoor(
+    bag_dir="../data_qolo/indoor_with_david_2022_01/",
+    # bag_dir="../data_qolo/indoor_working/",
+    save_animation=True,
+    dt_evaluation=0.1,
+    # plot_width_x=11, plot_width_y=8,
+    # plot_width_x=18, plot_width_y=12,
+    plot_width_x=16,
+    plot_width_y=9,
+    #
+):
+    """This script is for batch-processing of the ros-bag recording with the qolo."""
+    # Use aspect ratio of 16:9 [youtube standard ration] for x_lim / y_lim
+    # bag_list = glob.glob(bag_dir + "/*.bag")
+    bag_list = os.listdir(bag_dir)
+
+    for bag_name in bag_list:
+        print(f"Trying bag {bag_name}")
+        my_bag = rosbag.Bag(bag_dir + bag_name)
+
+        evaluate_bag(
+            my_bag,
+            bag_name=bag_name,
+            bag_dir=bag_dir,
+            save_animation=save_animation,
+            dt_simulation=dt_evaluation,
+            plot_width_x=plot_width_x,
+            plot_width_y=plot_width_y,
+        )
+
+
 if (__name__) == "__main__":
     plt.close("all")
     plt.ion()
 
-    evaluate_multibags()
+    # evaluate_multibags_outdoor()
+    evaluate_multibags_indoor()
 
     evaluate_single_bag = False
     if evaluate_single_bag:
