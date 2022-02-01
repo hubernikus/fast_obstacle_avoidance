@@ -106,7 +106,8 @@ class ReplayQoloCording(Animator):
         my_bag,
         x_lim=None,
         y_lim=None,
-        plot_width_x = 11, plot_width_y = 8,
+        plot_width_x=11,
+        plot_width_y=8,
         position_storing_length=50,
     ):
         self.robot = robot
@@ -139,7 +140,6 @@ class ReplayQoloCording(Animator):
         self.position_list = np.tile(
             self.robot.pose.position, (position_storing_length, 1)
         ).T
-        
 
     def update_step(self, ii):
         self.ii = ii
@@ -177,7 +177,6 @@ class ReplayQoloCording(Animator):
             alpha=0.6,
         )
 
-        
         laserscan = self.robot.get_allscan(in_robot_frame=False)
 
         if laserscan.shape[1]:
@@ -202,28 +201,37 @@ class ReplayQoloCording(Animator):
             # Just define both if one is not defined
             sensor_center = np.mean(laserscan, axis=1)
 
-            self.x_lim = [sensor_center[0] - self.width_x/2,
-                          sensor_center[0] + self.width_x/2]
+            self.x_lim = [
+                sensor_center[0] - self.width_x / 2,
+                sensor_center[0] + self.width_x / 2,
+            ]
 
-            self.y_lim = [sensor_center[1] - self.width_y/2,
-                          sensor_center[1] + self.width_y/2]
-        
+            self.y_lim = [
+                sensor_center[1] - self.width_y / 2,
+                sensor_center[1] + self.width_y / 2,
+            ]
 
         # Check offset and potentially adapt
-        fraction_to_adapt_plot_limits = 1./3
-        if (abs(np.mean(self.x_lim) - self.robot.pose.position[0])
-            > fraction_to_adapt_plot_limits * (self.x_lim[1]-self.x_lim[0])):
+        fraction_to_adapt_plot_limits = 1.0 / 3
+        if abs(
+            np.mean(self.x_lim) - self.robot.pose.position[0]
+        ) > fraction_to_adapt_plot_limits * (self.x_lim[1] - self.x_lim[0]):
             sensor_center = np.mean(laserscan, axis=1)
 
-            self.x_lim = [sensor_center[0] - self.width_x/2,
-                          sensor_center[0] + self.width_x/2]
+            self.x_lim = [
+                sensor_center[0] - self.width_x / 2,
+                sensor_center[0] + self.width_x / 2,
+            ]
 
-        if (abs(np.mean(self.y_lim) - self.robot.pose.position[1])
-            > fraction_to_adapt_plot_limits * (self.y_lim[1]-self.y_lim[0])):
+        if abs(
+            np.mean(self.y_lim) - self.robot.pose.position[1]
+        ) > fraction_to_adapt_plot_limits * (self.y_lim[1] - self.y_lim[0]):
             sensor_center = np.mean(laserscan, axis=1)
 
-            self.y_lim = [sensor_center[1] - self.width_y/2,
-                          sensor_center[1] + self.width_y/2]
+            self.y_lim = [
+                sensor_center[1] - self.width_y / 2,
+                sensor_center[1] + self.width_y / 2,
+            ]
 
         self.ax.set_xlim(self.x_lim)
         self.ax.set_ylim(self.y_lim)
@@ -297,26 +305,27 @@ def evaluate_bag(
     bag_path = bag_dir + bag_name
 
     # Get duration
-    stream = os.popen(f'rosbag info {bag_path} | grep duration')
+    stream = os.popen(f"rosbag info {bag_path} | grep duration")
     output = stream.read()
-    
+
     duration = 0
     duration_str = ""
     for m in output:
         if len(duration_str) > 0 or m.isdigit():
-            if m=="s":
+            if m == "s":
                 break
-            
+
             elif m == ":":
-                # Minute / hour
-                duration = 60*float(duration_str)
+                # Minute -> seconds
+                duration = 60 * float(duration_str)
+                duration_str = ""
                 continue
-                
+
             duration_str = duration_str + m
     duration = duration + float(duration_str)
 
     it_max = int(duration / dt_simulation)
-    
+
     qolo = qolo = QoloRobot(
         pose=ObjectPose(position=np.array([0, 0]), orientation=0 * np.pi / 180)
     )
@@ -373,16 +382,18 @@ Third_simulation_options = {
     # "animation_name": "animation_upperbody_first",
 }
 
+
 def evaluate_multibags(
     bag_dir="../data_qolo/marketplace_lausanne_2022_01_28/",
     save_animation=True,
     dt_evaluation=0.1,
     # plot_width_x=11, plot_width_y=8,
     # plot_width_x=18, plot_width_y=12,
-    plot_width_x=16, plot_width_y=9,
-    # 
-    ):
-    """ This script is for batch-processing of the ros-bag recording with the qolo."""
+    plot_width_x=16,
+    plot_width_y=9,
+    #
+):
+    """This script is for batch-processing of the ros-bag recording with the qolo."""
     # Use aspect ratio of 16:9 [youtube standard ration] for x_lim / y_lim
     # bag_list = glob.glob(bag_dir + "/*.bag")
     bag_list = os.listdir(bag_dir)
@@ -399,7 +410,6 @@ def evaluate_multibags(
             plot_width_x=plot_width_x,
             plot_width_y=plot_width_y,
         )
-
 
 
 if (__name__) == "__main__":
