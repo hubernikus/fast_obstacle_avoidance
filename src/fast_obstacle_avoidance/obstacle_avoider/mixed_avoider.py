@@ -21,11 +21,14 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
         # One for obstacles one for environments
         self.lidar_avoider = FastLidarAvoider(self.robot, evaluate_normal)
         self.obstacle_avoider = FastObstacleAvoider(
-            self.robot.obstacle_environment, robot=self.robot)
+            self.robot.obstacle_environment, robot=self.robot
+        )
 
         self.evaluate_normal = evaluate_normal
 
         self._got_new_scan = True
+
+        self.laserscan = None
 
     @property
     def dimension(self):
@@ -40,9 +43,12 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
             self.laserscan = self.robot.get_allscan()
             self._got_new_scan = True
 
-    def update_reference_direction(self, in_robot_frame=True):
+    def update_reference_direction(self, laserscan=None, in_robot_frame=True):
         """Clean up lidar first (remove inside obstacles)
         and then get reference, once for the avoider."""
+        if laserscan is not None:
+            self.update_laserscan(laserscan)
+
         if not self._got_new_scan and not self.robot.has_new_obstacles:
             # Nothing as changed - keep existing laserscan
             return self.reference_direction
@@ -62,7 +68,7 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
             self.lidar_avoider.distance_weight_sum,
             self.obstacle_avoider.distance_weight_sum,
         ]
-        
+
         if np.sum(weights) > 1:
             weights = weights / np.sum(weights)
 
@@ -73,13 +79,13 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
 
         if self.lidar_avoider.relative_velocity is not None:
             raise NotImplementedError("Not implemented for relative lidar velocity.")
-        
+
         # Update velocity
         if self.obstacle_avoider.relative_velocity is not None:
             self.relative_velocity = (
-                weights[1]*self.obstacle_avoider.relative_velocity
-                )
-            
+                weights[1] * self.obstacle_avoider.relative_velocity
+            )
+
         # Potentially update normal direction
         if self.evaluate_normal:
             ref_norm = LA.norm(self.reference_direction)
