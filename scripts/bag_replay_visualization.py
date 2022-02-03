@@ -25,6 +25,8 @@ from vartools.states import ObjectPose
 from vartools.dynamical_systems import LinearSystem
 from vartools.animator import Animator
 
+from dynamic_obstacle_avoidance.visualization import plot_obstacles
+
 from fast_obstacle_avoidance.control_robot import QoloRobot
 from fast_obstacle_avoidance.utils import laserscan_to_numpy
 from fast_obstacle_avoidance.obstacle_avoider import FastLidarAvoider
@@ -44,17 +46,7 @@ class ReplayQoloCording(Animator):
         self.start_time = None
         self.pos_start = None
 
-        for topic, msg, t in my_bag.read_messages(
-            topics=[
-                "/front_lidar/scan",
-                "/rear_lidar/scan",
-                "/rwth_tracker/tracked_persons",
-                "/qolo/user_commands",  # -> input
-                "/qolo/remote_commands",  # -> output
-                # "/qolo/twist", # (? and this?)
-                "/qolo/pose2D",
-            ]
-        ):
+        for topic, msg, t in my_bag.read_messages(topics=self.topic_names):
 
             if self.start_time is None:
                 self.start_time = t.to_sec()
@@ -67,12 +59,7 @@ class ReplayQoloCording(Animator):
             if topic == "/front_lidar/scan" or topic == "/rear_lidar/scan":
                 self.robot.set_laserscan(msg, topic_name=topic, save_intensity=True)
 
-            if topic == "/rwth_tracker/tracked_persons":
-                breakpoint
-                # msg_persons = msg
-
             if topic == "/qolo/pose2D":
-                msg_qolo = msg
                 self.robot.pose.position = np.array([msg.x, msg.y])
                 self.robot.pose.orientation = msg.theta
 
@@ -97,6 +84,10 @@ class ReplayQoloCording(Animator):
                     self.robot.rotation_matrix.T @ self.modulated_velocity
                 )
 
+            if topic == "/rwth_tracker/tracked_persons":
+                breakpoint()
+                self.robot.set_crowdtracker(msg)
+
         # All done - no iteration possible anymore
         yield 1
 
@@ -109,12 +100,27 @@ class ReplayQoloCording(Animator):
         plot_width_x=11,
         plot_width_y=8,
         position_storing_length=50,
+        topic_names=None,
     ):
         self.robot = robot
 
         self.it_pos = 0
 
         self.static_laserscan = None
+
+        if topic_names is None:
+            self.topic_names = [
+                "/front_lidar/scan",
+                "/rear_lidar/scan",
+                "/rwth_tracker/tracked_persons",
+                "/qolo/user_commands",  # -> input
+                "/qolo/remote_commands",  # -> output
+                # '/qolo/twist', # (? and this?)
+                "/qolo/pose2D",
+                "/rwth_tracker/tracked_persons",
+            ]
+        else:
+            self.topic_names = topic_names
 
         self.fig, self.ax = plt.subplots(figsize=(16, 10))
         self.obstacle_color = np.array([177, 124, 124]) / 255.0
@@ -142,6 +148,7 @@ class ReplayQoloCording(Animator):
         ).T
 
     def update_step(self, ii):
+        """Do one update step."""
         self.ii = ii
         self.simulation_time = (self.ii + 1) * self.dt_simulation
 
@@ -233,8 +240,26 @@ class ReplayQoloCording(Animator):
                 sensor_center[1] + self.width_y / 2,
             ]
 
-        self.ax.set_xlim(self.x_lim)
-        self.ax.set_ylim(self.y_lim)
+        # Plot obstacles (or at least limit environment)
+        if (
+            self.robot.obstacle_environment is None
+            or (self.robot.obstacle_environment) == 0
+        ):
+            self.ax.set_xlim(self.x_lim)
+            self.ax.set_ylim(self.y_lim)
+            self.ax.set_aspect("equal")
+
+        else:
+            plot_obstacles(
+                self.ax,
+                self.robot.obstacle_environment,
+                showLabel=False,
+                draw_reference=True,
+                velocity_arrow_factor=1.0,
+                # noTicks=True,
+                x_lim=self.x_lim,
+                y_lim=self.y_lim,
+            )
 
         self.ax.text(
             self.x_lim[1] - 0.1 * (self.x_lim[1] - self.x_lim[0]),
@@ -352,7 +377,7 @@ def evaluate_bag(
     # replayer.run(save_animation=True)
 
 
-def evaluate_multibags_outdoor(
+def evaluate_multibags_outdoor_all(
     bag_dir="../data_qolo/marketplace_lausanne_2022_01_28/",
     save_animation=True,
     dt_evaluation=0.1,
@@ -368,6 +393,45 @@ def evaluate_multibags_outdoor(
     bag_list = os.listdir(bag_dir)
 
     for bag_name in bag_list:
+        my_bag = rosbag.Bag(bag_dir + bag_name)
+
+        evaluate_bag(
+            my_bag,
+            bag_name=bag_name,
+            bag_dir=bag_dir,
+            save_animation=save_animation,
+            dt_simulation=dt_evaluation,
+            plot_width_x=plot_width_x,
+            plot_width_y=plot_width_y,
+        )
+
+
+def evaluate_multibags_outdoor_second_take(
+    bag_dir="../data_qolo/marketplace_lausanne_2022/",
+    save_animation=True,
+    dt_evaluation=0.1,
+    # plot_width_x=11, plot_width_y=8,
+    # plot_width_x=18, plot_width_y=12,
+    plot_width_x=16,
+    plot_width_y=9,
+    #
+):
+    """This script is for batch-processing of the ros-bag recording with the qolo."""
+    # Use aspect ratio of 16:9 [youtube standard ration] for x_lim / y_lim
+    # bag_list = glob.glob(bag_dir + "/*.bag")
+    bag_list = os.listdir(bag_dir)
+
+    day_int = 3
+    month_int = 2
+
+    for bag_name in bag_list:
+        if int(bag_name[5:7]) != month_int:
+            continue
+
+        if int(int(bag_name[8:10])) != day_int:
+            continue
+
+        print(f"Doing {bag_name}")
         my_bag = rosbag.Bag(bag_dir + bag_name)
 
         evaluate_bag(
@@ -417,7 +481,8 @@ if (__name__) == "__main__":
     plt.ion()
 
     # evaluate_multibags_outdoor()
-    evaluate_multibags_indoor()
+    # evaluate_multibags_indoor_all()
+    evaluate_multibags_outdoor_second_take(save_animation=False)
 
     evaluate_single_bag = False
     if evaluate_single_bag:

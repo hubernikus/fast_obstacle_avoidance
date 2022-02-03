@@ -123,6 +123,11 @@ class FastObstacleAvoider(SingleModulationAvoider):
             delta_normals * np.tile(weights, (delta_normals.shape[0], 1)), axis=1
         )
 
+        if not LA.norm(delta_normal) or not LA.norm(self.reference_direction):
+            # Trivial case
+            self.normal_direction = np.zeros(self.reference_direction.shape)
+            return self.normal_direction
+
         dot_prod = (-1) * (
             np.dot(delta_normal, self.reference_direction)
             / (LA.norm(delta_normal) * LA.norm(self.reference_direction))
