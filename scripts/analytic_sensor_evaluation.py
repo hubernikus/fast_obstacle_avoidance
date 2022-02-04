@@ -141,7 +141,8 @@ def plot_close_summation(num_angles=100, n_points=1000):
     delta_angle = 2 * np.pi / n_points
     rad_robot = 1
 
-    min_dist_on_surf = 2 * np.sin(delta_angle / 2) * rad_robot
+    # min_dist_on_surf = 10 * np.sin(delta_angle / 2) * rad_robot
+    min_dist_on_surf = rad_robot*0.1
 
     laserscan_angles = np.linspace(-np.pi / 2, np.pi / 2, n_points)
     dy_list = np.linspace(1e-4, 10, 1000)
