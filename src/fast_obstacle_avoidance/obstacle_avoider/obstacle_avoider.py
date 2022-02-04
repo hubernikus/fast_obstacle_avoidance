@@ -61,6 +61,16 @@ class FastObstacleAvoider(SingleModulationAvoider):
 
     def update_reference_direction(self, in_robot_frame=True, position=None):
         """Take position from robot position if not given as argument."""
+        if not len(self.obstacle_environment):
+            # No obstacles found -> default reference
+            # By default we assume dim=2
+            # TODO: specified for any other case (!)
+            self.reference_direction = np.zeros(2)
+            self.normal_direction = np.zeros(self.reference_direction.shape)
+            self.norm_angle = np.zeros(self.reference_direction.shape[0] - 1)
+            self.distance_weight_sum = 0
+            return
+
         if position is None:
             if in_robot_frame:
                 position = np.zeros(self.obstacle_environment.dimension)
@@ -81,8 +91,6 @@ class FastObstacleAvoider(SingleModulationAvoider):
             ref_dirs[:, it] = (-1) * obs.get_reference_direction(
                 position, in_global_frame=True
             )
-
-            # breakpoint()
 
             relative_distances[it] = obs.get_gamma(position, in_global_frame=True) - 1
 
@@ -115,6 +123,11 @@ class FastObstacleAvoider(SingleModulationAvoider):
             delta_normals * np.tile(weights, (delta_normals.shape[0], 1)), axis=1
         )
 
+        if not LA.norm(delta_normal) or not LA.norm(self.reference_direction):
+            # Trivial case
+            self.normal_direction = np.zeros(self.reference_direction.shape)
+            return self.normal_direction
+
         dot_prod = (-1) * (
             np.dot(delta_normal, self.reference_direction)
             / (LA.norm(delta_normal) * LA.norm(self.reference_direction))
@@ -142,8 +155,6 @@ class FastObstacleAvoider(SingleModulationAvoider):
         """Update the normal direction of an obstacle.
         This approach is based on relative rotation, it would potentially be nicer,
         but we could not extend it to d>3."""
-        # breakpoint()
-
         if self.obstacle_environment.dimension == 2:
             norm_angles = np.cross(ref_dirs, norm_dirs, axisa=0, axisb=0)
 

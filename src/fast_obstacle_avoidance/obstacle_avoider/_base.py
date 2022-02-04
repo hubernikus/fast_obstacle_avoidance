@@ -24,14 +24,20 @@ class StretchingMatrixFunctor(ABC):
         self.power_weights = power_weights
 
     def get_weight_vel(self, reference_dir, velocity):
-        """ Returns velocity weight weight(<reference_dir, velocity>) [-1, 1] -> [0, 1]"""
+        """Returns velocity weight weight(<reference_dir, velocity>) [-1, 1] -> [0, 1]"""
         if not LA.norm(reference_dir) or not LA.norm(velocity):
             return 0
-        
-        return np.maximum(
-            0.0, (np.dot(reference_dir, velocity)
-                  / (LA.norm(reference_dir) * LA.norm(velocity)))
-            )**self.power_weights
+
+        return (
+            np.maximum(
+                0.0,
+                (
+                    np.dot(reference_dir, velocity)
+                    / (LA.norm(reference_dir) * LA.norm(velocity))
+                ),
+            )
+            ** self.power_weights
+        )
 
     def get_weight_importance(self, importance_variable):
         """Returns importance weight [0, infty] -> [1, 0]"""
@@ -73,8 +79,7 @@ class StretchingMatrixFunctor(ABC):
 
         weight_normvel = np.maximum(
             0, np.dot(normal_direction, initial_velocity)
-            ) / LA.norm(initial_velocity)
-            
+        ) / LA.norm(initial_velocity)
 
         if self.free_tail_flow and weight_normvel:
             # breakpoint()
@@ -226,13 +231,12 @@ class SingleModulationAvoider:
             initial_velocity = initial_velocity - self.relative_velocity
 
         if not LA.norm(initial_velocity):
-            breakpoint()
             # Trivial velocity modulation
             if self.relative_velocity is None:
                 return initial_velocity
             else:
-                return (initial_velocity + self.relative_velocity)
-            
+                return initial_velocity + self.relative_velocity
+
         stretching_matrix = self.stretching_matrix.get(
             ref_norm, self.reference_direction, self.normal_direction, initial_velocity
         )

@@ -13,7 +13,7 @@ from scipy import ndimage
 
 from vartools.states import ObjectPose
 
-from dynamic_obstacle_avoidance import containers 
+from dynamic_obstacle_avoidance import containers
 from dynamic_obstacle_avoidance.obstacles import Sphere
 
 from .utils import laserscan_to_numpy
@@ -95,10 +95,10 @@ class QoloRobot(BaseRobot):
         self.dimension = 2
 
         self.robot_image = None
-        
+
         self._got_new_scan = False
         self._got_new_obstacles = True
-        
+
         if pose is None:
             self.pose = ObjectPose(position=np.zeros(self.dimension))
         else:
@@ -131,12 +131,12 @@ class QoloRobot(BaseRobot):
         self.intensity_data = {}
 
         # Maximum normalization - above this full repulsion is taking effect!
-        self.weight_max_norm = 6.99580150e+04
+        self.weight_max_norm = 6.99580150e04
 
     @property
     def rotation_matrix(self):
         cos_, sin_ = np.cos(self.pose.orientation), np.sin(self.pose.orientation)
-        return np.array([[cos_, sin_], [(-1)*sin_, cos_]])
+        return np.array([[cos_, sin_], [(-1) * sin_, cos_]])
 
     @property
     def has_newscan(self):
@@ -150,7 +150,7 @@ class QoloRobot(BaseRobot):
         self._got_new_obstacles = False
 
     def get_all_intensities(self):
-        return np.hstack([insenties for insenties in  self.intensity_data.values()])
+        return np.hstack([insenties for insenties in self.intensity_data.values()])
 
     def get_allscan(self, in_robot_frame=True):
         self._got_new_scan = False
@@ -162,8 +162,10 @@ class QoloRobot(BaseRobot):
 
             if LA.norm(self.pose.position):
                 # laserscan = self.pose.transform_position_from_local_to_reference(laserscan)
-                laserscan = laserscan + np.tile(self.pose.position, (laserscan.shape[1], 1)).T
-            
+                laserscan = (
+                    laserscan + np.tile(self.pose.position, (laserscan.shape[1], 1)).T
+                )
+
         return laserscan
 
     def set_laserscan(self, data, topic_name, save_intensity=False):
@@ -179,7 +181,9 @@ class QoloRobot(BaseRobot):
 
         if save_intensity:
             is_finite = np.isfinite(np.array(data.ranges))
-            self.intensity_data[topic_name] = np.squeeze(np.array(data.intensities))[is_finite]
+            self.intensity_data[topic_name] = np.squeeze(np.array(data.intensities))[
+                is_finite
+            ]
 
     def set_crowdtracker(
         self,
@@ -198,12 +202,12 @@ class QoloRobot(BaseRobot):
         # Make sure not to 'overwrite' the reference (but only modify)
         if margin_absolut is None:
             margin_absolut = self.control_radiuses[0]
-        
+
         it = 0
         while it < len(self.obstacle_environment):
-            if hasattr(
-                self.obstacle_environment[it],
-                "is_human" and self.obstacle_environment[it].is_human,
+            if (
+                hasattr(self.obstacle_environment[it], "is_human")
+                and self.obstacle_environment[it].is_human
             ):
                 del self.obstacle_environment[it]
             else:
@@ -242,36 +246,44 @@ class QoloRobot(BaseRobot):
 
         self._got_new_obstacles = True
 
-
-    def plot_robot(self, ax, bag_dir='figures/qolo'):
+    def plot_robot(self, ax, bag_dir="figures/qolo"):
         if self.robot_image is None:
             import matplotlib.image as mpimg
-            self.robot_image = (mpimg.imread(os.path.join(bag_dir, 'Qolo_T_CB_top_bumper.png'))
-                *255
-                ).astype('uint8')
+
+            self.robot_image = (
+                mpimg.imread(os.path.join(bag_dir, "Qolo_T_CB_top_bumper.png")) * 255
+            ).astype("uint8")
 
             # Length of robot
             # self.length_x = 0.92817
-            self.length_x = 1019.23*1e-3
-            self.length_y = (self.robot_image.shape[0]/self.robot_image.shape[1] * self.length_x)
+            self.length_x = 1019.23 * 1e-3
+            self.length_y = (
+                self.robot_image.shape[0] / self.robot_image.shape[1] * self.length_x
+            )
 
-            self.pose_reference = np.array([-self.length_x/2 * 341.23*1e-3, 0])
+            self.pose_reference = np.array([-self.length_x / 2 * 341.23 * 1e-3, 0])
 
         rot = self.pose.orientation
-        img_rotated = ndimage.rotate(self.robot_image, rot*180.0/np.pi, cval=255)
+        img_rotated = ndimage.rotate(self.robot_image, rot * 180.0 / np.pi, cval=255)
 
-        lenght_x_rotated = (np.abs(np.cos(rot))*self.length_x + 
-                            np.abs(np.sin(rot))*self.length_y )
-        
-        lenght_y_rotated = (np.abs(np.sin(rot))*self.length_x + 
-                            np.abs(np.cos(rot))*self.length_y )
-        
+        lenght_x_rotated = (
+            np.abs(np.cos(rot)) * self.length_x + np.abs(np.sin(rot)) * self.length_y
+        )
+
+        lenght_y_rotated = (
+            np.abs(np.sin(rot)) * self.length_x + np.abs(np.cos(rot)) * self.length_y
+        )
+
         pos_ref = self.rotation_matrix.T @ self.pose_reference
         pos_ref = pos_ref + self.pose.position
-        
-        ax.imshow(img_rotated, extent=[
-            pos_ref[0] - lenght_x_rotated/2.0,
-            pos_ref[0] + lenght_x_rotated/2.0,
-            pos_ref[1] - lenght_y_rotated/2.0,
-            pos_ref[1] + lenght_y_rotated/2.0
-            ], zorder=-2)
+
+        ax.imshow(
+            img_rotated,
+            extent=[
+                pos_ref[0] - lenght_x_rotated / 2.0,
+                pos_ref[0] + lenght_x_rotated / 2.0,
+                pos_ref[1] - lenght_y_rotated / 2.0,
+                pos_ref[1] + lenght_y_rotated / 2.0,
+            ],
+            zorder=-2,
+        )
