@@ -26,7 +26,6 @@ def laserscan_to_numpy(
         msg.angle_min + delta_angle
     )
 
-    breakpoint()
     positions = np.tile(ranges, (dimension, 1)) * np.vstack(
         (np.cos(angles), np.sin(angles))
     )

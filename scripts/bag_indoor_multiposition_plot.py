@@ -99,8 +99,11 @@ class MultiPloter:
         yield 1
 
     def __init__(self, robot, my_bag, width_x, width_y, visual_times=None):
-        if visual_times:
+        if visual_times is None:
             self.visual_times = [0, 1]
+        else:
+            self.visual_times = visual_times
+            
         self.dimension = 2
 
         delta_orientation = 0 / 180.0 * np.pi
@@ -114,26 +117,39 @@ class MultiPloter:
         self.width_x = width_x
         self.width_y = width_y
 
+        self.position_list = []
+
         # Initialization of variables
         self.my_generator = self.rosbag_generator(my_bag)
-        self.ros_state = next(self.my_generator)
-
+        while (
+            self.initial_velocity is None
+            or self.modulated_velocity is None
+        ):
+            self.ros_state = next(self.my_generator)
+            print("Waiting to recieve")
+            
         self.start_time = self.ros_time
 
-    def create(self, save_figure=False, bag_name=None):
+    def create(self, save_figure=False, bag_name=None, do_subplots=True,
+               time_text=True, draw_laserscan=True):
         global_ctrl_point = np.zeros(self.dimension)
 
         # self.fig, self.ax = plt.subplots(figsize=(16, 10))
+        # Reset position list
         self.position_list = []
 
-        # self.fig, self.axs = plt.subplots(figsize=(4, 4))
-        n_cols, n_rows = 3, 2
-        self.fig, self.axs = plt.subplots(n_rows, n_cols, figsize=(7, 5))
+        if do_subplots:
+            n_cols, n_rows = 3, 2
+            # self.fig, self.axs = plt.subplots(figsize=(4, 4))
+            # self.fig, self.axs = plt.subplots(n_rows, n_cols, figsize=(7, 5))
 
         for ii, vtime in enumerate(self.visual_times):
             # self.ax = self.axs[ii % n_rows, int(ii / n_rows)]
-            self.ax = self.axs[int(ii / n_cols), ii % n_cols]
-            # self.fig, self.ax = plt.subplots(figsize=(4, 4))
+            if do_subplots:
+                self.ax = self.axs[int(ii / n_cols), ii % n_cols]
+            else:
+                # self.fig, self.ax = plt.subplots(figsize=(4, 4))
+                self.fig, self.ax = plt.subplots(figsize=(8, 8))
 
             while self.ros_time - self.start_time < vtime and not (self.ros_state):
                 self.ros_state = next(self.my_generator)
@@ -196,6 +212,7 @@ class MultiPloter:
 
                 laserscan = self.robot.get_allscan(in_robot_frame=False)
 
+            if draw_laserscan:
                 self.ax.scatter(
                     laserscan[0, :],
                     laserscan[1, :],
@@ -252,24 +269,29 @@ class MultiPloter:
 
             self.robot.plot_robot(self.ax)
 
-            self.ax.text(
-                self.x_lim[1] - 0.22 * (self.x_lim[1] - self.x_lim[0]),
-                self.y_lim[1] - 0.08 * (self.y_lim[1] - self.y_lim[0]),
-                f"{str(round(vtime - self.visual_times[0], 1))} s",
-                fontsize=10,
-                backgroundcolor="#FFFFFF",
-            )
+            if time_text:
+                self.ax.text(
+                    self.x_lim[1] - 0.22 * (self.x_lim[1] - self.x_lim[0]),
+                    self.y_lim[1] - 0.08 * (self.y_lim[1] - self.y_lim[0]),
+                    f"{str(round(vtime - self.visual_times[0], 1))} s",
+                    fontsize=10,
+                    backgroundcolor="#FFFFFF",
+                )
 
-            # if save_figure:
-            #     figure_name = "bag_snipplet_"
-            #     if bag_name is not None:
-            #         figure_name = figure_name + bag_name[:-4]
+            if not do_subplots and save_figure:
+                figure_name = "bag_snipplet_"
+                if bag_name is not None:
+                    figure_name = figure_name + bag_name[:-4]
 
-            #     figure_name = figure_name + f"_fig_{str(ii)}"
+                figure_name = figure_name + f"_fig_{str(ii)}"
 
-            #     plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
+                plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
 
         # create some space below the plots by increasing the bottom-value
+
+        if not do_subplots:
+            return
+        
         self.fig.tight_layout()
         self.fig.subplots_adjust(top=0.9, left=0.1, right=0.9, bottom=0.09)
         self.axs.flatten()[-2].legend(
@@ -295,7 +317,7 @@ def main(my_bag, bag_name):
         width_x=8,
         width_y=8,
         visual_times=[
-            # 100.2,
+            100.2,
             104.4,
             112.3,
             114.2,
@@ -308,7 +330,11 @@ def main(my_bag, bag_name):
         ],
     )
 
-    my_ploter.create(save_figure=True, bag_name=bag_name)
+    # my_ploter.create(save_figure=True, bag_name=bag_name)
+    my_ploter.create(save_figure=True, bag_name=bag_name, do_subplots=False,
+                     time_text=True,
+                     # draw_laserscan=True,
+                     )
 
     # my_ploter.ax.set_xlim([-7.4, 2.4])
     # my_ploter.ax.set_ylim([-4, 4])
