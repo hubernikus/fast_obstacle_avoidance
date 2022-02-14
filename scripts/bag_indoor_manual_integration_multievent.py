@@ -30,8 +30,6 @@ from fast_obstacle_avoidance.utils import laserscan_to_numpy
 from fast_obstacle_avoidance.obstacle_avoider import FastLidarAvoider
 from fast_obstacle_avoidance.laserscan_utils import import_first_scans
 
-# def multicolor_line():
-
 
 class MultiPloter:
     def rosbag_generator(self, my_bag, bag_dir=None, bag_name=None, dx_max=1):
@@ -54,7 +52,6 @@ class MultiPloter:
                 "/qolo/pose2D",
             ]
         ):
-
             self.ros_time = t.to_sec()
 
             if topic == "/front_lidar/scan" or topic == "/rear_lidar/scan":
@@ -65,12 +62,10 @@ class MultiPloter:
                 # msg_persons = msg
 
             if topic == "/qolo/pose2D":
+                self.got_pose = True
                 msg_qolo = msg
                 self.robot.pose.position = np.array([msg.x, msg.y])
                 self.robot.pose.orientation = msg.theta
-
-                # Add to list
-                self.position_list.append(self.robot.pose.position)
 
             # Input from user via remote / belt
             if topic == "/qolo/user_commands":
@@ -93,14 +88,39 @@ class MultiPloter:
                     self.robot.rotation_matrix.T @ self.modulated_velocity
                 )
 
+                if self.remote_command_time is None or not hasattr(
+                    self, "position_list"
+                ):
+                    self.remote_command_time = self.ros_time
+                    continue
+
+                dt = self.ros_time - self.remote_command_time
+
+                # Add to list [Note this is very slow since the list is copied often]
+                # Let us do manual integration for this
+                self.position_list.append(
+                    self.position_list[-1] + self.modulated_velocity * dt
+                )
+
+                # Update to new remote command time
+                self.remote_command_time = self.ros_time
+
+            # Yield 0, since you can still go on!
             yield 0
 
         # All done - no iteration possible anymore
         yield 1
 
-    def __init__(self, robot, my_bag, width_x, width_y, visual_times=None):
-        if visual_times:
+    def __init__(
+        self, robot, my_bag, width_x, width_y, visual_times=None, visual_center=None
+    ):
+        if visual_times is None:
             self.visual_times = [0, 1]
+        else:
+            self.visual_times = visual_times
+
+        self.visual_center = visual_center
+
         self.dimension = 2
 
         delta_orientation = 0 / 180.0 * np.pi
@@ -114,35 +134,42 @@ class MultiPloter:
         self.width_x = width_x
         self.width_y = width_y
 
-        # Initialization of variables
+        self.remote_command_time = None
+
+        # Initialization of generator and run it until first pose
         self.my_generator = self.rosbag_generator(my_bag)
-        self.ros_state = next(self.my_generator)
+        self.got_pose = False
+        while (
+            not self.got_pose
+            or self.initial_velocity is None
+            or self.modulated_velocity is None
+        ):
+            self.ros_state = next(self.my_generator)
+            print("Waiting to recieve")
 
+        # Reset position list and time
         self.start_time = self.ros_time
+        self.position_list = [self.robot.pose.position]
 
-    def create(self, save_figure=False, bag_name=None):
+    def create(
+        self,
+        save_figure=False,
+        bag_name=None,
+        draw_laserscan=False,
+    ):
         global_ctrl_point = np.zeros(self.dimension)
 
         # self.fig, self.ax = plt.subplots(figsize=(16, 10))
-        self.position_list = []
 
-        # self.fig, self.axs = plt.subplots(figsize=(4, 4))
-        n_cols, n_rows = 3, 2
-        self.fig, self.axs = plt.subplots(n_rows, n_cols, figsize=(7, 5))
+        # n_cols, n_rows = 3, 2
+        # self.fig, self.axs = plt.subplots(n_rows, n_cols, figsize=(7, 5))
+        # Insgle plot
+        self.fig, self.ax = plt.subplots(figsize=(7, 5))
 
         for ii, vtime in enumerate(self.visual_times):
-            # self.ax = self.axs[ii % n_rows, int(ii / n_rows)]
-            self.ax = self.axs[int(ii / n_cols), ii % n_cols]
-            # self.fig, self.ax = plt.subplots(figsize=(4, 4))
-
             while self.ros_time - self.start_time < vtime and not (self.ros_state):
                 self.ros_state = next(self.my_generator)
                 continue
-
-            # Draw big marker
-            # self.ax.plot(self.robot.pose.position[0],
-            # self.robot.pose.position[1],
-            # 'ko')
 
             max_vel = 1.0
             if LA.norm(self.initial_velocity) > max_vel:
@@ -160,38 +187,32 @@ class MultiPloter:
             arrow_width = 0.07
             arrow_headwith = 0.4
             margin_velocity_plot = 1e-3
+
+            # robot_position = self.robot.pose.position
+            robot_position = self.position_list[-1]
             self.ax.arrow(
-                self.robot.pose.position[0] + global_ctrl_point[0],
-                self.robot.pose.position[1] + global_ctrl_point[1],
+                robot_position[0] + global_ctrl_point[0],
+                robot_position[1] + global_ctrl_point[1],
                 arrow_scale * self.initial_velocity[0],
                 arrow_scale * self.initial_velocity[1],
                 width=arrow_width,
                 head_width=arrow_headwith,
-                # color="g",
                 color="#008080",
                 label="Initial chommand",
             )
 
             self.ax.arrow(
-                self.robot.pose.position[0] + global_ctrl_point[0],
-                self.robot.pose.position[1] + global_ctrl_point[1],
+                robot_position[0] + global_ctrl_point[0],
+                robot_position[1] + global_ctrl_point[1],
                 arrow_scale * self.modulated_velocity[0],
                 arrow_scale * self.modulated_velocity[1],
                 width=arrow_width,
                 head_width=arrow_headwith,
-                # color="b",
-                # color='#213970',
                 color="#000080",
                 label="Modulated velocity",
             )
 
-            # if ii == 0:
-            # self.ax.legend(loc="upper left")
-
-            # if vtime == 112.3:
-            # Chose which time to plot the laserscan
-
-            if True:
+            if draw_laserscan:
                 intensities = self.robot.get_all_intensities()
 
                 laserscan = self.robot.get_allscan(in_robot_frame=False)
@@ -212,72 +233,55 @@ class MultiPloter:
                     zorder=-1,
                 )
 
-            # self.position_list = np.array(self.position_list).T
-            # self.ax.plot(
-            # self.position_list[0, :],
-            # self.position_list[1, :],
-            # '--',
-            # color='black',
-            # )
-
-            # Just define both if one is not defined
-            sensor_center = np.mean(laserscan, axis=1)
-
-            self.ax.set_aspect("equal")
-            # self.ax.grid(zorder=-3.0)
-
-            self.x_lim = [
-                sensor_center[0] - self.width_x / 2,
-                sensor_center[0] + self.width_x / 2,
-            ]
-
-            self.y_lim = [
-                sensor_center[1] - self.width_y / 2,
-                sensor_center[1] + self.width_y / 2,
-            ]
-
-            self.ax.set_xlim(self.x_lim)
-            self.ax.set_ylim(self.y_lim)
-
-            self.ax.tick_params(
-                axis="both",
-                which="major",
-                labelbottom=False,
-                labelleft=False,
-                bottom=False,
-                top=False,
-                left=False,
-                right=False,
-            )
-
+            # Set position for manual integration
+            self.robot.pose.position = robot_position
             self.robot.plot_robot(self.ax)
 
-            self.ax.text(
-                self.x_lim[1] - 0.22 * (self.x_lim[1] - self.x_lim[0]),
-                self.y_lim[1] - 0.08 * (self.y_lim[1] - self.y_lim[0]),
-                f"{str(round(vtime - self.visual_times[0], 1))} s",
-                fontsize=10,
-                backgroundcolor="#FFFFFF",
-            )
+            # self.ax.text(
+            #     self.x_lim[1] - 0.22 * (self.x_lim[1] - self.x_lim[0]),
+            #     self.y_lim[1] - 0.08 * (self.y_lim[1] - self.y_lim[0]),
+            #     f"{str(round(vtime - self.visual_times[0], 1))} s",
+            #     fontsize=10,
+            #     backgroundcolor="#FFFFFF",
+            # )
 
-            # if save_figure:
-            #     figure_name = "bag_snipplet_"
-            #     if bag_name is not None:
-            #         figure_name = figure_name + bag_name[:-4]
+        self.position_list = np.array(self.position_list).T
+        plt.plot(self.position_list[0, :], self.position_list[1, :], "k--")
 
-            #     figure_name = figure_name + f"_fig_{str(ii)}"
+        if self.visual_center is None:
+            # Just define both if one is not defined
+            visual_center = np.mean(laserscan, axis=1)
+        else:
+            visual_center = self.visual_center
 
-            #     plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
+        self.ax.set_aspect("equal")
 
-        # create some space below the plots by increasing the bottom-value
-        self.fig.tight_layout()
-        self.fig.subplots_adjust(top=0.9, left=0.1, right=0.9, bottom=0.09)
-        self.axs.flatten()[-2].legend(
-            loc="upper center", bbox_to_anchor=(0.5, -0.04), ncol=3
-        )
+        self.x_lim = [
+            self.visual_center[0] - self.width_x / 2,
+            self.visual_center[0] + self.width_x / 2,
+        ]
+
+        self.y_lim = [
+            self.visual_center[1] - self.width_y / 2,
+            self.visual_center[1] + self.width_y / 2,
+        ]
+
+        self.ax.set_xlim(self.x_lim)
+        self.ax.set_ylim(self.y_lim)
+
+        # self.ax.tick_params(
+        #     axis="both",
+        #     which="major",
+        #     labelbottom=False,
+        #     labelleft=False,
+        #     bottom=False,
+        #     top=False,
+        #     left=False,
+        #     right=False,
+        # )
 
         if save_figure:
-            figure_name = "bag_snipplet_"
+            figure_name = "bag_multimoments"
             if bag_name is not None:
                 figure_name = figure_name + bag_name[:-4]
 
@@ -292,8 +296,9 @@ def main(my_bag, bag_name):
     my_ploter = MultiPloter(
         robot=qolo,
         my_bag=my_bag,
-        width_x=8,
-        width_y=8,
+        width_x=40,
+        width_y=40,
+        visual_center=[-4, 0],
         visual_times=[
             # 100.2,
             104.4,

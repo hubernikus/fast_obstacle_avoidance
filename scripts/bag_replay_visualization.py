@@ -388,7 +388,7 @@ def evaluate_multibags_outdoor_all(
     #
 ):
     """This script is for batch-processing of the ros-bag recording with the qolo."""
-    # Use aspect ratio of 16:9 [youtube standard ration] for x_lim / y_lim
+    # Use aspect ratio of 16:9 [youtube standard ratio] for x_lim:y_lim
     # bag_list = glob.glob(bag_dir + "/*.bag")
     bag_list = os.listdir(bag_dir)
 
