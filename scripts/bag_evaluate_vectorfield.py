@@ -39,7 +39,7 @@ def main_vectorfield(
     )
 
     import_first_scans(qolo, bag_name, start_time=None)
-    
+
     allscan = qolo.get_allscan()
 
     # fast_avoider = FastLidarAvoider(robot=qolo, evaluate_normal=True)

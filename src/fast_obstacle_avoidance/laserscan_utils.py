@@ -64,6 +64,7 @@ def import_first_scans(
             continue
 
         if topic == "/front_lidar/scan" or topic == "/rear_lidar/scan":
+            print(topic)
             robot.set_laserscan(msg, topic_name=topic)
 
         if len(robot.laser_data) == len(robot.laser_poses):
