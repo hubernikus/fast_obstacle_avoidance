@@ -378,7 +378,7 @@ def evaluate_bag(
 
 
 def evaluate_multibags_outdoor_all(
-    bag_dir="../data_qolo/marketplace_lausanne_2022_01_28/",
+    bag_dir="../data_qolo/marketplace_lausanne_2022/",
     save_animation=True,
     dt_evaluation=0.1,
     # plot_width_x=11, plot_width_y=8,
@@ -480,9 +480,10 @@ if (__name__) == "__main__":
     plt.close("all")
     plt.ion()
 
+    evaluate_multibags_outdoor_all()
     # evaluate_multibags_outdoor()
     # evaluate_multibags_indoor_all()
-    evaluate_multibags_outdoor_second_take(save_animation=False)
+    # evaluate_multibags_outdoor_second_take(save_animation=False)
 
     evaluate_single_bag = False
     if evaluate_single_bag:
