@@ -476,30 +476,42 @@ def evaluate_multibags_indoor(
         )
 
 
+# animation_bag_2022-01-28-13-33-32
+
 if (__name__) == "__main__":
     plt.close("all")
     plt.ion()
 
-    evaluate_multibags_outdoor_all()
+    # evaluate_multibags_outdoor_all()
     # evaluate_multibags_outdoor()
     # evaluate_multibags_indoor_all()
     # evaluate_multibags_outdoor_second_take(save_animation=False)
 
-    evaluate_single_bag = False
+    evaluate_single_bag = True
     if evaluate_single_bag:
-        save_animation = False
-        my_simu = first_simulation_options
-        # my_simu = second_simulation_options
-        # my_simu = third_simulation_options
+        reimport_bag = True
 
-        reimport_bag = False
         if (
             reimport_bag
             or not "my_bag" in locals()
-            or not my_bag_name == my_simu["bag_name"]
+            # or not my_bag_name == my_simu["bag_name"]
         ):
+            save_animation = True
+            dt_evaluation = 0.1
 
-            my_bag = rosbag.Bag(my_simu["bag_dir"] + my_simu["bag_name"])
-            my_bag_name = my_simu["bag_name"]
+            plot_width_x = 16
+            plot_width_y = 9
 
-        evaluate_run_in_room(my_bag, save_animation=save_animation, **my_simu)
+            bag_dir = "../data_qolo/marketplace_lausanne_2022/"
+            bag_name = "2022-01-28-13-33-32.bag"
+            my_bag = rosbag.Bag(bag_dir + bag_name)
+
+        evaluate_bag(
+            my_bag,
+            bag_name=bag_name,
+            bag_dir=bag_dir,
+            save_animation=save_animation,
+            dt_simulation=dt_evaluation,
+            plot_width_x=plot_width_x,
+            plot_width_y=plot_width_y,
+        )
