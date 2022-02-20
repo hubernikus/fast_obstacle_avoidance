@@ -21,7 +21,8 @@ from vartools.animator import Animator
 from fast_obstacle_avoidance.control_robot import QoloRobot
 from fast_obstacle_avoidance.utils import laserscan_to_numpy
 from fast_obstacle_avoidance.obstacle_avoider import FastLidarAvoider
-from fast_obstacle_avoidance.laserscan_utils import import_first_scans
+
+from fast_obstacle_avoidance.laserscan_utils import import_first_scans, reset_laserscan
 
 
 class LaserScanAnimator(Animator):
@@ -46,22 +47,22 @@ class LaserScanAnimator(Animator):
     def update_step(self, ii):
         """Update robot and position."""
         initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)
-        
-        start = timer()
+
         temp_scan = reset_laserscan(self.static_laserscan, self.robot.pose.position)
-        
+
+        t_start = timer()
         self.fast_avoider.update_reference_direction(temp_scan, in_robot_frame=False)
+        # self.fast_avoider.update_reference_direction(temp_scan)
         modulated_velocity = self.fast_avoider.avoid(initial_velocity)
+        t_end = timer()
 
-        print('pose', self.robot.pose.position)
-        print('init vel', initial_velocity)
-        print('mod vel', modulated_velocity)
+        # print('pose', self.robot.pose.position)
+        # print('init vel', initial_velocity)
+        # print('mod vel', modulated_velocity)
 
-        end = timer()
-        
         print(
             "Time for modulation {}ms at it={}".format(
-                np.round((end - start) * 1000, 3), ii
+                np.round((t_end - t_start) * 1000, 3), ii
             )
         )
 
@@ -69,7 +70,7 @@ class LaserScanAnimator(Animator):
         self.robot.pose.position = (
             self.robot.pose.position + self.dt_simulation * modulated_velocity
         )
-        
+
         if LA.norm(modulated_velocity):
             self.robot.pose.orientation = np.arctan2(
                 modulated_velocity[1], modulated_velocity[0]
@@ -231,7 +232,8 @@ def main_animator(
     )
 
     main_animator = LaserScanAnimator(
-        it_max=160, dt_simulation=0.04,
+        it_max=160,
+        dt_simulation=0.04,
         # animation_name="indoor_scattered"
     )
     main_animator.setup(
@@ -246,17 +248,19 @@ def main_animator(
 
 
 def animator_office_room():
-    main_animator(bag_name="2021-12-23-18-23-16.bag",
-                  start_position=np.array([-0.5, 1.5]),
-                  attractor_position=np.array([3, -1])
-                  )
+    main_animator(
+        bag_name="2021-12-23-18-23-16.bag",
+        start_position=np.array([-0.5, 1.5]),
+        attractor_position=np.array([3, -1]),
+    )
+
 
 def evaluation_shared_control():
-    main_animator(bag_name="2021-12-23-18-23-16.bag",
-                  start_position=np.array([-0.5, 1.5]),
-                  attractor_position=np.array([3, -1])
-                  )
-
+    main_animator(
+        bag_name="2021-12-23-18-23-16.bag",
+        start_position=np.array([-0.5, 1.5]),
+        attractor_position=np.array([3, -1]),
+    )
 
 
 if (__name__) == "__main__":
@@ -265,6 +269,6 @@ if (__name__) == "__main__":
 
     # main_animator()
     animator_office_room()
-    # evaluation_shared_control()
-    
+    # Evaluation_shared_control()
+
     pass
