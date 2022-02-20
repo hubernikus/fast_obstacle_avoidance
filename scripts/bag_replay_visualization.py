@@ -101,12 +101,15 @@ class ReplayQoloCording(Animator):
         plot_width_y=8,
         position_storing_length=50,
         topic_names=None,
+        figsize=(16, 10),
+        display_time=True,
     ):
         self.robot = robot
 
         self.it_pos = 0
 
         self.static_laserscan = None
+        self.display_time = display_time
 
         if topic_names is None:
             self.topic_names = [
@@ -122,7 +125,7 @@ class ReplayQoloCording(Animator):
         else:
             self.topic_names = topic_names
 
-        self.fig, self.ax = plt.subplots(figsize=(16, 10))
+        self.fig, self.ax = plt.subplots(figsize=figsize)
         self.obstacle_color = np.array([177, 124, 124]) / 255.0
 
         self.x_lim = x_lim
@@ -261,31 +264,52 @@ class ReplayQoloCording(Animator):
                 y_lim=self.y_lim,
             )
 
-        self.ax.text(
-            self.x_lim[1] - 0.1 * (self.x_lim[1] - self.x_lim[0]),
-            self.y_lim[1] - 0.05 * (self.y_lim[1] - self.y_lim[0]),
-            f"{str(round(self.simulation_time, 2))} s",
-            fontsize=14,
-        )
+        if self.display_time:
+            self.ax.text(
+                self.x_lim[1] - 0.1 * (self.x_lim[1] - self.x_lim[0]),
+                self.y_lim[1] - 0.05 * (self.y_lim[1] - self.y_lim[0]),
+                f"{str(round(self.simulation_time, 2))} s",
+                fontsize=14,
+            )
+
+            self.ax.grid(zorder=-3.0)
 
         self.ax.set_aspect("equal")
-        self.ax.grid(zorder=-3.0)
 
-        # self.ax.grid
+        # Draw the robot
         self.robot.plot_robot(self.ax)
 
         drawn_arrow = False
-        arrow_scale = 0.2
+
+        max_draw_vel = 1.0
+        if LA.norm(self.initial_velocity) > max_draw_vel:
+            self.initial_velocity = (
+                self.initial_velocity / LA.norm(self.initial_velocity) * max_draw_vel
+            )
+
+        if LA.norm(self.modulated_velocity) > max_draw_vel:
+            self.modulated_velocity = (
+                self.modulated_velocity
+                / LA.norm(self.modulated_velocity)
+                * max_draw_vel
+            )
+
+        # Draw velocity arrows
+        arrow_scale = 0.5
+        arrow_width = 0.07
+        arrow_headwith = 0.4
         margin_velocity_plot = 1e-3
+
         if LA.norm(self.initial_velocity) > margin_velocity_plot:
             self.ax.arrow(
                 self.robot.pose.position[0] + global_ctrl_point[0],
                 self.robot.pose.position[1] + global_ctrl_point[1],
                 arrow_scale * self.initial_velocity[0],
                 arrow_scale * self.initial_velocity[1],
-                width=0.03,
-                head_width=0.2,
-                color="g",
+                width=arrow_width,
+                head_width=arrow_headwith,
+                # color="g",
+                color="#008080",
                 label="Initial Command",
             )
             drawn_arrow = True
@@ -296,15 +320,17 @@ class ReplayQoloCording(Animator):
                 self.robot.pose.position[1] + global_ctrl_point[1],
                 arrow_scale * self.modulated_velocity[0],
                 arrow_scale * self.modulated_velocity[1],
-                width=0.03,
-                head_width=0.2,
-                color="b",
+                width=arrow_width,
+                head_width=arrow_headwith,
+                # color="b",
+                # color='#213970',
+                color="#000080",
                 label="Modulated Velocity",
             )
             drawn_arrow = True
 
         if drawn_arrow:
-            self.ax.legend(loc="upper left")
+            self.ax.legend(loc="upper left", fontsize=18)
 
     def has_converged(self, ii):
         """ROS-state indicates"""
@@ -326,6 +352,7 @@ def evaluate_bag(
     bag_dir=None,
     plot_width_x=None,
     plot_width_y=None,
+    **kwargs,
 ):
     bag_path = bag_dir + bag_name
 
@@ -371,6 +398,7 @@ def evaluate_bag(
         y_lim=y_lim,
         plot_width_x=plot_width_x,
         plot_width_y=plot_width_y,
+        **kwargs,
     )
 
     replayer.run(save_animation=save_animation)
@@ -499,19 +527,30 @@ if (__name__) == "__main__":
             save_animation = True
             dt_evaluation = 0.1
 
-            plot_width_x = 16
-            plot_width_y = 9
+            # plot_width_x=16
+            # plot_width_y=9
 
-            bag_dir = "../data_qolo/marketplace_lausanne_2022/"
-            bag_name = "2022-01-28-13-33-32.bag"
-            my_bag = rosbag.Bag(bag_dir + bag_name)
+            # bag_dir = "../data_qolo/marketplace_lausanne_2022/"
+            # bag_name = "2022-01-28-13-33-32.bag"
+
+            # Indor setup
+            indoor_setup = {
+                "plot_width_x": 11,
+                "plot_width_y": 10,
+                "bag_dir": "../data_qolo/indoor_with_david_2022_01/",
+                "bag_name": "2022-01-26-17-50-23.bag",
+                "figsize": (8, 7),
+                "display_time": False,
+            }
+
+            # Choose the one!
+            my_setup = indoor_setup
+
+            my_bag = rosbag.Bag(my_setup["bag_dir"] + my_setup["bag_name"])
 
         evaluate_bag(
             my_bag,
-            bag_name=bag_name,
-            bag_dir=bag_dir,
             save_animation=save_animation,
             dt_simulation=dt_evaluation,
-            plot_width_x=plot_width_x,
-            plot_width_y=plot_width_y,
+            **my_setup,
         )
