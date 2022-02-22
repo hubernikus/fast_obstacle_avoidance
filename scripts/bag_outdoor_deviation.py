@@ -71,7 +71,6 @@ class MultiPloter:
                 # self.robot.pose.position = np.array([msg.x, msg.y])
                 # self.robot.pose.orientation = msg.theta
 
-
             # Input from user via remote / belt
             if topic == "/qolo/user_commands":
                 self.RemoteJacobian = np.diag([1, 0.15])
@@ -94,15 +93,19 @@ class MultiPloter:
                 )
 
                 # Caluclate Deviation
-                if (LA.norm(self.initial_velocity) and LA.norm(self.modulated_velocity)):
-                    initial_velocity = self.initial_velocity / LA.norm(self.initial_velocity)
-                    modulated_velocity = self.modulated_velocity / LA.norm(self.modulated_velocity)
+                if LA.norm(self.initial_velocity) and LA.norm(self.modulated_velocity):
+                    initial_velocity = self.initial_velocity / LA.norm(
+                        self.initial_velocity
+                    )
+                    modulated_velocity = self.modulated_velocity / LA.norm(
+                        self.modulated_velocity
+                    )
                     dot_prod = np.dot(initial_velocity, modulated_velocity)
-                    
+
                     # Make sure no numerical errors occur
                     dot_prod = np.maximum(dot_prod, -1)
                     dot_prod = np.minimum(dot_prod, 1)
-                    
+
                     angle = np.arccos(dot_prod)
 
                     angle_dir = np.cross(initial_velocity, modulated_velocity)
@@ -110,7 +113,7 @@ class MultiPloter:
 
                     if np.isnan(angle):
                         breakpoint()
-                        
+
                     self.angle_list.append(angle)
 
             yield 0
@@ -130,29 +133,32 @@ class MultiPloter:
         # Initialization of generator and do one step
         self.my_generator = self.rosbag_generator(my_bag)
         self.ros_state = next(self.my_generator)
-        
 
     def create(self, save_figure=False, bag_name=None, num_bars=50):
-        delta_angle = 2*np.pi / num_bars
+        delta_angle = 2 * np.pi / num_bars
 
         # Iterate through all of them(!)
         for ii in self.my_generator:
             continue
 
         # Create plot
-        self.ax = plt.subplot(111, polar=True);
+        self.fig = plt.figure()
+        self.ax = plt.subplot(111, polar=True)
 
-        min_val = (-np.pi)
+        min_val = -np.pi
         max_val = np.pi
         range_val = max_val - min_val
-        
+
         # Make sure to odd number of bins / even number of bin-spaces
-        if (num_bars % 2): # Is odd
-            num_bars = num_bars +1
-            
+        if num_bars % 2:  # Is odd
+            num_bars = num_bars + 1
+
         angle_bins = np.linspace(min_val, max_val, num_bars)
         # hist_vals = np.histogram(self.angle_list, bins=bins=angle_bins)
-        
+
+        if not len(self.angle_list):
+            return
+
         bars = self.ax.hist(
             self.angle_list,
             bins=angle_bins,
@@ -169,49 +175,60 @@ class MultiPloter:
         max_val = bars[0][args_sorted[-2]] * max_val_factor
 
         from matplotlib.ticker import PercentFormatter
+
         # self.ax.set_major_formatter(PercentFormatter(1))
 
         # Y ticks + range
-        perc_factor = 100/np.sum(bars[0])
+        perc_factor = 100 / np.sum(bars[0])
         num_y_ticks = 5
-        max_val = round(max_val * perc_factor / ((num_y_ticks-1))) * (num_y_ticks-1)/perc_factor
-        
+
+        if not perc_factor:
+            return
+
+        max_val = (
+            round(max_val * perc_factor / ((num_y_ticks - 1)))
+            * (num_y_ticks - 1)
+            / perc_factor
+        )
+
         self.ax.set_ylim([0, max_val])
         y_ticks = np.linspace(0, max_val, num_y_ticks)
         # self.ax.set_yticks(y_ticks / np.sum(bars[0])*100)
-        
+
         self.ax.set_yticks(y_ticks)
         y_labels = [f"{round(iy*perc_factor)}%" for iy in y_ticks]
         y_labels[0] = ""
         self.ax.set_yticklabels(y_labels)
         # self.ax.set_yscale('log')
-        
-        self.ax.set_theta_zero_location('N')
+
+        self.ax.set_theta_zero_location("N")
         self.ax.set_rlabel_position(300)
         # self.ax.set_theta_direction(-1)
         # self.ax.set_rscale('log')
         # self.ax.invert_yaxis()
-        
+
         num_x_ticks = 8
-        x_ticks = np.linspace(0, 2*np.pi, num_x_ticks, endpoint=False)
+        x_ticks = np.linspace(0, 2 * np.pi, num_x_ticks, endpoint=False)
         self.ax.set_xticks(x_ticks)
 
         x_ticks = np.copy(x_ticks)
         for ii, x_val in enumerate(x_ticks):
             if x_val > np.pi:
-                x_ticks[ii] = x_val - 2*np.pi
-        
-        self.ax.set_xticklabels([f"{round(ix/np.pi*180)}\N{DEGREE SIGN}" for ix in x_ticks])
+                x_ticks[ii] = x_val - 2 * np.pi
+
+        self.ax.set_xticklabels(
+            [f"{round(ix/np.pi*180)}\N{DEGREE SIGN}" for ix in x_ticks]
+        )
         # self.ax.set_xticklabels([f"{round(ix/np.pi*180}deg" for iy in y_ticks])
         # self.ax.set_xticklabels([f"{round(ix/np.sum(bars[0])*100)}%" for ix in x_ticks])
-        
+
         # self.ax.grid(zorder=-1)
         self.ax.set_axisbelow(True)
-        
+
         # self.ax.set_ylabel([f"{iy/np.sum(bars[0])*100}%" for iy in y_ticks])
 
         # plt.xticks(angle_bins)
-        
+
         # angles = np.linspace(min_val, max_val, num_bars + 1)
         # angles = (angles[1:] + angles[:-1]) * 0.5
 
@@ -223,7 +240,7 @@ class MultiPloter:
             plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
 
 
-def main(my_bag, bag_name):
+def bag_evaluate_deviation(my_bag, bag_name, save_figure=True):
     qolo = QoloRobot(
         pose=ObjectPose(position=np.array([0, 0]), orientation=0 * np.pi / 180)
     )
@@ -233,30 +250,44 @@ def main(my_bag, bag_name):
         my_bag=my_bag,
     )
 
-    my_ploter.create(save_figure=True, bag_name=bag_name)
+    my_ploter.create(save_figure=save_figure, bag_name=bag_name)
 
     # my_ploter.ax.set_xlim([-7.4, 2.4])
     # my_ploter.ax.set_ylim([-4, 4])
 
 
-def main_batch_processing():
-    pass
+def main_batch_processing(bag_dir):
+    """This script is for batch-processing of the ros-bag recording with the qolo."""
+    # Use aspect ratio of 16:9 [youtube standard ration] for x_lim / y_lim
+    # bag_list = glob.glob(bag_dir + "/*.bag")
+    bag_list = os.listdir(bag_dir)
+
+    for bag_name in bag_list:
+        print(f"Trying bag {bag_name}")
+        my_bag = rosbag.Bag(bag_dir + bag_name)
+
+        bag_evaluate_deviation(my_bag, bag_name)
 
 
 if (__name__) == "__main__":
     plt.close("all")
     plt.ion()
 
-    # Fast ones
-    # bag_dir = "../data_qolo/indoor_with_david_2022_01/"
-    # bag_name = "2022-01-26-17-50-23.bag"
+    bag_dir = "../data_qolo/marketplace_lausanne_2022/"
+    main_batch_processing(bag_dir)
 
-    bag_dir = "../data_qolo/marketplace_lausanne_2022_01_28/"
-    bag_name = "2022-01-28-13-33-32.bag"
-    # bag_name = "2022-01-28-14-00-39.bag"
+    # Single bags
+    single_bag = False
+    if single_bag:
+        # Fast ones
+        # bag_dir = "../data_qolo/indoor_with_david_2022_01/"
+        # bag_name = "2022-01-26-17-50-23.bag"
 
-    import_again = True
-    if import_again or not "my_bag" in locals():
-        my_bag = rosbag.Bag(bag_dir + bag_name)
+        bag_name = "2022-01-28-13-33-32.bag"
+        # bag_name = "2022-01-28-14-00-39.bag"
 
-    main(my_bag, bag_name=bag_name)
+        import_again = True
+        if import_again or not "my_bag" in locals():
+            my_bag = rosbag.Bag(bag_dir + bag_name)
+
+        main(my_bag, bag_name=bag_name)

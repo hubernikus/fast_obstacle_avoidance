@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 # import pandas as pd
 import rosbag
 
-from vartools.states import ObjectPose 
+from vartools.states import ObjectPose
 from vartools.dynamical_systems import LinearSystem
 from vartools.animator import Animator
 
@@ -27,7 +27,7 @@ from fast_obstacle_avoidance.laserscan_utils import import_first_scans, reset_la
 
 def main_vectorfield(
     figure_name="vector_field_around_laserscan",
-    bag_name='2021-12-13-18-33-06.bag',
+    bag_name="2021-12-13-18-33-06.bag",
     # bag_name="2021-12-21-14-21-00.bag",
     # bag_name="2021-12-23-18-23-16.bag",
     eval_time=1640280207.915730,
@@ -43,9 +43,10 @@ def main_vectorfield(
     allscan = qolo.get_allscan()
 
     # fast_avoider = FastLidarAvoider(robot=qolo, evaluate_normal=True)
-    fast_avoider = FastLidarAvoider(robot=qolo, evaluate_normal=False,
-        weight_max_norm=6.99580150e+04)
-    
+    fast_avoider = FastLidarAvoider(
+        robot=qolo, evaluate_normal=False, weight_max_norm=6.99580150e04
+    )
+
     dynamical_system = LinearSystem(
         # attractor_position=np.array([1.5, 0.5]),
         attractor_position=np.array([-1.5, 1.5]),
@@ -81,6 +82,9 @@ def main_vectorfield(
     velocities_mod = np.zeros(positions.shape)
     reference_dirs = np.zeros(positions.shape)
 
+    it_count = 0
+    t_sum = 0
+
     for it in range(positions.shape[1]):
         qolo.pose.position = positions[:, it]
         temp_scan = reset_laserscan(allscan, positions[:, it])
@@ -92,12 +96,24 @@ def main_vectorfield(
         if any(relative_distances < 0):
             continue
 
-        fast_avoider.update_reference_direction(temp_scan, in_robot_frame=False)
-
         velocities_init[:, it] = dynamical_system.evaluate(positions[:, it])
+
+        temp_scan = np.repeat(temp_scan, 30, axis=1)
+        print(f"[WARNING]: Repeating the scan to shape={temp_scan.shape}.")
+
+        t_start = timer()
+        # fast_avoider.update_reference_direction(temp_scan, in_robot_frame=False)
+        fast_avoider.update_reference_direction(temp_scan)
         velocities_mod[:, it] = fast_avoider.avoid(velocities_init[:, it])
+        t_end = timer()
+        print(f"Time modulation {np.round((t_end-t_start) * 1000, 3)}ms")
+
+        t_sum += t_end - t_start
+        it_count += 1
+
         reference_dirs[:, it] = fast_avoider.reference_direction
 
+    print(f"Average time of {t_sum / it_count * 1000}")
     fig, axs = plt.subplots(1, 2, figsize=(10, 6))
 
     # ax.quiver(positions[0, :], positions[1, :],
@@ -136,15 +152,16 @@ def main_vectorfield(
     scale_vel = 3  #
     if scale_vel is not None:
         axs[1].quiver(
-        positions[0, :],
-        positions[1, :],
-        velocities_init[0, :],
-        velocities_init[1, :],
-        angles='xy', scale_units='xy',
-        scale=scale_vel,
-        width=arrow_width,
-        color="black",
-        alpha=0.3,
+            positions[0, :],
+            positions[1, :],
+            velocities_init[0, :],
+            velocities_init[1, :],
+            angles="xy",
+            scale_units="xy",
+            scale=scale_vel,
+            width=arrow_width,
+            color="black",
+            alpha=0.3,
         )
 
         axs[1].quiver(
@@ -236,6 +253,7 @@ def main_vectorfield(
             ticks=[-0.5, 0, 0.5],
             extend="neither",
         )
+
 
 if (__name__) == "__main__":
     # plt.close("all")
