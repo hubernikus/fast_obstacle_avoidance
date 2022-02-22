@@ -173,7 +173,11 @@ class SingleModulationAvoider:
     def __init__(
         self,
         stretching_matrix: StretchingMatrixFunctor = None,
+        # Parameters for the weight evaluation
         weight_max_norm: float = None,
+        weight_factor: float = 3,
+        weight_power: float = 2.0,
+        margin_weight: float = 1e-3
     ):
         if stretching_matrix is None:
             self.stretching_matrix = StretchingMatrixTrigonometric()
@@ -195,6 +199,9 @@ class SingleModulationAvoider:
 
         # The maximum possible distance weight sum
         self.weight_max_norm = weight_max_norm
+        self.weight_factor = weight_factor
+        self.weight_power = weight_power
+        self.margin_weight = margin_weight
 
         self.relative_velocity = None
 
@@ -258,18 +265,17 @@ class SingleModulationAvoider:
 
         return modulated_velocity
 
-    def get_weight_from_distances(
-        self, distances, weight_factor=3, weight_power=2.0, margin_weight=1e-3
-    ):
+    def get_weight_from_distances(self, distances: np.ndarray,):
+        """ Returns an array of weights with the same dimensions as distances input. """
         # => get weighted evaluation along the robot
         # to obtain linear + angular velocity
-        if any(distances < margin_weight):
+        if any(distances < self.margin_weight):
             warnings.warn("Treat the small-weight case.")
 
-            distances = distances - np.min(distances) + margin_weight
+            distances = distances - np.min(distances) + self.margin_weight
 
         num_points = distances.shape[0]
-        weight = (1 / distances) ** weight_power * (weight_factor / num_points)
+        weight = (1 / distances) ** self.weight_power * (self.weight_factor / num_points)
 
         self.distance_weight_sum = np.sum(weight)
 

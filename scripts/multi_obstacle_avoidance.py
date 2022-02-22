@@ -26,7 +26,7 @@ def double_plot(
     x_lim=[-5, 5],
     y_lim=[-5, 5],
     n_grid=40,
-    plot_normal=False,
+    plot_normal=True,
     attractor_position=None,
 ):
     if attractor_position is None:
@@ -110,7 +110,7 @@ def double_plot(
         mod_vel[0, :],
         mod_vel[1, :],
         color="blue",
-        scale=30,
+        scale=20,
         alpha=0.8,
     )
 
@@ -309,29 +309,31 @@ def main_vectorfield_starshaped(
             np.cross(ref_dirs / LA.norm(ref_dirs), norm_dirs / LA.norm(norm_dirs))
         )
 
-    pcm = axs[0].contourf(
-        x_vals,
-        y_vals,
-        deviation.reshape(nx, ny),
-        # cmap='PiYG',
-        cmap="bwr",
-        vmin=-np.pi / 2,
-        vmax=np.pi / 2,
-        zorder=-3,
-        alpha=0.9,
-        levels=101,
-    )
+    if False:
+        pcm = axs[0].contourf(
+            x_vals,
+            y_vals,
+            deviation.reshape(nx, ny),
+            # cmap='PiYG',
+            cmap="bwr",
+            vmin=-np.pi / 2,
+            vmax=np.pi / 2,
+            zorder=-3,
+            alpha=0.9,
+            levels=101,
+        )
 
-    cbar = fig.colorbar(
-        pcm,
-        ax=axs[0],
-        fraction=0.035,
-        ticks=[-np.pi / 4, 0, np.pi / 4],
-        # ticks=[-1.0, 0, 1.0],
-        # ticks=[-0.5, 0, 0.5],
-        extend="neither",
-    )
-    cbar.ax.set_yticklabels([r"$-\frac{\pi}{4}$", "0", r"$\frac{\pi}{4}$"])
+        cbar = fig.colorbar(
+            pcm,
+            ax=axs[0],
+            fraction=0.035,
+            ticks=[-np.pi / 4, 0, np.pi / 4],
+            # ticks=[-1.0, 0, 1.0],
+            # ticks=[-0.5, 0, 0.5],
+            extend="neither",
+        )
+        cbar.ax.set_yticklabels([r"$-\frac{\pi}{4}$", "0", r"$\frac{\pi}{4}$"])
+        
     # cbar.set_label(r"sin${}^{-1}(\mathbf{r} \times \mathbf{n})$")
     # cbar.ax.set_title(r"sin${}^{-1}(\mathbf{r} \times \mathbf{n})$", loc='left')
     # cbar.ax.set_title(r"$\mathbf{r} \times \mathbf{n}$", loc='left')

@@ -135,6 +135,7 @@ class FastObstacleAvoider(SingleModulationAvoider):
 
         if dot_prod < np.sqrt(2) / 2:
             normal_scaling = 1
+            
         else:
             normal_scaling = np.sqrt(2) * dot_prod
 
