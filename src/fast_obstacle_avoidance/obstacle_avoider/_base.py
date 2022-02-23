@@ -247,13 +247,14 @@ class SingleModulationAvoider:
 
         if self.relative_velocity is not None:
             initial_velocity = initial_velocity - self.relative_velocity
+            # breakpoint()
 
         if not LA.norm(initial_velocity):
             # Trivial velocity modulation
             if self.relative_velocity is None:
                 return initial_velocity
             else:
-                return initial_velocity + self.relative_velocity
+                return initial_velocity - self.relative_velocity
 
         stretching_matrix = self.stretching_matrix.get(
             ref_norm, self.reference_direction, self.normal_direction, initial_velocity

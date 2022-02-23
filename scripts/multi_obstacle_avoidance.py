@@ -68,8 +68,8 @@ def double_plot(
     ref_dirs = np.zeros(positions.shape)
 
     for it in range(positions.shape[1]):
-        main_avoider.update_reference_direction(position=positions[:, it])b
-
+        main_avoider.update_reference_direction(position=positions[:, it])
+        
         initial_vel = initial_dynamics.evaluate(position=positions[:, it])
 
         ref_dirs[:, it] = main_avoider.reference_direction

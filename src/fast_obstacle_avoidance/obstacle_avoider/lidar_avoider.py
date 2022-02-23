@@ -65,7 +65,7 @@ class SampledAvoider(SingleModulationAvoider):
         if self.evaluate_normal:
             self.update_normal_direction(laser_scan, weights, ref_dirs)
 
-        # Temporary plotting
+        # For Temporary plotting [remove after submission]
         if hasattr(self, "debug_mode") and self.debug_mode:
             warnings.warn("Storing refs and norms.")
             self.ref_dirs = (-1) * ref_dirs
