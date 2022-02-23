@@ -56,7 +56,8 @@ class SampledAvoider(SingleModulationAvoider):
 
         weights = self.get_weight_from_distances(relative_distances)
 
-        self.reference_direction = (-1) * np.sum(
+        # (-1) or not ... 
+        self.reference_direction = (1) * np.sum(
             ref_dirs * np.tile(weights, (ref_dirs.shape[0], 1)), axis=1
         )
 

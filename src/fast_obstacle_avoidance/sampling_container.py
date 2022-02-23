@@ -16,9 +16,10 @@ def visualize_obstacles(container, ax=None):
 
     for obs in container.environment:
         xx, yy = obs.exterior.xy
-        ax.plot(xx, yy, color='black', alpha=0.4)
+        ax.plot(xx, yy, color='black', alpha=0.3)
 
-        polygon_path = plt.Polygon(np.vstack((xx, yy)).T, alpha=0.2, zorder=-4)
+
+        polygon_path = plt.Polygon(np.vstack((xx, yy)).T, alpha=0.1, zorder=-4)
         polygon_path.set_color('black')
         ax.add_patch(polygon_path)
 
@@ -36,11 +37,30 @@ class ShapelySamplingContainer:
 
         self.n_samples = n_samples
 
-    def is_inside(self, position):
+    def get_center_position(self, ii):
+        """ Returns geometric center of all surface points."""
+        # TODO: maybe checkout the 'kernel' property of shapelies
+        xy_vals = self.environment[ii].exterior.xy
+        return np.mean(xy_vals, axis=1)
+    
+    def is_inside(self, position, margin=0):
         """ Checks if the position is inside any of the obstacles."""
-        point = shapely.geometry.Point(position)
+        if not margin:
+            point = shapely.geometry.Point(position)
         
-        for obs in self.environment:
+        for ii, obs in enumerate(self.environment):
+            if margin:
+                # Move the point along the margin
+                center_position = self.get_center_position(ii)
+                rel_pos = center_position - position
+
+                rel_pos_norm = LA.norm(rel_pos)
+                if rel_pos_norm < margin:
+                    return True
+
+                temp_pos = position + rel_pos/LA.norm(rel_pos)*margin
+                point = shapely.geometry.Point(temp_pos)
+        
             if obs.contains(point):
                 return True
         

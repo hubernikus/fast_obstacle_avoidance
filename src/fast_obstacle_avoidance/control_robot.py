@@ -146,6 +146,23 @@ class QoloRobot(BaseRobot):
     def has_new_obstacles(self):
         return self._got_new_obstacles
 
+    # Simplified environment for (only) one point
+    @property
+    def control_point(self):
+        return self.control_points[:, 0]
+
+    @control_point.setter
+    def control_point(self, value):
+        self.control_points[:, 0] = value
+
+    @property
+    def control_radius(self):
+        return self.control_radiuses[0]
+
+    @control_radius.setter
+    def control_radius(self, value):
+        self.control_radiuses[0] = value
+
     def retrieved_obstacles(self):
         self._got_new_obstacles = False
 

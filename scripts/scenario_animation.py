@@ -1,3 +1,8 @@
+""" Script to create animations."""
+# Author: Lukas Huber
+# Created: 2021-02-22
+# Email: lukas.huber@epfl.ch
+
 from timeit import default_timer as timer
 
 import numpy as np
@@ -17,75 +22,7 @@ from vartools.animator import Animator
 
 from fast_obstacle_avoidance.sampling_container import ShapelySamplingContainer
 from fast_obstacle_avoidance.sampling_container import visualize_obstacles
-
-
-class LaserscanAnimator(Animator):
-    def setup(
-        self,
-        robot,
-        initial_dynamics,
-        avoider,
-        environment,
-        x_lim=[-10, 10],
-        y_lim=[-10, 10],
-    ):
-        self.dimension = 2
-
-        self.robot = robot
-
-        self.initial_dynamics = initial_dynamics
-        self.avoider = avoider
-        self.environment = environment
-
-        self.x_lim = x_lim
-        self.y_lim = y_lim
-
-        self.positions = np.zeros((self.dimension, self.it_max))
-
-        self.velocities_init = np.zeros((self.dimension, self.it_max))
-        self.velocities_mod = np.zeros((self.dimension, self.it_max))
-
-        # Create
-        self.fig, self.ax = plt.subplots(figsize=(16, 10))
-
-        self.velocity_command = np.zeros(self.dimension)
-
-    def update_step(self, ii):
-        self.positions[:, ii] = self.robot.pose.position
-
-        data_points = self.environment.get_surface_points(
-            center_position=self.robot.pose.position,
-            null_direction=self.velocity_command,
-        )
-
-        self.avoider.update_reference_direction(data_points, in_robot_frame=False)
-
-        # Store all
-        velocity_init = self.initial_dynamics.evaluate(self.robot.pose.position)
-        self.velocity_command = self.avoider.avoid(velocity_init)
-
-        # Update step
-        self.robot.pose.position = (
-            self.robot.pose.position + self.velocity_command * self.dt_simulation
-        )
-
-        self.ax.clear()
-
-        self.ax.plot(data_points[0, :], data_points[1, :], "o", color="k")
-
-        self.ax.plot(
-            self.robot.pose.position[0], self.robot.pose.position[1], "o", color="b"
-        )
-
-        visualize_obstacles(self.environment, ax=self.ax)
-
-        self.ax.plot(self.positions[0, :ii], self.positions[1, :ii], "--", color="b")
-
-        self.ax.set_aspect("equal")
-        self.ax.grid(True)
-
-        self.ax.set_xlim(self.x_lim)
-        self.ax.set_ylim(self.y_lim)
+from fast_obstacle_avoidance.visualization import LaserscanAnimator
 
 
 def single_polygon_animator():

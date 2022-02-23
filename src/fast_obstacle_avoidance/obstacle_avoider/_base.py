@@ -146,13 +146,24 @@ class StretchingMatrixTrigonometric(StretchingMatrixFunctor):
     # super().__init__(*args, **kwargs)
 
     def get_lambda_weights(self, weight, weight_vel):
-        if weight < 2:
-            lambda_tang = 1 + np.sin(np.pi / 2 * weight)
-            lambda_ref = np.cos(np.pi / 2 * weight)
-
+        if weight < 1:
+            lambda_tang = 1 + np.sin(np.pi /2 *weight)
         else:
-            lambda_tang = 1
+            lambda_tang = 2 * np.sin(np.pi / (2*weight))
+
+        if weight < 2:
+            lambda_ref = np.cos(np.pi/2*weight)
+        else:
             lambda_ref = -1
+
+            
+        # if weight < 2:
+            # lambda_tang = 1 + np.sin(np.pi / 2 * weight)
+            # lambda_ref = np.cos(np.pi / 2 * weight)
+
+        # else:
+            # lambda_tang = 1
+            # lambda_ref = -1
 
         if weight_vel < 0 and weight > 1:
             lambda_ref = (-1) * lambda_ref
@@ -262,7 +273,7 @@ class SingleModulationAvoider:
 
             if mod_norm > init_norm:
                 modulated_velocity = modulated_velocity * (init_norm / mod_norm)
-
+        
         return modulated_velocity
 
     def get_weight_from_distances(self, distances: np.ndarray,):
