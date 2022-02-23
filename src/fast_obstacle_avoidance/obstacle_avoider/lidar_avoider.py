@@ -39,6 +39,7 @@ class SampledAvoider(SingleModulationAvoider):
     def update_reference_direction(
         self, laser_scan: np.ndarray = None, in_robot_frame: bool = True
     ) -> np.ndarray:
+
         if laser_scan is None:
             laser_scan = self.laser_scan
 
@@ -57,7 +58,7 @@ class SampledAvoider(SingleModulationAvoider):
         weights = self.get_weight_from_distances(relative_distances)
 
         # (-1) or not ... 
-        self.reference_direction = (1) * np.sum(
+        self.reference_direction = (-1) * np.sum(
             ref_dirs * np.tile(weights, (ref_dirs.shape[0], 1)), axis=1
         )
 
@@ -69,6 +70,8 @@ class SampledAvoider(SingleModulationAvoider):
             warnings.warn("Storing refs and norms.")
             self.ref_dirs = (-1) * ref_dirs
 
+        # print('ref dir', self.reference_direction)
+        
         return self.reference_direction
 
     def update_normal_direction(self, laser_scan, weights, ref_dirs):

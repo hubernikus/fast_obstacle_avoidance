@@ -41,29 +41,6 @@ def explore_specific_point(
     if robot is None:
         robot = QoloRobot(pose=ObjectPose(position=[7.0, -2.0], orientation=0))
 
-    # dynamical_system = ConstantValue(velocity=[0, 1])
-    
-    if fast_avoider is None:
-        fast_avoider = SampledAvoider(
-            robot=robot,
-            # evaluate_normal=False,
-            evaluate_normal=True,
-            weight_max_norm=1e4,
-            weight_factor=2,
-            weight_power=1.0,
-            )
-
-    if main_environment is None:
-        main_environment = ShapelySamplingContainer(n_samples=100)
-        main_environment.add_obstacle(shapely.geometry.box(-5, -1, 2, 1))
-
-    if dynamical_system is None:
-        dynamical_system = ConstantValue(velocity=[0, 1])
-
-    data_points = main_environment.get_surface_points(
-        center_position=robot.pose.position,
-    )
-    
     eval_pos = robot.pose.position
 
     fast_avoider.debug_mode = True
@@ -259,7 +236,6 @@ def static_visualization_of_sample_avoidance(
 
         if any(relative_distances < 0):
             continue
-        
         fast_avoider.update_reference_direction(data_points, in_robot_frame=False)
         
         velocities_init[:, it] = dynamical_system.evaluate(positions[:, it])
@@ -446,6 +422,8 @@ def execute_avoidance_with_obstacle(save_figure=False):
             dt_simulation=0.05,
             )
 
+        fast_avoider.robot = simu_bot
+
         my_animator.setup(
             robot=simu_bot,
             initial_dynamics=initial_dynamics,
@@ -545,9 +523,9 @@ def vectorfield_with_many_obstacles(save_figure=False):
 
     fast_avoider = SampledAvoider(
             robot=robot,
-            weight_max_norm=1e8,
-            weight_factor=4,
-            weight_power=2.0,
+            weight_max_norm=1e5,
+            weight_factor=5,
+            weight_power=1.0,
             )
 
     create_animation = True
@@ -562,6 +540,8 @@ def vectorfield_with_many_obstacles(save_figure=False):
             it_max=400,
             dt_simulation=0.05,
             )
+        
+        fast_avoider.robot = simu_bot
 
         my_animator.setup(
             robot=simu_bot,
@@ -611,7 +591,7 @@ def vectorfield_with_many_obstacles(save_figure=False):
 
 def test_multi_obstacles():
     start_point = np.array([-7.5, 0.8])
-    start_point = np.array([0.5, 1.4])
+    # start_point = np.array([0.5, 1.4])
     x_lim = [-8, 4]
     y_lim = [-1.0, 4.6]
 
@@ -642,7 +622,6 @@ def test_multi_obstacles():
     # Second Box
     main_environment.add_obstacle(shapely.geometry.box(0, 4, 1, 8))
     
-    
     robot = QoloRobot(pose=ObjectPose(position=start_point, orientation=0))
     robot.control_point = [0, 0]
     robot.control_radius = 0.6
@@ -655,6 +634,8 @@ def test_multi_obstacles():
             )
 
     main_environment.n_samples = 100
+    fig, ax = plt.subplots(1, 1, figsize=(12, 5))
+    
     explore_specific_point(
         robot=robot,
         dynamical_system=initial_dynamics,
@@ -664,8 +645,6 @@ def test_multi_obstacles():
         ax=ax,
         draw_velocity=True
         )
-
-
     
     
 
@@ -678,6 +657,7 @@ if (__name__) == "__main__":
     # plt.close("all")
     
     # execute_avoidance_with_obstacle(save_figure=True)
-    vectorfield_with_many_obstacles(save_figure=False)
+    # test_multi_obstacles()
+    vectorfield_with_many_obstacles(save_figure=True)
 
     # test_various_surface_points()

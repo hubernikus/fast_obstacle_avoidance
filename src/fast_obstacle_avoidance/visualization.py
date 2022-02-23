@@ -68,9 +68,9 @@ class LaserscanAnimator(Animator):
 
         data_points = self.environment.get_surface_points(
             center_position=self.robot.pose.position,
-            null_direction=self.velocity_command,
+            null_direction=self.velocity_command
         )
-
+        
         self.avoider.update_reference_direction(data_points, in_robot_frame=False)
 
         # Store all
@@ -157,6 +157,7 @@ class LaserscanAnimator(Animator):
                 color='#9b1503',
                 width=arrow_width,
                 head_width=arrow_headwith,
+                label="Reference direction"
                 )
 
             drawn_arrow = True
