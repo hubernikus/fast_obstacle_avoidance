@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 import shapely
 
-from vartools.states import ObjectPose 
+from vartools.states import ObjectPose
 from vartools.dynamical_systems import ConstantValue
 from vartools.dynamical_systems import LinearSystem
 
@@ -20,15 +20,23 @@ from fast_obstacle_avoidance.sampling_container import visualize_obstacles
 
 
 class LaserscanAnimator(Animator):
-    def setup(self, robot, initial_dynamics, avoider, environment, x_lim=[-10, 10], y_lim=[-10, 10]):
+    def setup(
+        self,
+        robot,
+        initial_dynamics,
+        avoider,
+        environment,
+        x_lim=[-10, 10],
+        y_lim=[-10, 10],
+    ):
         self.dimension = 2
-        
+
         self.robot = robot
 
         self.initial_dynamics = initial_dynamics
         self.avoider = avoider
         self.environment = environment
-        
+
         self.x_lim = x_lim
         self.y_lim = y_lim
 
@@ -42,7 +50,6 @@ class LaserscanAnimator(Animator):
 
         self.velocity_command = np.zeros(self.dimension)
 
-
     def update_step(self, ii):
         self.positions[:, ii] = self.robot.pose.position
 
@@ -50,7 +57,7 @@ class LaserscanAnimator(Animator):
             center_position=self.robot.pose.position,
             null_direction=self.velocity_command,
         )
-        
+
         self.avoider.update_reference_direction(data_points, in_robot_frame=False)
 
         # Store all
@@ -59,49 +66,48 @@ class LaserscanAnimator(Animator):
 
         # Update step
         self.robot.pose.position = (
-            self.robot.pose.position + self.velocity_command*self.dt_simulation
+            self.robot.pose.position + self.velocity_command * self.dt_simulation
         )
-        
+
         self.ax.clear()
-        
-        self.ax.plot(data_points[0, :], data_points[1, :], 'o', color='k')
-        
-        self.ax.plot(self.robot.pose.position[0], self.robot.pose.position[1], 'o', color='b')
-        
+
+        self.ax.plot(data_points[0, :], data_points[1, :], "o", color="k")
+
+        self.ax.plot(
+            self.robot.pose.position[0], self.robot.pose.position[1], "o", color="b"
+        )
+
         visualize_obstacles(self.environment, ax=self.ax)
 
-        self.ax.plot(self.positions[0, :ii], self.positions[1, :ii], '--', color='b')
-        
+        self.ax.plot(self.positions[0, :ii], self.positions[1, :ii], "--", color="b")
+
         self.ax.set_aspect("equal")
         self.ax.grid(True)
 
         self.ax.set_xlim(self.x_lim)
         self.ax.set_ylim(self.y_lim)
 
-        
+
 def single_polygon_animator():
-    qolo = QoloRobot(
-        pose=ObjectPose(position=[0.0, -3.4], orientation=0)
-    )
+    qolo = QoloRobot(pose=ObjectPose(position=[0.0, -3.4], orientation=0))
 
     # dynamical_system = ConstantValue(velocity=[0, 1])
     dynamical_system = LinearSystem(
-        attractor_position=np.array([0, 3]), maximum_velocity=1.0)
+        attractor_position=np.array([1, 3]), maximum_velocity=1.0
+    )
 
     fast_avoider = SampledAvoider(
         robot=qolo,
-        # evaluate_normal=False,
-        evaluate_normal=True,
+        evaluate_normal=False,
+        # evaluate_normal=True,
         weight_max_norm=1e4,
         weight_factor=2,
-        weight_power=1.,
+        weight_power=1.0,
     )
-    
-    main_environment = ShapelySamplingContainer(n_samples=50)
-    
-    main_environment.add_obstacle(                 
-        shapely.geometry.box(-5, -1, 2, 1)
-        )
+
+    main_environment = ShapelySamplingContainer(n_samples=100)
+
+    main_environment.add_obstacle(shapely.geometry.box(-5, -1, 2, 1))
 
     my_animator = LaserscanAnimator(
         it_max=400,
@@ -119,12 +125,9 @@ def single_polygon_animator():
 
     my_animator.run()
 
+
 if (__name__) == "__main__":
     plt.close("all")
     plt.ion()
 
     single_polygon_animator()
-
-        
-
-    
