@@ -263,7 +263,8 @@ class QoloRobot(BaseRobot):
 
         self._got_new_obstacles = True
 
-    def plot_robot(self, ax, bag_dir="figures/qolo"):
+    def plot_robot(self, ax, bag_dir="figures/qolo", length_x=1019.23*1e-3):
+        self.length_x = length_x
         if self.robot_image is None:
             import matplotlib.image as mpimg
 
@@ -273,7 +274,7 @@ class QoloRobot(BaseRobot):
 
             # Length of robot
             # self.length_x = 0.92817
-            self.length_x = 1019.23 * 1e-3
+            # self.length_x = 1019.23 * 1e-3
             self.length_y = (
                 self.robot_image.shape[0] / self.robot_image.shape[1] * self.length_x
             )

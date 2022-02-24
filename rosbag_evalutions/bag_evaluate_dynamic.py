@@ -201,13 +201,15 @@ def static_plot(allscan, qolo, dynamical_system, fast_avoider):
 
 
 def main_animator(
-    # bag_name='2021-12-13-18-33-06.bag',
+    bag_name='2021-12-13-18-33-06.bag',
+    eval_time=0,
     # bag_name="2021-12-21-14-21-00.bag",
     # bag_name="2021-12-23-18-23-16.bag",
-    bag_name="2021-12-23-18-23-16.bag",
-    eval_time=1640280207.915730,
+    # bag_name="2021-12-23-18-23-16.bag",
+    # eval_time=1640280207.915730,
     start_position=None,
     attractor_position=None,
+    save_animation=False,
 ):
     # sample_freq = 20
     # allscan = allscan[:,  np.logical_not(np.mod(np.arange(allscan.shape[1]), sample_freq))]
@@ -241,17 +243,27 @@ def main_animator(
         initial_dynamics=dynamical_system,
         robot=qolo,
     )
-
-    main_animator.run(save_animation=False)
+    
+    main_animator.run(save_animation=save_animation)
+    
     # main_animator.run(save_animation=True)
     # main_animator.update_step(ii=0)
-
 
 def animator_office_room():
     main_animator(
         bag_name="2021-12-23-18-23-16.bag",
         start_position=np.array([-0.5, 1.5]),
         attractor_position=np.array([3, -1]),
+        save_animation=False,
+    )
+
+def animator_doorpassing():
+    main_animator(
+        bag_name='2021-12-13-18-33-06.bag',
+        eval_time=0,
+        start_position=np.array([1.0, -0.4]),
+        attractor_position=np.array([-1.7, 1.6]),
+        save_animation=False,
     )
 
 
@@ -268,7 +280,8 @@ if (__name__) == "__main__":
     plt.ion()
 
     # main_animator()
-    animator_office_room()
+    # animator_office_room()
+    animator_doorpassing()
     # Evaluation_shared_control()
 
     pass

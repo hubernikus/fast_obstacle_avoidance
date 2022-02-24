@@ -30,8 +30,6 @@ from fast_obstacle_avoidance.utils import laserscan_to_numpy
 from fast_obstacle_avoidance.obstacle_avoider import FastLidarAvoider
 from fast_obstacle_avoidance.laserscan_utils import import_first_scans
 
-# def multicolor_line():
-
 
 class MultiPloter:
     def rosbag_generator(self, my_bag, bag_dir=None, bag_name=None, dx_max=1):

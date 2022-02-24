@@ -75,7 +75,7 @@ class FastObstacleAvoider(SingleModulationAvoider):
 
         self.relative_velocity = self.relative_velocity + summed_angular
 
-        print(weights)
+        # print(weights)
 
         return self.relative_velocity
 
