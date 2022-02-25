@@ -36,12 +36,49 @@ class SampledAvoider(SingleModulationAvoider):
 
         super().__init__(*args, **kwargs)
 
+    # @property
+    # def norm_angle(self):
+        # return np.
+    
+    @property
+    def datapoints(self):
+        # Property to make consistent with mixed avoider.
+        # But change this variable name in the future
+        return self.laser_scan
+
+    @datapoints.setter
+    def datapoints(self, value):
+        self.laser_scan = value
+    
+    @property
+    def laserscan(self):
+        # Property to make consistent with mixed avoider.
+        return self.laser_scan
+
+    @laserscan.setter
+    def laserscan(self, value):
+        self.laser_scan = value
+
+    def update_laserscan(self, laserscan=None, in_robot_frame=True):
+        if in_robot_frame is False:
+            raise NotImplementedError()
+        
+        if laserscan is not None:
+            self.laserscan = laserscan
+            self._got_new_scan = True
+
+        elif self.robot.has_newscan:
+            self.laserscan = self.robot.get_allscan()
+            self._got_new_scan = True
+        
     def update_reference_direction(
         self, laser_scan: np.ndarray = None, in_robot_frame: bool = True
     ) -> np.ndarray:
 
         if laser_scan is None:
-            laser_scan = self.laser_scan
+            laser_scan = self.laserscan
+        else:
+            self.laserscan = laser_scan
 
         if not laser_scan.shape[1]:
             self.reference_direction = np.zeros(self.robot.pose.position.shape)
@@ -76,6 +113,8 @@ class SampledAvoider(SingleModulationAvoider):
 
     def update_normal_direction(self, laser_scan, weights, ref_dirs):
         """Update the normal direction and normal angle with resect to the reference."""
+        # NOTE: This does not work very well anymore (!)
+        
         norm_ref_dir = LA.norm(self.reference_direction)
         if not norm_ref_dir:
             return

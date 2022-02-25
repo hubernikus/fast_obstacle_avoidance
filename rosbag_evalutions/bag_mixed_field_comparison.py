@@ -22,7 +22,9 @@ from dynamic_obstacle_avoidance.visualization import plot_obstacles
 
 from fast_obstacle_avoidance.control_robot import QoloRobot
 from fast_obstacle_avoidance.utils import laserscan_to_numpy
-from fast_obstacle_avoidance.obstacle_avoider import MixedEnvironmentAvoider
+from fast_obstacle_avoidance.obstacle_avoider import (
+    FastObstacleAvoider,SampledAvoider, MixedEnvironmentAvoider
+    )
 
 from fast_obstacle_avoidance.laserscan_utils import import_first_scans, reset_laserscan
 from fast_obstacle_avoidance.laserscan_utils import import_first_scan_and_crowd
@@ -34,6 +36,7 @@ def is_interesecting(obstacle_environment, position):
         if gamma < 1:
             return True
     return False
+
 
 def run_vectorfield_mixed(qolo):
     """Draw the vectorfield mixed"""

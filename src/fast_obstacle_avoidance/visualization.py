@@ -37,6 +37,8 @@ class BaseFastAnimator(Animator):
         x_lim=[-10, 10],
         y_lim=[-10, 10],
         show_reference=False,
+        show_ticks=False,
+        show_velocity=True,
     ):
         self.dimension = 2
 
@@ -47,6 +49,9 @@ class BaseFastAnimator(Animator):
         self.environment = environment
 
         self.show_reference = show_reference
+        self.show_ticks = show_ticks
+        self.show_velocity = show_velocity
+        
         self.x_lim = x_lim
         self.y_lim = y_lim
 
@@ -193,6 +198,7 @@ class FastObstacleAnimator(BaseFastAnimator):
         self.initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)
         self.modulated_velocity = self.avoider.avoid(self.initial_velocity)
 
+
         # Update step
         self.robot.pose.position = (
             self.robot.pose.position + self.modulated_velocity*self.dt_simulation
@@ -249,7 +255,6 @@ class FastObstacleAnimator(BaseFastAnimator):
                 label="Initial velocity",
             )
             darwn_arrow = True
-        
 
         if LA.norm(self.modulated_velocity) > margin_velocity_plot:
             self.ax.arrow(
@@ -289,3 +294,157 @@ class FastObstacleAnimator(BaseFastAnimator):
         # if not show_ticks:
         self.ax.axes.xaxis.set_visible(False)
         self.ax.axes.yaxis.set_visible(False)
+
+
+class MixedObstacleAnimator(BaseFastAnimator):
+    def update_step(self, ii, show_ticks=False):
+        # Print very few steps
+        if not (ii % 10):
+            print(f"It {ii}")
+
+        # Update obstacle position:
+        for obs in self.robot.obstacle_environment:
+            obs.do_velocity_step(delta_time=self.dt_simulation)
+
+        data_points = self.environment.get_surface_points(
+            center_position=self.robot.pose.position,
+            null_direction=self.velocity_command
+        )
+
+        self.positions[:, ii] = self.robot.pose.position
+        
+        self.avoider.update_laserscan(data_points)
+        # self.avoider.update_reference_direction(in_robot_frame=False)
+            
+        self.avoider.update_reference_direction(in_robot_frame=False)
+
+        # Store all
+        self.initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)
+        self.modulated_velocity = self.avoider.avoid(self.initial_velocity)
+
+        # Speed up simulation
+        self.modulated_velocity = (self.modulated_velocity
+                                   / LA.norm(self.modulated_velocity)
+                                   * LA.norm(self.initial_velocity))        
+
+        # Update step
+        self.robot.pose.position = (
+            self.robot.pose.position + self.modulated_velocity*self.dt_simulation
+        )
+
+        # Restart plotting
+        self.ax.clear()
+        
+        self.ax.plot(data_points[0, :], data_points[1, :], "o", color="k")
+
+        self.ax.plot(
+            self.robot.pose.position[0], self.robot.pose.position[1], "o", color="b"
+        )
+
+        # visualize_obstacles(self.environment, ax=self.ax)
+        visualize_obstacles(self.environment, ax=self.ax)
+        plot_obstacles(obstacle_container=self.robot.obstacle_environment,
+                       ax=self.ax,
+                       x_lim=self.x_lim, y_lim=self.y_lim)
+        
+        self.ax.plot(self.positions[0, :ii], self.positions[1, :ii], "--", color="b")
+
+        self.ax.set_aspect("equal")
+
+        self.ax.plot(
+            self.initial_dynamics.attractor_position[0],
+            self.initial_dynamics.attractor_position[1],
+            "k*",
+            linewidth=18.0,
+            markersize=18,
+            zorder=5,
+        )
+
+        self.robot.plot2D(ax=self.ax)
+        self.ax.plot(self.robot.pose.position[0], self.robot.pose.position[1],
+                "o", color='black', markersize=13, zorder=5)
+
+        margin_velocity_plot = 2e-1
+        arrow_scale = 0.5
+        arrow_width = 0.07
+        arrow_headwith = 0.4
+        margin_velocity_plot = 1e-3
+
+        drawn_arrow = False
+
+        if self.show_reference:
+            self.ax.arrow(
+                self.robot.pose.position[0],
+                self.robot.pose.position[1],
+                self.avoider.reference_direction[0],
+                self.avoider.reference_direction[1],
+                color='#9b1503',
+                width=arrow_width,
+                head_width=arrow_headwith,
+                label="Reference [summed]"
+                )
+
+            self.ax.arrow(
+                self.robot.pose.position[0],
+                self.robot.pose.position[1],
+                self.avoider.obstacle_avoider.reference_direction[0],
+                self.avoider.obstacle_avoider.reference_direction[1],
+                color='#CD7F32',
+                width=arrow_width,
+                head_width=arrow_headwith,
+                label="Reference [obstacle]"
+                )
+
+            self.ax.arrow(
+                self.robot.pose.position[0],
+                self.robot.pose.position[1],
+                self.avoider.lidar_avoider.reference_direction[0],
+                self.avoider.lidar_avoider.reference_direction[1],
+                color='#3d3635',
+                width=arrow_width,
+                head_width=arrow_headwith,
+                label="Reference [sampled]"
+                )
+            drawn_arrow = True
+
+        if self.show_velocity:
+            if LA.norm(self.initial_velocity) > margin_velocity_plot:
+                self.ax.arrow(
+                    self.robot.pose.position[0],
+                    self.robot.pose.position[1],
+                    arrow_scale * self.initial_velocity[0],
+                    arrow_scale * self.initial_velocity[1],
+                    width=arrow_width,
+                    head_width=arrow_headwith,
+                    # color="g",
+                    color="#008080",
+                    label="Initial velocity",
+                )
+                darwn_arrow = True
+
+            if LA.norm(self.modulated_velocity) > margin_velocity_plot:
+                self.ax.arrow(
+                    self.robot.pose.position[0],
+                    self.robot.pose.position[1],
+                    arrow_scale * self.modulated_velocity[0],
+                    arrow_scale * self.modulated_velocity[1],
+                    width=arrow_width,
+                    head_width=arrow_headwith,
+                    # color="b",
+                    # color='#213970',
+                    color="#000080",
+                    label="Modulated velocity",
+                )
+                drawn_arrow = True
+
+
+        if drawn_arrow:
+            self.ax.legend(loc="upper left", fontsize=18)
+
+        self.ax.set_xlim(self.x_lim)
+        self.ax.set_ylim(self.y_lim)
+
+        if not self.show_ticks:
+            self.ax.axes.xaxis.set_visible(False)
+            self.ax.axes.yaxis.set_visible(False)
+    

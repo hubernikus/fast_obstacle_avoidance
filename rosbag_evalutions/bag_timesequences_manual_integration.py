@@ -48,7 +48,7 @@ class LaserscanWalkerSinglePlot:
         else:
             self.plot_times = plot_times
 
-        self.fig, self.ax = plt.subplots()
+        self.fig, self.ax = plt.subplots(figsize=figsize)
 
         # self.obstacle_color = np.array([177, 124, 124]) / 255.0
 
@@ -194,9 +194,9 @@ class LaserscanWalkerSinglePlot:
         self.modulated_velocity_list.append(self.modulated_velocity)
 
         if self.draw_fancy_robot:
-            self.robot.plot_robot(self.ax)
+            self.robot.plot_robot(self.ax, length_x=1.0)
         else:
-            self.robot.plot2D(self.ax, length_x=0.9)
+            self.robot.plot2D(self.ax)
         
 
 
@@ -237,7 +237,8 @@ def multi_plot_static_data_narrow_doorway(save_plot=False):
         it_max=160,
         robot=qolo,
         x_lim=x_lim, y_lim=y_lim,
-        figsize=(4, 3),
+        # figsize=(4.0, 3.5),
+        figsize=(5.0, 4.0),
         )
     
     main_plotter.run()
@@ -284,7 +285,8 @@ def multiplo_lab_enviornment_nice_qolo(save_plot=False):
         it_max=160,
         robot=qolo,
         x_lim=x_lim, y_lim=y_lim,
-        figsize=(4, 3),
+        figsize=(5.0, 4.0),
+        # figsize=(4.0, 3.5),
         draw_fancy_robot=True
         )
     
@@ -300,7 +302,7 @@ if (__name__) == "__main__":
     plt.close("all")
     plt.ion()
 
-    # multi_plot_static_data_narrow_doorway(save_plot=True)
+    multi_plot_static_data_narrow_doorway(save_plot=True)
     multiplo_lab_enviornment_nice_qolo(save_plot=True)
     
     pass

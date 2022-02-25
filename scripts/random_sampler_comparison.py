@@ -111,6 +111,8 @@ def comparison_dimensions_sampler(save_figure=False):
     ax.set_xlabel("Number of datapoints")
     ax.set_ylabel("Time [ms]")
 
+    ax.set_xlim([samples_number[0], samples_number[-1]])
+    # ax.set_ylim([0, 7.2])
     ax.set_ylim([0, 10])
 
     # ax.set_xscale("log")
@@ -130,4 +132,3 @@ def comparison_dimensions_sampler(save_figure=False):
 if (__name__) == "__main__":
     plt.ion()
     data = comparison_dimensions_sampler(save_figure=True)
-    # comparsion_single_mod_to_multiple()

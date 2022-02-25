@@ -186,8 +186,8 @@ class SingleModulationAvoider:
         stretching_matrix: StretchingMatrixFunctor = None,
         # Parameters for the weight evaluation
         weight_max_norm: float = None,
-        weight_factor: float = 3,
-        weight_power: float = 2.0,
+        weight_factor: float = 10,
+        weight_power: float = 1,
         margin_weight: float = 1e-3
     ):
         if stretching_matrix is None:
@@ -301,6 +301,7 @@ class SingleModulationAvoider:
             return weight / self.distance_weight_sum
         else:
             return weight
+
 
     def limit_velocity(self):
         raise NotImplementedError()

@@ -168,6 +168,10 @@ def plot_dimension_data(experiment_duration_grid, samples_number, save_figure=Fa
     ax.grid(True)
     ax.legend()
 
+    ax.set_xlim(samples_number[0], samples_number[-1])
+    # ax.set_ylim(0, ax.get_ylim()[1])
+    ax.set_ylim([0, 7.2])
+    
     # breakpoint()
 
     if save_figure:

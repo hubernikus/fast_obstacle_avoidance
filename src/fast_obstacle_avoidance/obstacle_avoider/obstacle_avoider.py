@@ -19,7 +19,8 @@ from ._base import SingleModulationAvoider
 
 
 class FastObstacleAvoider(SingleModulationAvoider):
-    def __init__(self, obstacle_environment, robot: BaseRobot = None, dimension=2, *args, **kwargs):
+    def __init__(self, obstacle_environment, robot: BaseRobot = None,
+                 dimension=2, *args, **kwargs):
         """Initialize with obstacle list"""
         self.obstacle_environment = obstacle_environment
         self.robot = robot
@@ -37,7 +38,7 @@ class FastObstacleAvoider(SingleModulationAvoider):
     def dimension(self):
         return self.obstacle_environment.dimension
 
-    def update_relative_velocity(self, weights, position, weight_pow=2):
+    def update_relative_velocity(self, weights, position, weight_pow=2, velocity_scaling=1.1):
         """Update linear and angular velocity (without deformation)."""
         linear_velocities = np.zeros((self.dimension, weights.shape[0]))
         angular_velocities = np.zeros((weights.shape[0]))
@@ -61,9 +62,6 @@ class FastObstacleAvoider(SingleModulationAvoider):
                 )
 
                 summed_angular += angular_weight*angular_vel[:2]
-                print('summed_angular', summed_angular)
-                print('weight', angular_weight)
-                print('angular_vel', angular_vel)
 
         # if any(angular_velocities):
             # warnings.warn("Not yet implemented for angular velocity.")
@@ -75,7 +73,8 @@ class FastObstacleAvoider(SingleModulationAvoider):
 
         self.relative_velocity = self.relative_velocity + summed_angular
 
-        # print(weights)
+        # Try sure to move away a bit 'faster' than surface velocity
+        self.relative_velocity = self.relative_velocity * velocity_scaling
 
         return self.relative_velocity
 

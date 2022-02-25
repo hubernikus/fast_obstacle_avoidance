@@ -177,6 +177,9 @@ def explore_specific_point(
 
     return ax
 
+
+
+
 def static_visualization_of_sample_avoidance(
     main_environment,
     dynamical_system,
@@ -528,7 +531,8 @@ def vectorfield_with_many_obstacles(save_figure=False):
     ellipse = shapely.affinity.scale(shapely.geometry.Point(-3, 3.5).buffer(1), 1.0, 0.8)
     ellipse = shapely.affinity.rotate(ellipse, 50)
     main_environment.add_obstacle(ellipse)
-    
+
+    # Ellipse
     ellipse = shapely.affinity.scale(shapely.geometry.Point(2, 0).buffer(1), 1.0, 0.8)
     ellipse = shapely.affinity.rotate(ellipse, -20)
     main_environment.add_obstacle(ellipse)

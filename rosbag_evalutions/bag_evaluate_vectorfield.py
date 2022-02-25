@@ -212,7 +212,6 @@ def main_vectorfield(
 
     deviation = np.zeros((positions.shape[1]))
 
-    # if False:
     for it in range(positions.shape[1]):
         qolo.pose.position = positions[:, it]
         temp_scan = reset_laserscan(allscan, positions[:, it])
