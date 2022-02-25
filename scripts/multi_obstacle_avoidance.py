@@ -69,7 +69,6 @@ def double_plot(
 
     for it in range(positions.shape[1]):
         main_avoider.update_reference_direction(position=positions[:, it])
-        
         initial_vel = initial_dynamics.evaluate(position=positions[:, it])
 
         ref_dirs[:, it] = main_avoider.reference_direction
@@ -333,7 +332,7 @@ def main_vectorfield_starshaped(
             extend="neither",
         )
         cbar.ax.set_yticklabels([r"$-\frac{\pi}{4}$", "0", r"$\frac{\pi}{4}$"])
-        
+
     # cbar.set_label(r"sin${}^{-1}(\mathbf{r} \times \mathbf{n})$")
     # cbar.ax.set_title(r"sin${}^{-1}(\mathbf{r} \times \mathbf{n})$", loc='left')
     # cbar.ax.set_title(r"$\mathbf{r} \times \mathbf{n}$", loc='left')
