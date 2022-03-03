@@ -199,6 +199,7 @@ def visualization_analytic_data(
     obstacle_avoider = FastObstacleAvoider(
         obstacle_environment=qolo.obstacle_environment, robot=qolo
     )
+    qolo.obstacle_environment.update_reference_points()
 
     nx = ny = n_sampels
     x_vals, y_vals = np.meshgrid(
@@ -244,7 +245,11 @@ def visualization_mixed(
 ):
     """Draw the vectorfield mixed"""
 
-    mixed_avoider = MixedEnvironmentAvoider(qolo)
+    mixed_avoider = MixedEnvironmentAvoider(
+        robot=qolo,
+        scaling_obstacle_weight=50,
+        scaling_laserscan_weight=1,
+    )
 
     nx = ny = n_sampels
     x_vals, y_vals = np.meshgrid(
@@ -280,15 +285,24 @@ def visualization_mixed(
         reference_dirs[:, it] = mixed_avoider.reference_direction
 
     plot_environment(
-        ax,
-        mixed_avoider,
-        positions,
-        velocities_mod,
-        dynamical_system,
-        x_lim,
-        y_lim,
+        ax=ax,
+        my_avoider=mixed_avoider,
+        positions=positions,
+        velocities_mod=velocities_mod,
+        dynamical_system=dynamical_system,
+        x_lim=x_lim,
+        y_lim=y_lim,
         show_quiver=show_quiver,
     )
+    # ax,
+    # my_avoider,
+    # positions=None,
+    # velocities_mod=None,
+    # dynamical_system=None,
+    # x_lim=None,
+    # y_lim=None,
+    # draw_velocity_arrow=False,
+    # show_quiver=False,
 
 
 def get_random_start_and_stop(x_lim=[-7, 7], y_vals=[-6, 6], y_lim=[-7, 9]):
@@ -335,8 +349,8 @@ def time_integration_fast(
 
         # Do such that the mixed avoider updates everything
         avoider.robot._got_new_obstacles = True
-        avoider.update_laserscan(lasercan)
-        # avoider.update_laserscan(temp_scan)
+        if hasattr(avoider, 'update_laserscan'):
+            avoider.update_laserscan(lasercan)
 
         initial_ds = dynamical_system.evaluate(avoider.robot.pose.position)
         avoider.update_reference_direction(in_robot_frame=False)
@@ -409,9 +423,14 @@ def compare_numerically_algorithms(qolo):
     mixed_avoider = MixedEnvironmentAvoider(
         qolo,
         # scaling_laserscan_weight=0.5,
-        scaling_obstacle_weight=10.0,
+        scaling_obstacle_weight=50.0,
     )
     qolo.obstacle_environment.update_reference_points()
+
+    obstacle_avoider = FastObstacleAvoider(
+        obstacle_environment=qolo.obstacle_environment,
+        robot=qolo,
+    )
 
     mixed_avoider.update_laserscan(temp_scan)  # Update once before plotting
 
@@ -425,7 +444,7 @@ def compare_numerically_algorithms(qolo):
 
     plot_environment(
         ax=axs[0],
-        my_avoider=mixed_avoider,
+        my_avoider=sample_avoider,
         dynamical_system=dynamical_system,
         x_lim=x_lim,
         y_lim=y_lim,
@@ -433,7 +452,7 @@ def compare_numerically_algorithms(qolo):
 
     plot_environment(
         ax=axs[1],
-        my_avoider=sample_avoider,
+        my_avoider=mixed_avoider,
         dynamical_system=dynamical_system,
         x_lim=x_lim,
         y_lim=y_lim,
@@ -447,7 +466,9 @@ def compare_numerically_algorithms(qolo):
         sample_avoider.robot.pose.position = start_position
 
         run_results[0, ii] = time_integration_fast(
-            sample_avoider, dynamical_system, ax=axs[0], lasercan=np.copy(temp_scan)
+            sample_avoider,
+            dynamical_system, ax=axs[0],
+            lasercan=np.copy(temp_scan)
         )
 
         # Do for the mixed environment
@@ -457,7 +478,10 @@ def compare_numerically_algorithms(qolo):
 
         # mixed_avoider.update_laserscan()
         run_results[1, ii] = time_integration_fast(
-            mixed_avoider, dynamical_system, ax=axs[1], lasercan=np.copy(temp_scan)
+            mixed_avoider,
+            dynamical_system,
+            ax=axs[1],
+            lasercan=np.copy(temp_scan)
         )
 
     print("Sampled Avoider Results")
@@ -475,20 +499,29 @@ def compare_two_vectorfields(qolo, save_figure=False, n_sampels=100):
     x_lim = [-7, 14]
     y_lim = [-7, 9]
 
-    # fig, ax = plt.subplots(figsize=(6, 5))
-    # visualization_mixed(
-    # ax, qolo, dynamical_system, x_lim, y_lim, n_sampels=n_sampels, show_quiver=True)
+    fig, ax = plt.subplots(figsize=(6, 5))
+    visualization_mixed(
+        ax=ax,
+        qolo=qolo,
+        dynamical_system=dynamical_system,
+        x_lim=x_lim,
+        y_lim=y_lim,
+        n_sampels=n_sampels,
+        show_quiver=True)
 
-    # if save_figure:
-    # figure_name = "mixed_environment_scan"
-    # plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
+    if True:
+        return
 
-    # fig, ax = plt.subplots(figsize=(6, 5))
-    # visualization_sampledata(ax, qolo, dynamical_system, x_lim, y_lim, n_sampels=n_sampels)
+    if save_figure:
+        figure_name = "mixed_environment_scan"
+        plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
+    
+    fig, ax = plt.subplots(figsize=(6, 5))
+    visualization_sampledata(ax, qolo, dynamical_system, x_lim, y_lim, n_sampels=n_sampels)
 
-    # if save_figure:
-    # figure_name = "mixed_environment_both"
-    # plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
+    if save_figure:
+        figure_name = "mixed_environment_both"
+        plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
 
     fig, ax = plt.subplots(figsize=(6, 5))
     visualization_analytic_data(
@@ -529,5 +562,5 @@ if (__name__) == "__main__":
             start_time=None,
         )
 
-    compare_two_vectorfields(qolo=qolo, save_figure=False, n_sampels=30)
-    # compare_numerically_algorithms(qolo=qolo)
+    # compare_two_vectorfields(qolo=qolo, save_figure=False, n_sampels=50)
+    compare_numerically_algorithms(qolo=qolo)

@@ -1,0 +1,6 @@
+[submodule "src/dynamic_obstacle_avoidance"]
+	path = src/dynamic_obstacle_avoidance
+	url = https://github.com/epfl-lasa/dynamic_obstacle_avoidance
+[submodule "src/various_tools"]
+	path = src/various_tools
+	url = https://github.com/hubernikus/various_tools

@@ -107,9 +107,9 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
         ]
 
         # Do scaling of laserscan weight
-        weights = np.array(weights) / np.array(
-            [self.scaling_laserscan_weight, self.scaling_obstacle_weight]
-        )
+        scaling = np.array([self.scaling_laserscan_weight, self.scaling_obstacle_weight])
+        scaling = scaling / np.sum(scaling)
+        weights = np.array(weights) * scaling
 
         if np.sum(weights) > 1:
             weights = weights / np.sum(weights)
