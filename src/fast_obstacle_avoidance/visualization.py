@@ -71,7 +71,7 @@ class BaseFastAnimator(Animator):
         self.convergence_distance = convergence_distance
 
     def has_converged(self):
-        """ Return values:
+        """Return values:
         0 : No convvergence, agent still rolling
         1 : Velocity very low. Probably stuck somewhere
         2 : Very close to the attractor! Great success!
@@ -86,6 +86,9 @@ class BaseFastAnimator(Animator):
             return 2
 
         return 0
+
+    def basic_plotting(self):
+        pass
 
 
 class LaserscanAnimator(BaseFastAnimator):
@@ -115,10 +118,8 @@ class LaserscanAnimator(BaseFastAnimator):
         if self.do_the_plotting:
             self.plot_environment()
 
-
-
     def plot_environment(self):
-        """ Plot the environment """
+        """Plot the environment"""
         # Restart plotting
         self.ax.clear()
 
@@ -240,9 +241,8 @@ class FastObstacleAnimator(BaseFastAnimator):
         if self.do_the_plotting:
             self.plot_environment()
 
-
     def plot_environment(self):
-        """ Plot the environment """
+        """Plot the environment"""
         # Restart plotting
         self.ax.clear()
 
@@ -385,7 +385,6 @@ class MixedObstacleAnimator(BaseFastAnimator):
 
         if self.do_the_plotting:
             self.plot_environment()
-
 
     def plot_environment(self):
         # Restart plotting
