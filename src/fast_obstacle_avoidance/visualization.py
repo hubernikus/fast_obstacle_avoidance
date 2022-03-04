@@ -70,6 +70,8 @@ class BaseFastAnimator(Animator):
         self.convergence_velocity = convergence_velocity
         self.convergence_distance = convergence_distance
 
+        self.convergence_state = 0
+
     def has_converged(self):
         """Return values:
         0 : No convvergence, agent still rolling
@@ -77,15 +79,15 @@ class BaseFastAnimator(Animator):
         2 : Very close to the attractor! Great success!
         """
         if LA.norm(self.velocity_command) < self.convergence_velocity:
-            return 1
+            self.convergence_state = 1
 
-        if (
+        elif (
             LA.norm(sef.robot.pose.position - self.initial_dynamics.attractor_position)
             < self.convergence_distance
         ):
-            return 2
+            self.convergence_state = 2
 
-        return 0
+        return self.convergence_state
 
     def basic_plotting(self):
         pass
