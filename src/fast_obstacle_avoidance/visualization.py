@@ -27,6 +27,10 @@ from fast_obstacle_avoidance.sampling_container import visualize_obstacles
 
 
 class BaseFastAnimator(Animator):
+    @property
+    def it_count(self):
+        return self.ii
+
     def setup(
         self,
         robot,
@@ -40,6 +44,8 @@ class BaseFastAnimator(Animator):
         show_velocity=True,
         convergence_distance=1e-2,
         convergence_velocity=1e-3,
+        velocity_normalization_margin=1e-1,
+        do_the_plotting=True,
     ):
         self.dimension = 2
 
@@ -69,15 +75,21 @@ class BaseFastAnimator(Animator):
         # Margins
         self.convergence_velocity = convergence_velocity
         self.convergence_distance = convergence_distance
+        self.velocity_normalization_margin = velocity_normalization_margin
 
         self.convergence_state = 0
 
-    def has_converged(self):
+        self.do_the_plotting = do_the_plotting
+
+    def has_converged(self, ii):
         """Return values:
         0 : No convvergence, agent still rolling
         1 : Velocity very low. Probably stuck somewhere
         2 : Very close to the attractor! Great success!
         """
+        if True:
+            return False
+
         if LA.norm(self.velocity_command) < self.convergence_velocity:
             self.convergence_state = 1
 
@@ -95,6 +107,8 @@ class BaseFastAnimator(Animator):
 
 class LaserscanAnimator(BaseFastAnimator):
     def update_step(self, ii):
+        self.ii = ii
+
         # Print very few steps
         if not (ii % 10):
             print(f"It {ii}")
@@ -112,19 +126,28 @@ class LaserscanAnimator(BaseFastAnimator):
         self.initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)
         self.modulated_velocity = self.avoider.avoid(self.initial_velocity)
 
+        if LA.norm(self.modulated_velocity) > self.velocity_normalization_margin:
+            # Speed up simulation
+            self.modulated_velocity = (
+                self.modulated_velocity
+                / LA.norm(self.modulated_velocity)
+                * LA.norm(self.initial_velocity)
+            )
+
         # Update step
         self.robot.pose.position = (
             self.robot.pose.position + self.modulated_velocity * self.dt_simulation
         )
 
         if self.do_the_plotting:
-            self.plot_environment()
+            self.plot_environment(ii=ii)
 
-    def plot_environment(self):
+    def plot_environment(self, ii):
         """Plot the environment"""
         # Restart plotting
         self.ax.clear()
 
+        data_points = self.avoider.datapoints
         self.ax.plot(data_points[0, :], data_points[1, :], "o", color="k")
 
         self.ax.plot(
@@ -220,12 +243,14 @@ class LaserscanAnimator(BaseFastAnimator):
 
 class FastObstacleAnimator(BaseFastAnimator):
     def update_step(self, ii):
+        self.ii = ii
+
         # Print very few steps
         if not (ii % 10):
             print(f"It {ii}")
 
         # Update obstacle position:
-        for obs in self.environment:
+        for obs in self.robot.obstacle_environment:
             obs.do_velocity_step(delta_time=self.dt_simulation)
 
         self.positions[:, ii] = self.robot.pose.position
@@ -241,9 +266,9 @@ class FastObstacleAnimator(BaseFastAnimator):
         )
 
         if self.do_the_plotting:
-            self.plot_environment()
+            self.plot_environment(ii=ii)
 
-    def plot_environment(self):
+    def plot_environment(self, ii):
         """Plot the environment"""
         # Restart plotting
         self.ax.clear()
@@ -256,10 +281,11 @@ class FastObstacleAnimator(BaseFastAnimator):
 
         # visualize_obstacles(self.environment, ax=self.ax)
         plot_obstacles(
-            obstacle_container=self.environment,
+            obstacle_container=self.robot.obstacle_environment,
             ax=self.ax,
             x_lim=self.x_lim,
             y_lim=self.y_lim,
+            draw_reference=True,
         )
 
         self.ax.plot(self.positions[0, :ii], self.positions[1, :ii], "--", color="b")
@@ -339,8 +365,10 @@ class FastObstacleAnimator(BaseFastAnimator):
         if drawn_arrow:
             self.ax.legend(loc="upper left", fontsize=18)
 
-        self.ax.set_xlim(self.x_lim)
-        self.ax.set_ylim(self.y_lim)
+        if not self.x_lim is None:
+            self.ax.set_xlim(self.x_lim)
+        if not self.y_lim is None:
+            self.ax.set_ylim(self.y_lim)
 
         # if not show_ticks:
         self.ax.axes.xaxis.set_visible(False)
@@ -349,6 +377,8 @@ class FastObstacleAnimator(BaseFastAnimator):
 
 class MixedObstacleAnimator(BaseFastAnimator):
     def update_step(self, ii, show_ticks=False):
+        self.ii = ii
+
         # Print very few steps
         if not (ii % 10):
             print(f"It {ii}")
@@ -373,12 +403,13 @@ class MixedObstacleAnimator(BaseFastAnimator):
         self.initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)
         self.modulated_velocity = self.avoider.avoid(self.initial_velocity)
 
-        # Speed up simulation
-        self.modulated_velocity = (
-            self.modulated_velocity
-            / LA.norm(self.modulated_velocity)
-            * LA.norm(self.initial_velocity)
-        )
+        if LA.norm(self.modulated_velocity) > self.velocity_normalization_margin:
+            # Speed up simulation
+            self.modulated_velocity = (
+                self.modulated_velocity
+                / LA.norm(self.modulated_velocity)
+                * LA.norm(self.initial_velocity)
+            )
 
         # Update step
         self.robot.pose.position = (
@@ -386,12 +417,13 @@ class MixedObstacleAnimator(BaseFastAnimator):
         )
 
         if self.do_the_plotting:
-            self.plot_environment()
+            self.plot_environment(ii=ii)
 
-    def plot_environment(self):
+    def plot_environment(self, ii):
         # Restart plotting
         self.ax.clear()
 
+        data_points = self.avoider.lidar_avoider.datapoints
         self.ax.plot(data_points[0, :], data_points[1, :], "o", color="k")
 
         self.ax.plot(

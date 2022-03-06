@@ -59,6 +59,14 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
         return self._robot
 
     @property
+    def datapoints(self):
+        return self.laserscan
+
+    @datapoints.setter
+    def datapoints(self, value):
+        self.laserscan = value
+
+    @property
     def obstacle_environment(self):
         return self.robot.obstacle_environment
 
@@ -107,7 +115,9 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
         ]
 
         # Do scaling of laserscan weight
-        scaling = np.array([self.scaling_laserscan_weight, self.scaling_obstacle_weight])
+        scaling = np.array(
+            [self.scaling_laserscan_weight, self.scaling_obstacle_weight]
+        )
         scaling = scaling / np.sum(scaling)
         weights = np.array(weights) * scaling
 
@@ -162,7 +172,8 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
     def get_scan_without_ocluded_points(self):
         """Remove laserscan which is within boundaries of obstacles
         and then update lidar-reference direction."""
-        # TODO (!) -> ukpdate (circular) obstacle class for fast evaluation
+        # TODO (!) -> update (circular) obstacle class for fast evaluation
+
         self.update_laserscan()
         laserscan = np.copy(self.laserscan)
 
@@ -176,7 +187,6 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
 
             # Get gamma from array for circular obstacles only (!)
             dirs = laserscan - np.tile(obs.position, (laserscan.shape[1], 1)).T
-
             gamma_vals = LA.norm(dirs, axis=0) - obs.radius
 
             is_outside = gamma_vals > 0

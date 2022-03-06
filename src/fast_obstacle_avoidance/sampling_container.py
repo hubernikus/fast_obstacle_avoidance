@@ -10,25 +10,26 @@ import shapely
 
 import matplotlib.pyplot as plt
 
+
 def visualize_obstacles(container, ax=None):
     if ax is None:
         fig, ax = plt.subplots()
 
     for obs in container.environment:
         xx, yy = obs.exterior.xy
-        ax.plot(xx, yy, color='black', alpha=0.3)
-
+        ax.plot(xx, yy, color="black", alpha=0.3)
 
         polygon_path = plt.Polygon(np.vstack((xx, yy)).T, alpha=0.1, zorder=-4)
-        polygon_path.set_color('black')
+        polygon_path.set_color("black")
         ax.add_patch(polygon_path)
 
     return ax
 
+
 class ShapelySamplingContainer:
     # Only implemented for two dimensional case
     dimension = 2
-    
+
     def __init__(self, environment=None, n_samples=10):
         if environment is None:
             self.environment = []
@@ -38,16 +39,16 @@ class ShapelySamplingContainer:
         self.n_samples = n_samples
 
     def get_center_position(self, ii):
-        """ Returns geometric center of all surface points."""
+        """Returns geometric center of all surface points."""
         # TODO: maybe checkout the 'kernel' property of shapelies
         xy_vals = self.environment[ii].exterior.xy
         return np.mean(xy_vals, axis=1)
-    
+
     def is_inside(self, position, margin=0):
-        """ Checks if the position is inside any of the obstacles."""
+        """Checks if the position is inside any of the obstacles."""
         if not margin:
             point = shapely.geometry.Point(position)
-        
+
         for ii, obs in enumerate(self.environment):
             if margin:
                 # Move the point along the margin
@@ -58,31 +59,59 @@ class ShapelySamplingContainer:
                 if rel_pos_norm < margin:
                     return True
 
-                temp_pos = position + rel_pos/LA.norm(rel_pos)*margin
+                temp_pos = position + rel_pos / LA.norm(rel_pos) * margin
                 point = shapely.geometry.Point(temp_pos)
-        
+
             if obs.contains(point):
                 return True
-        
+
         return False
+
+    def __len__(self):
+        return len(self.environment)
 
     def add_obstacle(self, obstacle):
         self.environment.append(obstacle)
-        
-    def get_surface_points(self, center_position, n_samples=None, null_direction=None, dist_max=1e3):
+
+    def create_ellipse(self, position, axes_length, orientation_in_degree=0):
+        ellipse = shapely.geometry.Point(position[0], position[1]).buffer(1)
+        ellipse = shapely.affinity.scale(ellipse, axes_length[0], axes_length[1])
+        ellipse = shapely.affinity.rotate(ellipse, orientation_in_degree)
+
+        self.add_obstacle(ellipse)
+
+    def create_sphere(self, position, radius):
+        sphere = shapely.geometry.Point(position[0], position[1]).buffer(radius)
+
+        self.add_obstacle(sphere)
+
+    def create_cuboid(self, position, axes_length, orientation_in_degree=0):
+        cuboid = shapely.geometry.box(
+            position[0] - axes_length[0],
+            position[1] - axes_length[1],
+            position[0] + axes_length[0],
+            position[1] + axes_length[1],
+        )
+
+        cuboid = shapely.affinity.rotate(cuboid, orientation_in_degree)
+        self.add_obstacle(cuboid)
+
+    def get_surface_points(
+        self, center_position, n_samples=None, null_direction=None, dist_max=1e3
+    ):
         if not n_samples:
             n_samples = self.n_samples
-        sample_points = np.zeros((self.dimension, n_samples)) 
-        sample_dist  = np.ones(n_samples) * (-1)
+        sample_points = np.zeros((self.dimension, n_samples))
+        sample_dist = np.ones(n_samples) * (-1)
 
-        angles = np.linspace(0, 2*np.pi, n_samples, endpoint=False)
+        angles = np.linspace(0, 2 * np.pi, n_samples, endpoint=False)
         if null_direction is not None:
             angles = angles + np.arctan2(null_direction[1], null_direction[0])
-    
+
         for ii in range(n_samples):
             direction = np.array([np.cos(angles[ii]), np.sin(angles[ii])])
             shapely_line = shapely.geometry.LineString(
-                [center_position, center_position+direction*dist_max]
+                [center_position, center_position + direction * dist_max]
             )
 
             for obs in self.environment:
@@ -91,8 +120,8 @@ class ShapelySamplingContainer:
                 if len(intersection_line):
                     # TODO: if sure, this could be done with only the closest...
                     # dists = LA.norm(np.array(intersection_line)
-                                    # - np.tile(center_position, (len(intersection_line), 1)),
-                                    # axis=1)
+                    # - np.tile(center_position, (len(intersection_line), 1)),
+                    # axis=1)
                     # min_dist = min(dists)
                     # breakpoint()
                     # sample_list[:, ii] = min(sample_list[:, ii], min_dist)
@@ -102,5 +131,4 @@ class ShapelySamplingContainer:
                         sample_points[:, ii] = intersection_line[0]
                         sample_dist[ii] = min_dist
 
-        
         return sample_points[:, sample_dist > 0]

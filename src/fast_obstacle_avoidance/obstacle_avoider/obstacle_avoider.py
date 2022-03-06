@@ -19,33 +19,44 @@ from ._base import SingleModulationAvoider
 
 
 class FastObstacleAvoider(SingleModulationAvoider):
-    def __init__(self, obstacle_environment, robot: BaseRobot = None,
-                 dimension=2, *args, **kwargs):
+    def __init__(
+        self,
+        obstacle_environment,
+        robot: BaseRobot = None,
+        # reference_update_before_modulation: bool = True,
+        consider_relative_velocity: bool = True,
+        dimension=2,
+        **kwargs
+    ):
         """Initialize with obstacle list"""
+
         self.obstacle_environment = obstacle_environment
         self.robot = robot
 
-        super().__init__(*args, **kwargs)
+        super().__init__(reference_update_before_modulation=True, **kwargs)
 
         if (
             len(self.obstacle_environment) and self.obstacle_environment.dimension == 3
         ) or dimension == 2:
             from scipy.spatial.transform import Rotation as R
 
-        self.consider_relative_velocity = True
+        # Simulation paramteres
+        self.consider_relative_velocity = consider_relative_velocity
 
     @property
     def dimension(self):
         return self.obstacle_environment.dimension
 
-    def update_relative_velocity(self, weights, position, weight_pow=2, velocity_scaling=1.1):
+    def update_relative_velocity(
+        self, weights, position, weight_pow=2, velocity_scaling=1.1
+    ):
         """Update linear and angular velocity (without deformation)."""
         linear_velocities = np.zeros((self.dimension, weights.shape[0]))
         angular_velocities = np.zeros((weights.shape[0]))
 
-        weights = weights**weight_pow
+        weights = weights ** weight_pow
         weights = weights / np.sum(weights)
-        
+
         summed_angular = np.zeros(position.shape[0])
         for it, obs in enumerate(self.obstacle_environment):
             if weights[it] <= 0:
@@ -54,17 +65,17 @@ class FastObstacleAvoider(SingleModulationAvoider):
             linear_velocities[:, it] = obs.linear_velocity
 
             if obs.angular_velocity and LA.norm(obs.angular_velocity):
-                
-                angular_weight = np.exp(1 - (1/weights[it]))
+
+                angular_weight = np.exp(1 - (1 / weights[it]))
                 angular_vel = np.cross(
                     np.array([0, 0, obs.angular_velocity]),
                     np.hstack((position - np.array(obs.center_position), 0)),
                 )
 
-                summed_angular += angular_weight*angular_vel[:2]
+                summed_angular += angular_weight * angular_vel[:2]
 
         # if any(angular_velocities):
-            # warnings.warn("Not yet implemented for angular velocity.")
+        # warnings.warn("Not yet implemented for angular velocity.")
 
         self.relative_velocity = np.sum(
             (np.tile(weights, (linear_velocities.shape[0], 1)) * linear_velocities),
@@ -78,7 +89,9 @@ class FastObstacleAvoider(SingleModulationAvoider):
 
         return self.relative_velocity
 
-    def update_reference_direction(self, in_robot_frame=True, position=None):
+    def update_reference_direction(
+        self, in_robot_frame=True, position=None, initial_velocity=None
+    ):
         """Take position from robot position if not given as argument."""
         if not len(self.obstacle_environment):
             # No obstacles found -> default reference
@@ -103,8 +116,8 @@ class FastObstacleAvoider(SingleModulationAvoider):
         relative_distances = np.zeros((norm_dirs.shape[1]))
 
         # if self.consider_relative_velocity:
-            # self.udpate_relative_velocity(weights, position=position)
-            # relative_velocities = np.zeros(ref_dirs.shape)
+        # self.udpate_relative_velocity(weights, position=position)
+        # relative_velocities = np.zeros(ref_dirs.shape)
 
         for it, obs in enumerate(self.obstacle_environment):
             norm_dirs[:, it] = obs.get_normal_direction(position, in_global_frame=True)
@@ -114,7 +127,9 @@ class FastObstacleAvoider(SingleModulationAvoider):
 
             relative_distances[it] = obs.get_gamma(position, in_global_frame=True) - 1
 
-        weights = self.get_weight_from_distances(relative_distances)
+        weights = self.get_weight_from_distances(
+            relative_distances, directions=ref_dirs, initial_velocity=initial_velocity
+        )
 
         self.reference_direction = np.sum(
             ref_dirs * np.tile(weights, (ref_dirs.shape[0], 1)), axis=1
@@ -140,13 +155,15 @@ class FastObstacleAvoider(SingleModulationAvoider):
             self.ref_dirs = ref_dirs
             self.normal_dirs = norm_dirs
 
-            self.tang_dirs = np.vstack(((-1)*self.normal_dirs[1, :], self.normal_dirs[0, :]))
+            self.tang_dirs = np.vstack(
+                ((-1) * self.normal_dirs[1, :], self.normal_dirs[0, :])
+            )
 
     @property
     def tangent_direction(self):
-        """ Only works for two dimensions!! """
-        tang = np.array([(-1)*self.normal_direction[1], self.normal_direction[0]])
-        tang = tang / LA.norm(tang)*LA.norm(self.reference_direction)
+        """Only works for two dimensions!!"""
+        tang = np.array([(-1) * self.normal_direction[1], self.normal_direction[0]])
+        tang = tang / LA.norm(tang) * LA.norm(self.reference_direction)
         return tang
 
     # def passpass():
@@ -169,7 +186,7 @@ class FastObstacleAvoider(SingleModulationAvoider):
 
         if dot_prod < np.sqrt(2) / 2:
             normal_scaling = 1
-            
+
         else:
             normal_scaling = np.sqrt(2) * dot_prod
 

@@ -449,4 +449,4 @@ if (__name__) == "__main__":
     plt.close("all")
 
     # vectorfield_with_scenario_mixed(save_figure=False)
-    # animation_with_mixed(save_animation=True)
+    animation_with_mixed(save_animation=False)

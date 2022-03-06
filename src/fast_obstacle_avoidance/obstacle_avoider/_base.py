@@ -35,11 +35,12 @@ class SingleModulationAvoider(ABC):
     def __init__(
         self,
         stretching_matrix: StretchingMatrixFunctor = None,
+        reference_update_before_modulation: bool = False,
         # Parameters for the weight evaluation
         weight_max_norm: float = None,
         weight_factor: float = 10,
         weight_power: float = 1,
-        margin_weight: float = 1e-3
+        margin_weight: float = 1e-3,
     ):
         if stretching_matrix is None:
             self.stretching_matrix = StretchingMatrixTrigonometric()
@@ -67,6 +68,8 @@ class SingleModulationAvoider(ABC):
 
         self.relative_velocity = None
 
+        self.reference_update_before_modulation = reference_update_before_modulation
+
     def avoid(
         self, initial_velocity: np.ndarray, limit_velocity_magnitude: bool = True
     ) -> None:
@@ -75,6 +78,20 @@ class SingleModulationAvoider(ABC):
         # -> get distance (minus radius)
         # -> get closest points
         # -> get_weights => how?
+        if self.relative_velocity is not None:
+            initial_velocity = initial_velocity - self.relative_velocity
+            # breakpoint()
+
+        if not LA.norm(initial_velocity):
+            # Trivial velocity modulation
+            if self.relative_velocity is None:
+                return initial_velocity
+            else:
+                return initial_velocity - self.relative_velocity
+
+        if self.reference_update_before_modulation:
+            self.update_reference_direction(initial_velocity=initial_velocity)
+
         ref_norm = LA.norm(self.reference_direction)
 
         if not ref_norm:
@@ -96,17 +113,6 @@ class SingleModulationAvoider(ABC):
 
             inv_decomposition = LA.pinv(decomposition_matrix)
 
-        if self.relative_velocity is not None:
-            initial_velocity = initial_velocity - self.relative_velocity
-            # breakpoint()
-
-        if not LA.norm(initial_velocity):
-            # Trivial velocity modulation
-            if self.relative_velocity is None:
-                return initial_velocity
-            else:
-                return initial_velocity - self.relative_velocity
-
         stretching_matrix = self.stretching_matrix.get(
             ref_norm, self.reference_direction, self.normal_direction, initial_velocity
         )
@@ -125,15 +131,16 @@ class SingleModulationAvoider(ABC):
 
             if mod_norm > init_norm:
                 modulated_velocity = modulated_velocity * (init_norm / mod_norm)
-        
+
         return modulated_velocity
 
     def get_weight_from_distances(
-        self, distances: np.ndarray,
+        self,
+        distances: np.ndarray,
         directions: np.ndarray = None,
         initial_velocity: np.ndarray = None,
-        ):
-        """ Returns an array of weights with the same dimensions as distances input. """
+    ):
+        """Returns an array of weights with the same dimensions as distances input."""
         # => get weighted evaluation along the robot
         # to obtain linear + angular velocity
         if any(distances < self.margin_weight):
@@ -142,7 +149,9 @@ class SingleModulationAvoider(ABC):
             distances = distances - np.min(distances) + self.margin_weight
 
         num_points = distances.shape[0]
-        weight = (1 / distances) ** self.weight_power * (self.weight_factor / num_points)
+        weight = (1 / distances) ** self.weight_power * (
+            self.weight_factor / num_points
+        )
 
         self.distance_weight_sum = np.sum(weight)
 
@@ -150,13 +159,13 @@ class SingleModulationAvoider(ABC):
         if directions is not None and initial_velocity is not None:
             # TODO: the way the weight is caluclated has to be changed slightly,
             # it needs to be done each 'avoid' funtion to incoorporate this...
-            breakpoint()
-            dir_weight = (
-                1 + np.sum(directions, np.tile(initial_velocity, (1, directions.shape[1]), axis=0))
-                / (LA.norm(directions, axis=0)*LA.norm(initial_velocity))
-            )
-            
-            weight = weight * dir_weight
+            dir_weight = 1 + np.sum(
+                directions * np.tile(initial_velocity, (directions.shape[1], 1)).T,
+                axis=0,
+            ) / (LA.norm(directions, axis=0) * LA.norm(initial_velocity))
+
+            # weight = weight * dir_weight
+            weight = weight
 
         if (
             self.weight_max_norm is not None
@@ -168,7 +177,6 @@ class SingleModulationAvoider(ABC):
             return weight / self.distance_weight_sum
         else:
             return weight
-
 
     def limit_velocity(self):
         raise NotImplementedError()

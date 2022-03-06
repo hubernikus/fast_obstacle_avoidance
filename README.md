@@ -64,7 +64,6 @@ Try to use pre-commit-hooks if actively contributing to the repository:
 pre-commit install
 ```
 
-
 # Debug
 You forgot to add the submodules, add them with:
 ``` sh
