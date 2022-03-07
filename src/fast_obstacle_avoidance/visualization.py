@@ -260,6 +260,14 @@ class FastObstacleAnimator(BaseFastAnimator):
         self.initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)
         self.modulated_velocity = self.avoider.avoid(self.initial_velocity)
 
+        # if LA.norm(self.modulated_velocity) > self.velocity_normalization_margin:
+        # Speed up simulation
+        # self.modulated_velocity = (
+        # self.modulated_velocity
+        # / LA.norm(self.modulated_velocity)
+        # * LA.norm(self.initial_velocity)
+        # )
+
         # Update step
         self.robot.pose.position = (
             self.robot.pose.position + self.modulated_velocity * self.dt_simulation

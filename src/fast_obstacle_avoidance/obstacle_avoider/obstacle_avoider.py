@@ -25,7 +25,10 @@ class FastObstacleAvoider(SingleModulationAvoider):
         robot: BaseRobot = None,
         # reference_update_before_modulation: bool = True,
         consider_relative_velocity: bool = True,
-        dimension=2,
+        weight_factor: float = 1,
+        margin_weight: float = 1,
+        distance_weight_sum: float = 1,
+        dimension: int = 2,
         **kwargs
     ):
         """Initialize with obstacle list"""
@@ -33,7 +36,9 @@ class FastObstacleAvoider(SingleModulationAvoider):
         self.obstacle_environment = obstacle_environment
         self.robot = robot
 
-        super().__init__(reference_update_before_modulation=True, **kwargs)
+        super().__init__(
+            weight_factor=weight_factor, margin_weight=margin_weight, **kwargs
+        )
 
         if (
             len(self.obstacle_environment) and self.obstacle_environment.dimension == 3
@@ -113,7 +118,7 @@ class FastObstacleAvoider(SingleModulationAvoider):
             (self.obstacle_environment.dimension, self.obstacle_environment.n_obstacles)
         )
         ref_dirs = np.zeros(norm_dirs.shape)
-        relative_distances = np.zeros((norm_dirs.shape[1]))
+        gammas = np.zeros((norm_dirs.shape[1]))
 
         # if self.consider_relative_velocity:
         # self.udpate_relative_velocity(weights, position=position)
@@ -125,19 +130,21 @@ class FastObstacleAvoider(SingleModulationAvoider):
                 position, in_global_frame=True
             )
 
-            relative_distances[it] = obs.get_gamma(position, in_global_frame=True) - 1
+            gammas[it] = obs.get_gamma(position, in_global_frame=True)
 
-        weights = self.get_weight_from_distances(
-            relative_distances, directions=ref_dirs, initial_velocity=initial_velocity
+        weights = self.get_weights_from_gamma(
+            gammas, directions=ref_dirs, initial_velocity=initial_velocity
         )
-
         self.reference_direction = np.sum(
             ref_dirs * np.tile(weights, (ref_dirs.shape[0], 1)), axis=1
         )
 
+        if any(np.isnan(self.reference_direction)):
+            breakpoint()
+
         norm_ref_dir = LA.norm(self.reference_direction)
         if not norm_ref_dir:
-            self.normal_direction = np.zeros(reference_direction.shape)
+            self.normal_direction = self.reference_direction
             return
 
         self.normal_direction = self.update_normal_direction(
@@ -166,9 +173,18 @@ class FastObstacleAvoider(SingleModulationAvoider):
         tang = tang / LA.norm(tang) * LA.norm(self.reference_direction)
         return tang
 
-    # def passpass():
     def update_normal_direction(self, ref_dirs, norm_dirs, weights) -> np.ndarray:
-        """Update normal direction as mentioned in the paper xy."""
+        """Update normal direction which is used in the decomposition of the initial velocity."""
+        # Check if normal directions are valid
+        ind_nonzero = LA.norm(norm_dirs, axis=0) > 0
+        if not np.sum(ind_nonzero):
+            self.normal_direction = self.reference_direction
+            return self.normal_direction
+
+        ref_dirs = ref_dirs[:, ind_nonzero]
+        norm_dirs = norm_dirs[:, ind_nonzero]
+        weights = weights[ind_nonzero]
+
         delta_normals = norm_dirs - ref_dirs
         delta_normal = np.sum(
             delta_normals * np.tile(weights, (delta_normals.shape[0], 1)), axis=1
@@ -176,7 +192,10 @@ class FastObstacleAvoider(SingleModulationAvoider):
 
         if not LA.norm(delta_normal) or not LA.norm(self.reference_direction):
             # Trivial case
-            self.normal_direction = np.zeros(self.reference_direction.shape)
+            self.normal_direction = self.reference_direction
+            normal_norm = LA.norm(self.normal_direction)
+            if normal_norm:
+                self.normal_direction = self.normal_direction / normal_norm
             return self.normal_direction
 
         dot_prod = (-1) * (
@@ -198,9 +217,10 @@ class FastObstacleAvoider(SingleModulationAvoider):
         )
         self.normal_direction = self.normal_direction / LA.norm(self.normal_direction)
 
+        if any(np.isnan(self.normal_direction)):
+            breakpoint()
         return self.normal_direction
 
-    # def update_normal_direction(self, ref_dirs, norm_dirs, weights) -> np.ndarray:
     def update_normal_direction_with_relative_rotation(
         self, ref_dirs, norm_dirs, weights
     ) -> np.ndarray:
@@ -246,3 +266,40 @@ class FastObstacleAvoider(SingleModulationAvoider):
             )
 
         return self.normal_direction
+
+    def get_weights_from_gamma(
+        self,
+        gammas: np.ndarray,
+        directions: np.ndarray = None,
+        initial_velocity: np.ndarray = None,
+        max_weight_value: float = 1e10,
+        lower_margin: float = 1e-10,
+    ):
+        ref_dists = np.array(
+            [oo.get_characteristic_length() for oo in self.obstacle_environment]
+        )
+
+        ind_zero = gammas < lower_margin
+        if np.sum(ind_zero):
+            weights = np.zeros(ind_zero.shape)
+            weights[ind_zero] = 1 / np.sum(ind_zero)
+            return weights
+
+        weights = ref_dists / gammas ** (self.dimension)
+
+        if (
+            self.evaluate_velocity_weight
+            and directions is not None
+            and initial_velocity is not None
+        ):
+            weights = self.reduce_wake_effect(weights, initial_velocity, directions)
+
+        self.distance_weight_sum = np.sum(weights)
+
+        if any(np.isnan(weights)) or any(np.isnan(weights / self.distance_weight_sum)):
+            breakpoint()
+
+        if np.sum(self.distance_weight_sum) > 1:
+            return weights / self.distance_weight_sum
+        else:
+            return weights

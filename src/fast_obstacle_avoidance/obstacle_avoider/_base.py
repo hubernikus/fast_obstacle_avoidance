@@ -36,9 +36,10 @@ class SingleModulationAvoider(ABC):
         self,
         stretching_matrix: StretchingMatrixFunctor = None,
         reference_update_before_modulation: bool = False,
+        evaluate_velocity_weight: bool = False,
         # Parameters for the weight evaluation
         weight_max_norm: float = None,
-        weight_factor: float = 10,
+        weight_factor: float = 1,
         weight_power: float = 1,
         margin_weight: float = 1e-3,
     ):
@@ -69,9 +70,13 @@ class SingleModulationAvoider(ABC):
         self.relative_velocity = None
 
         self.reference_update_before_modulation = reference_update_before_modulation
+        self.evaluate_velocity_weight = evaluate_velocity_weight
 
     def avoid(
-        self, initial_velocity: np.ndarray, limit_velocity_magnitude: bool = True
+        self,
+        initial_velocity: np.ndarray,
+        limit_velocity_magnitude: bool = True,
+        position: np.ndarray = None,
     ) -> None:
         """Modulate velocity and return DS."""
         # For each control_points
@@ -90,7 +95,12 @@ class SingleModulationAvoider(ABC):
                 return initial_velocity - self.relative_velocity
 
         if self.reference_update_before_modulation:
-            self.update_reference_direction(initial_velocity=initial_velocity)
+            if position is None:
+                position = self.robot.pose.position
+
+            self.update_reference_direction(
+                position=position, initial_velocity=initial_velocity
+            )
 
         ref_norm = LA.norm(self.reference_direction)
 
@@ -98,19 +108,18 @@ class SingleModulationAvoider(ABC):
             # Not modulated when far away from everywhere / in between two obstacles
             return initial_velocity
 
-        if self.normal_direction is None:
+        if self.normal_direction is None or not LA.norm(self.normal_direction):
             decomposition_matrix = get_orthogonal_basis(
                 self.reference_direction / ref_norm, normalize=False
             )
-
             inv_decomposition = decomposition_matrix.T
+
         else:
             decomposition_matrix = get_orthogonal_basis(
                 self.normal_direction, normalize=False
             )
 
             decomposition_matrix[:, 0] = self.reference_direction / ref_norm
-
             inv_decomposition = LA.pinv(decomposition_matrix)
 
         stretching_matrix = self.stretching_matrix.get(
@@ -121,6 +130,7 @@ class SingleModulationAvoider(ABC):
         modulated_velocity = stretching_matrix @ modulated_velocity
         modulated_velocity = decomposition_matrix @ modulated_velocity
 
+        # breakpoint()
         # TODO: limit velocity with respect to maximum velocity
         if self.relative_velocity is not None:
             initial_velocity = initial_velocity + self.relative_velocity
@@ -149,23 +159,18 @@ class SingleModulationAvoider(ABC):
             distances = distances - np.min(distances) + self.margin_weight
 
         num_points = distances.shape[0]
-        weight = (1 / distances) ** self.weight_power * (
+        weights = (1 / distances) ** self.weight_power * (
             self.weight_factor / num_points
         )
 
-        self.distance_weight_sum = np.sum(weight)
+        self.distance_weight_sum = np.sum(weights)
 
-        # Reduce wake effect behind an obstacle
-        if directions is not None and initial_velocity is not None:
-            # TODO: the way the weight is caluclated has to be changed slightly,
-            # it needs to be done each 'avoid' funtion to incoorporate this...
-            dir_weight = 1 + np.sum(
-                directions * np.tile(initial_velocity, (directions.shape[1], 1)).T,
-                axis=0,
-            ) / (LA.norm(directions, axis=0) * LA.norm(initial_velocity))
-
-            # weight = weight * dir_weight
-            weight = weight
+        if (
+            self.evaluate_velocity_weight
+            and directions is not None
+            and initial_velocity is not None
+        ):
+            weights = self.reduce_wake_effect(weights, initial_velocity, directions)
 
         if (
             self.weight_max_norm is not None
@@ -174,9 +179,41 @@ class SingleModulationAvoider(ABC):
             self.distance_weight_sum = self.weight_max_norm
 
         if self.distance_weight_sum > 1:
-            return weight / self.distance_weight_sum
+            return weights / self.distance_weight_sum
         else:
-            return weight
+            return weights
+
+    def reduce_wake_effect(self, weights, initial_velocity, directions):
+        """Reduce wake effect behind an obstacle and returns adapted weights.
+
+        Since initial weights are in the range of [0, 1],
+        a non-zero power will reduce the influence."""
+        # TODO: the way the weight is caluclated has to be changed slightly,
+        # it needs to be done each 'avoid' funtion to incoorporate this...
+        dir_weights = (
+            1
+            + (-1)
+            * np.sum(
+                directions * np.tile(initial_velocity, (directions.shape[1], 1)).T,
+                axis=0,
+            )
+            / (LA.norm(directions, axis=0) * LA.norm(initial_velocity))
+        )
+
+        dir_weights = dir_weights * 0.5
+
+        ind_nonzero = dir_weights > 0
+
+        weight_fact = weights / np.sum(weights)
+        weight_fact[~ind_nonzero] = 0
+        weight_fact[ind_nonzero] = weight_fact[ind_nonzero] ** (
+            1.0 / dir_weights[ind_nonzero]
+        )
+
+        # TODO: The importance weight could be dependent on the magnitude of the speed
+        # TODO: Use the normal (instead of the reference). This would ensure impenetrability
+
+        return weights * weight_fact
 
     def limit_velocity(self):
         raise NotImplementedError()

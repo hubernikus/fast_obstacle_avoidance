@@ -8,10 +8,13 @@ from numpy import linalg as LA
 from numpy import pi
 import matplotlib.pyplot as plt
 
+from vartools.states import ObjectPose
 from vartools.dynamical_systems import LinearSystem
 
+
 from dynamic_obstacle_avoidance.obstacles import Ellipse, Sphere
-from dynamic_obstacle_avoidance.containers import ObstacleContainer
+from dynamic_obstacle_avoidance.obstacles import CircularObstacle
+from dynamic_obstacle_avoidance.containers import ObstacleContainer, SphereContainer
 from dynamic_obstacle_avoidance.visualization import plot_obstacles
 
 # from fast_obstacle_avoidance.obstacle_avoider import FastObstacleAvoider
@@ -21,6 +24,16 @@ from fast_obstacle_avoidance.obstacle_avoider import FastObstacleAvoider
 from fast_obstacle_avoidance.control_robot import QoloRobot
 
 
+def get_random_position(x_lim, y_lim):
+    dimension = 2
+
+    position = np.random.rand(dimension)
+    position[0] = position[0] * (x_lim[1] - x_lim[0]) + x_lim[0]
+    position[1] = position[1] * (y_lim[1] - y_lim[0]) + y_lim[0]
+
+    return position
+
+
 def double_plot(
     obstacle_environment,
     x_lim=[-5, 5],
@@ -28,11 +41,12 @@ def double_plot(
     n_grid=40,
     plot_normal=True,
     attractor_position=None,
+    figsize=(12, 6),
 ):
     if attractor_position is None:
         attractor_position = np.array([4, -0.1])
 
-    fig, axs = plt.subplots(1, 2, figsize=(12, 6))
+    fig, axs = plt.subplots(1, 2, figsize=figsize)
 
     for ax in axs:
         ax.axis("equal")
@@ -43,11 +57,15 @@ def double_plot(
             obstacle_container=obstacle_environment,
             x_lim=x_lim,
             y_lim=y_lim,
-            noTicks=True,
+            noTicks=False,
             draw_reference=True,
         )
 
-    main_avoider = FastObstacleAvoider(obstacle_environment=obstacle_environment)
+    main_avoider = FastObstacleAvoider(
+        obstacle_environment=obstacle_environment,
+        reference_update_before_modulation=True,
+        evaluate_velocity_weight=True,
+    )
 
     initial_dynamics = LinearSystem(
         # attractor_position=np.array([3, -3]), maximum_velocity=0.8)
@@ -67,20 +85,47 @@ def double_plot(
     norm_dirs = np.zeros(positions.shape)
     ref_dirs = np.zeros(positions.shape)
 
-    for it in range(positions.shape[1]):
-        main_avoider.update_reference_direction(position=positions[:, it])
-        initial_vel = initial_dynamics.evaluate(position=positions[:, it])
+    # Single-Value Test
+    if False:
+        position = np.array([1.322, 2.320])
+        initial_vel = initial_dynamics.evaluate(position=position)
+        mod_vel = main_avoider.avoid(initial_velocity=initial_vel, position=position)
+        print("ref dir", main_avoider.reference_direction)
+        print("pos", position)
+        print("vel", mod_vel)
 
-        ref_dirs[:, it] = main_avoider.reference_direction
-        if main_avoider.normal_direction is not None:
-            norm_dirs[:, it] = main_avoider.normal_direction
+        position = np.array([1.458, 2.317])
+        initial_vel = initial_dynamics.evaluate(position=position)
+        mod_vel = main_avoider.avoid(initial_velocity=initial_vel, position=position)
+
+        print("ref dir", main_avoider.reference_direction)
+        print("pos", position)
+        print("vel", mod_vel)
+
+        return
+
+    for it in range(positions.shape[1]):
+        # main_avoider.update_reference_direction(position=positions[:, it])
+
+        initial_vel = initial_dynamics.evaluate(position=positions[:, it])
 
         # norm_dirs[:, it] = main_avoider.normal_direction
         # if any(relative_distances < 0):
         # continue
 
         # fast_avoider.update_laserscan(allscan)
-        mod_vel[:, it] = main_avoider.avoid(initial_vel)
+        mod_vel[:, it] = main_avoider.avoid(
+            initial_velocity=initial_vel, position=positions[:, it]
+        )
+
+        ref_dirs[:, it] = main_avoider.reference_direction
+        if main_avoider.normal_direction is not None:
+            norm_dirs[:, it] = main_avoider.normal_direction
+
+        # print('pos', positions[:, it])
+        # print('vel', LA.norm(mod_vel[:, it]), mod_vel[:, it])
+
+        # print('ref_dirs', main_avoider.reference_direction)
 
     axs[0].quiver(
         positions[0, :],
@@ -281,8 +326,9 @@ def main_vectorfield_starshaped(
 
     # DEBUG
     if False:
-        # position = np.array([0, 0])
-        position = np.array([2.932, 0.858])
+        pos = np.array([-2.66666667, 4.44444444])
+        # vel 0.0708717999105947 [-0.03646324  0.06077207]        # position = np.array([0, 0])
+        # position = np.array([2.932, 0.858])
         main_avoider.update_reference_direction(position=position)
         initial_dynamics = LinearSystem(
             # attractor_position=np.array([3, -3]), maximum_velocity=0.8)
@@ -418,11 +464,87 @@ def main_vectorfield_single_ellipse(
     plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
 
 
+def main_multiobstacle_unifrom_circular(x_lim=[-8, 8], y_lim=[-8, 8]):
+    obs_environment = SphereContainer()
+    human_radius = 0.7
+
+    robot = QoloRobot(pose=ObjectPose(position=[0, 0], orientation=0))
+    robot.control_point = [0, 0]
+    robot.control_radius = 0.4
+
+    margin = (human_radius + robot.control_radius) * 2.0
+    x_lim_obs = [x_lim[0] + margin, x_lim[1] - margin]
+    y_lim_obs = [y_lim[0] + margin, y_lim[1] - margin]
+
+    np.random.seed(4)
+    n_humans = 6
+    for ii in range(n_humans):
+        # Random ellipse
+        # position = get_random_position(x_lim=x_lim, y_lim=y_lim)
+        position = get_random_position(x_lim=x_lim_obs, y_lim=y_lim_obs)
+
+        obs_environment.append(
+            CircularObstacle(
+                center_position=position,
+                radius=human_radius,
+                margin_absolut=robot.control_radius,
+            )
+        )
+
+    double_plot(
+        obs_environment,
+        x_lim=x_lim,
+        y_lim=y_lim,
+        n_grid=30,
+        attractor_position=np.array([4, 4]),
+        figsize=(18, 9),
+        plot_normal=False,
+    )
+
+
+def main_single_obstacle(
+    x_lim=[-8, 8],
+    y_lim=[-8, 8]
+    # x_lim=[1, 3], y_lim=[1, 3]
+):
+    obs_environment = SphereContainer()
+    human_radius = 0.7
+
+    robot = QoloRobot(pose=ObjectPose(position=[0, 0], orientation=0))
+    robot.control_point = [0, 0]
+    robot.control_radius = 0.4
+
+    margin = (human_radius + robot.control_radius) * 2.0
+    x_lim_obs = [x_lim[0] + margin, x_lim[1] - margin]
+    y_lim_obs = [y_lim[0] + margin, y_lim[1] - margin]
+
+    n_humans = 1
+    obs_environment.append(
+        CircularObstacle(
+            center_position=np.array([0, 0]),
+            radius=human_radius,
+            margin_absolut=robot.control_radius,
+        )
+    )
+
+    double_plot(
+        obs_environment,
+        x_lim=x_lim,
+        y_lim=y_lim,
+        n_grid=30,
+        attractor_position=np.array([4, 4]),
+        figsize=(18, 9),
+        plot_normal=False,
+    )
+
+
 if (__name__) == "__main__":
-    # plt.close('all')
+    plt.close("all")
     plt.ion()
 
     # main_vectorfield_multi_circle()
-    main_vectorfield_starshaped()
+    # main_vectorfield_starshaped()
     # main_vectorfield_multi_ellipse()
     # main_vectorfield_single_ellipse()
+    main_multiobstacle_unifrom_circular()
+    # main_single_obstacle()

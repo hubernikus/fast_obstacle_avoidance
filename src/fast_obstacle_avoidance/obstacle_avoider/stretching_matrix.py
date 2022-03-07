@@ -140,28 +140,28 @@ class StretchingMatrixExponential(StretchingMatrixFunctor):
 
 
 class StretchingMatrixTrigonometric(StretchingMatrixFunctor):
-    # def __init__(self,*args, **kwargs):
-    # super().__init__(*args, **kwargs)
+
+    weight_power = 1.0 / 4
 
     def get_lambda_weights(self, weight, weight_vel):
+        weight = weight ** self.weight_power
         if weight < 1:
-            lambda_tang = 1 + np.sin(np.pi /2 *weight)
+            lambda_tang = 1 + np.sin(np.pi / 2 * weight)
         else:
-            lambda_tang = 2 * np.sin(np.pi / (2*weight))
+            lambda_tang = 2 * np.sin(np.pi / (2 * weight))
 
         if weight < 2:
-            lambda_ref = np.cos(np.pi/2*weight)
+            lambda_ref = np.cos(np.pi / 2 * weight)
         else:
             lambda_ref = -1
 
-            
         # if weight < 2:
-            # lambda_tang = 1 + np.sin(np.pi / 2 * weight)
-            # lambda_ref = np.cos(np.pi / 2 * weight)
+        # lambda_tang = 1 + np.sin(np.pi / 2 * weight)
+        # lambda_ref = np.cos(np.pi / 2 * weight)
 
         # else:
-            # lambda_tang = 1
-            # lambda_ref = -1
+        # lambda_tang = 1
+        # lambda_ref = -1
 
         if weight_vel < 0 and weight > 1:
             lambda_ref = (-1) * lambda_ref

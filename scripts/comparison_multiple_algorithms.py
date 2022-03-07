@@ -167,6 +167,7 @@ def animation_comparison(
         robot.obstacle_environment = obstacle_environment
 
         fast_avoider = FastObstacleAvoider(
+            reference_update_before_modulation=True,
             robot=robot,
             obstacle_environment=robot.obstacle_environment,
             weight_max_norm=weight_max_norm,
