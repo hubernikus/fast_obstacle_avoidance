@@ -200,7 +200,7 @@ class SingleModulationAvoider(ABC):
             / (LA.norm(directions, axis=0) * LA.norm(initial_velocity))
         )
 
-        dir_weights = dir_weights * 0.5
+        dir_weights = (dir_weights * 0.5) ** 2
 
         ind_nonzero = dir_weights > 0
 

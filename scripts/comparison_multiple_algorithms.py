@@ -167,12 +167,13 @@ def animation_comparison(
         robot.obstacle_environment = obstacle_environment
 
         fast_avoider = FastObstacleAvoider(
-            reference_update_before_modulation=True,
             robot=robot,
             obstacle_environment=robot.obstacle_environment,
-            weight_max_norm=weight_max_norm,
-            weight_factor=weight_factor,
-            weight_power=weight_power,
+            # weight_max_norm=weight_max_norm,
+            # weight_factor=weight_factor,
+            # weight_power=weight_power,
+            reference_update_before_modulation=True,
+            evaluate_velocity_weight=True,
         )
 
         my_animator = FastObstacleAnimator(
@@ -216,7 +217,7 @@ def animation_comparison(
 
 def main_comparison():
     # Do a random seed
-    np.random.seed(1)
+    np.random.seed(5)
 
     dimension = 2
 
@@ -233,16 +234,15 @@ def main_comparison():
             obs_environment,
         ) = create_new_environment()
 
-        convergence_states[1, ii] = animation_comparison(
-            robot=robot,
-            initial_dynamics=initial_dynamics,
-            # main_environment=main_environment,
-            obstacle_environment=obs_environment,
-        )
+        # convergence_states[1, ii] = animation_comparison(
+        # robot=robot,
+        # initial_dynamics=initial_dynamics,
+        # obstacle_environment=obs_environment,
+        # )
 
         # For now only fix the obstacle
-        if True:
-            continue
+        # if True:
+        # continue
         convergence_states[0, ii] = animation_comparison(
             robot=robot,
             initial_dynamics=initial_dynamics,
