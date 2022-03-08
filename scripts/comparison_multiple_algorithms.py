@@ -19,7 +19,7 @@ import shapely
 from vartools.states import ObjectPose
 from vartools.dynamical_systems import LinearSystem
 
-# from dynamic_obstacle_avoidance.obstacles import Ellipse, Cuboid
+from dynamic_obstacle_avoidance.obstacles import Ellipse, Cuboid
 from dynamic_obstacle_avoidance.obstacles import CircularObstacle
 
 # from dynamic_obstacle_avoidance.containers import ObstacleContainer
@@ -64,30 +64,134 @@ def get_random_position(x_lim, y_lim):
     return position
 
 
-def create_new_environment(control_radius=0.5):
+def create_fourobstacle_environment(control_radius=0.5):
     dimension = 2
 
+    y_vals = [-5, 5]
+
     # User defined values
-    x_start = -7
-    x_attractor = 7
-    y_vals = [-4, 4]
+    pos_start = np.array([-6, -4.5])
+    pos_attractor = np.array([6, 4.5])
+
+    x_start = pos_start[0]
+    x_attractor = pos_attractor[0]
+
+    axes_min = 0.4
+    axes_max = 2.0
+
+    robot = QoloRobot(pose=ObjectPose(position=pos_start, orientation=0))
+    robot.control_point = [0, 0]
+    robot.control_radius = control_radius
+
+    initial_dynamics = LinearSystem(
+        attractor_position=pos_attractor, maximum_velocity=1.0
+    )
+
+    # Set obstacle environment
+    x_lim_obs = [x_start + axes_max, x_attractor - axes_max]
+
+    main_environment = ShapelySamplingContainer(n_samples=50)
+    obs_environment = SphereContainer()
+
+    # Get the index of the real obstacles
+    n_tot = 4
+    n_real = 2
+    real_obs_index = np.zeros(n_tot).astype(bool)
+    real_obs_index[np.random.choice(n_tot, n_real)] = True
+
+    axes_length_star = [2.0, 0.4]
+
+    # Star 1
+    position, orientation_deg, axes_length = get_random_position_orientation_and_axes(
+        x_lim=x_lim_obs, y_lim=y_vals, axes_range=[axes_min, axes_max]
+    )
+    main_environment.create_ellipse(position, axes_length_star, orientation_deg)
+    obs_environment.append(
+        Ellipse(
+            center_position=position,
+            orientation=orientation_deg * np.pi / 180,
+            axes_length=axes_length_star,
+        )
+    )
+
+    orientation_deg += 90
+
+    main_environment.create_ellipse(position, axes_length_star, orientation_deg)
+    obs_environment.append(
+        Ellipse(
+            center_position=position,
+            orientation=orientation_deg * np.pi / 180,
+            axes_length=axes_length_star,
+        )
+    )
+
+    # Star 2
+    position, orientation_deg, axes_length = get_random_position_orientation_and_axes(
+        x_lim=x_lim_obs, y_lim=y_vals, axes_range=[axes_min, axes_max]
+    )
+    main_environment.create_ellipse(position, axes_length_star, orientation_deg)
+    obs_environment.append(
+        Ellipse(
+            center_position=position,
+            orientation=orientation_deg * np.pi / 180,
+            axes_length=axes_length_star,
+        )
+    )
+
+    orientation_deg += 90
+
+    main_environment.create_ellipse(position, axes_length_star, orientation_deg)
+    obs_environment.append(
+        Ellipse(
+            center_position=position,
+            orientation=orientation_deg * np.pi / 180,
+            axes_length=axes_length_star,
+        )
+    )
+
+    # Ellipse
+    position, orientation_deg, axes_length = get_random_position_orientation_and_axes(
+        x_lim=x_lim_obs, y_lim=y_vals, axes_range=[axes_min, axes_max]
+    )
+    main_environment.create_ellipse(position, axes_length, orientation_deg)
+
+    # Random cuboid
+    position, orientation_deg, axes_length = get_random_position_orientation_and_axes(
+        x_lim=x_lim_obs, y_lim=y_vals, axes_range=[axes_min, axes_max]
+    )
+    main_environment.create_cuboid(position, axes_length, orientation_deg)
+
+    return robot, initial_dynamics, main_environment, obs_environment
+
+
+def create_multi_human_environment(control_radius=0.5):
+    dimension = 2
+
+    y_vals = [-5, 5]
+
+    # User defined values
+    pos_start = np.array([-6, -4.5])
+    pos_attractor = np.array([6, 4.5])
+
+    x_start = pos_start[0]
+    x_attractor = pos_attractor[0]
 
     axes_min = 0.5
     axes_max = 2
 
     # Set robot and start position
-    pos_start = np.zeros(dimension)
-    pos_start[0] = x_start
-    pos_start[1] = np.random.rand(1) * (y_vals[1] - y_vals[0]) + y_vals[0]
+    # pos_start = np.zeros(dimension)
+    # pos_start[0] = x_start
+    # pos_start[1] = np.random.rand(1) * (y_vals[1] - y_vals[0]) + y_vals[0]
 
     robot = QoloRobot(pose=ObjectPose(position=pos_start, orientation=0))
     robot.control_point = [0, 0]
     robot.control_radius = control_radius
 
     # Set dynamical system
-    pos_attractor = np.zeros(dimension)
-    pos_attractor[0] = x_attractor
-    pos_attractor[1] = np.random.rand(1) * (y_vals[1] - y_vals[0]) + y_vals[0]
+    # pos_attractor = np.zeros(dimension)
+    # pos_attractor[0] = x_attractor
+    # pos_attractor[1] = np.random.rand(1) * (y_vals[1] - y_vals[0]) + y_vals[0]
 
     initial_dynamics = LinearSystem(
         attractor_position=pos_attractor, maximum_velocity=1.0
@@ -141,29 +245,38 @@ def create_new_environment(control_radius=0.5):
 
 
 def animation_comparison(
-    robot, initial_dynamics, main_environment=None, obstacle_environment=None
+    robot,
+    initial_dynamics,
+    main_environment=None,
+    obstacle_environment=None,
+    do_the_plotting=True,
+    it_max=500,
 ):
     # Only robot moves - everything else is static
     robot = copy.deepcopy(robot)
 
-    weight_max_norm = 1e8
-    weight_factor = 4
-    weight_power = 2.0
+    weight_max_norm = 1e6
+    weight_factor = 1.0
+    weight_power = 1.0
+
     if obstacle_environment is None:
+        mode_name = "sample"
+
         # Sample scenario only
         fast_avoider = SampledAvoider(
             robot=robot,
             weight_max_norm=weight_max_norm,
-            weight_factor=weight_factor,
+            weight_factor=2 * np.pi / main_environment.n_samples * 3.5,
             weight_power=weight_power,
+            reference_update_before_modulation=False,
         )
 
         my_animator = LaserscanAnimator(
-            it_max=400,
+            it_max=it_max,
             dt_simulation=0.05,
         )
     elif main_environment is None:
-        print("Obstacle only.")
+        mode_name = "obstacle"
         robot.obstacle_environment = obstacle_environment
 
         fast_avoider = FastObstacleAvoider(
@@ -172,17 +285,17 @@ def animation_comparison(
             # weight_max_norm=weight_max_norm,
             # weight_factor=weight_factor,
             # weight_power=weight_power,
-            reference_update_before_modulation=True,
+            reference_update_before_modulation=False,
             evaluate_velocity_weight=True,
         )
 
         my_animator = FastObstacleAnimator(
-            it_max=400,
+            it_max=it_max,
             dt_simulation=0.05,
         )
 
     else:
-        print("Doing the mixed.")
+        mode_name = "mixed"
         robot.obstacle_environment = obstacle_environment
 
         fast_avoider = MixedEnvironmentAvoider(
@@ -190,10 +303,12 @@ def animation_comparison(
             weight_max_norm=weight_max_norm,
             weight_factor=weight_factor,
             weight_power=weight_power,
+            reference_update_before_modulation=False,
+            delta_sampling=2 * np.pi / main_environment.n_samples * 3.5,
         )
 
         my_animator = MixedObstacleAnimator(
-            it_max=400,
+            it_max=it_max,
             dt_simulation=0.05,
         )
 
@@ -205,19 +320,25 @@ def animation_comparison(
         # x_lim=x_lim,
         # y_lim=y_lim,
         show_reference=True,
+        do_the_plotting=do_the_plotting,
     )
 
-    my_animator.run(save_animation=False)
+    if do_the_plotting:
+        my_animator.run(save_animation=False)
 
-    if my_animator.convergence_state:
-        return (-1) * my_animator.convergence_state
     else:
-        return my_animator.ii
+        plt.close("all")
+        my_animator.run_without_plotting()
+
+    print(f"Convergence state of {mode_name}: {my_animator.convergence_state}")
+    print()
+
+    return my_animator.convergence_state
 
 
-def main_comparison():
+def main_comparison(do_the_plotting=True):
     # Do a random seed
-    np.random.seed(5)
+    np.random.seed(1)
 
     dimension = 2
 
@@ -227,33 +348,42 @@ def main_comparison():
     convergence_states = np.zeros((n_modes, n_repetitions))
 
     for ii in range(n_repetitions):
+        # (
+        # robot,
+        # initial_dynamics,
+        # main_environment,
+        # obs_environment,
+        # ) = create_new_environment()
+
         (
             robot,
             initial_dynamics,
             main_environment,
             obs_environment,
-        ) = create_new_environment()
+        ) = create_fourobstacle_environment()
 
-        # convergence_states[1, ii] = animation_comparison(
+        # Obstacle Environment
+        # animation_comparison(
         # robot=robot,
         # initial_dynamics=initial_dynamics,
         # obstacle_environment=obs_environment,
         # )
 
-        # For now only fix the obstacle
-        # if True:
-        # continue
+        # Sample Environment
         convergence_states[0, ii] = animation_comparison(
             robot=robot,
             initial_dynamics=initial_dynamics,
             main_environment=main_environment,
+            do_the_plotting=do_the_plotting,
         )
 
+        # Mixed Environment
         convergence_states[1, ii] = animation_comparison(
             robot=robot,
             initial_dynamics=initial_dynamics,
             main_environment=main_environment,
             obstacle_environment=obs_environment,
+            do_the_plotting=do_the_plotting,
         )
 
     print(convergence_states)

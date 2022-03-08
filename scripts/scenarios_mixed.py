@@ -48,6 +48,8 @@ def static_visualization_of_sample_avoidance_mixed(
     ax=None,
     do_quiver=False,
     plot_ref_vectorfield=False,
+    plot_velocities=False,
+    ax_ref=None,
 ):
 
     if plot_initial_robot:
@@ -81,30 +83,31 @@ def static_visualization_of_sample_avoidance_mixed(
         arrow_headwith = 0.4
         margin_velocity_plot = 1e-3
 
-        # ax.arrow(
-        #         robot.pose.position[0],
-        #         robot.pose.position[1],
-        #         arrow_scale * initial_velocity[0],
-        #         arrow_scale * initial_velocity[1],
-        #         width=arrow_width,
-        #         head_width=arrow_headwith,
-        #         # color="g",
-        #         color="#008080",
-        #         label="Initial velocity",
-        #     )
+        if plot_velocities:
+            ax.arrow(
+                robot.pose.position[0],
+                robot.pose.position[1],
+                arrow_scale * initial_velocity[0],
+                arrow_scale * initial_velocity[1],
+                width=arrow_width,
+                head_width=arrow_headwith,
+                # color="g",
+                color="#008080",
+                label="Initial velocity",
+            )
 
-        # ax.arrow(
-        #     robot.pose.position[0],
-        #     robot.pose.position[1],
-        #     arrow_scale * modulated_velocity[0],
-        #     arrow_scale * modulated_velocity[1],
-        #     width=arrow_width,
-        #     head_width=arrow_headwith,
-        #     # color="b",
-        #     # color='#213970',
-        #     color="#000080",
-        #     label="Modulated velocity",
-        # )
+            ax.arrow(
+                robot.pose.position[0],
+                robot.pose.position[1],
+                arrow_scale * modulated_velocity[0],
+                arrow_scale * modulated_velocity[1],
+                width=arrow_width,
+                head_width=arrow_headwith,
+                # color="b",
+                # color='#213970',
+                color="#000080",
+                label="Modulated velocity",
+            )
 
         ax.arrow(
             robot.pose.position[0],
@@ -254,9 +257,10 @@ def static_visualization_of_sample_avoidance_mixed(
     ax.set_aspect("equal")
     # ax.grid(True)
 
-    if plot_ref_vectorfield:
+    if plot_ref_vectorfield or ax_ref is not None:
         # _, ax_ref = plt.subplots(1, 1, figsize=(10, 6))
-        ax_ref = ax
+        if ax_ref is None:
+            ax_ref = ax
 
         ax_ref.quiver(
             positions[0, :],
@@ -444,9 +448,89 @@ def animation_with_mixed(save_animation):
     my_animator.run(save_animation=save_animation)
 
 
+def scenario_mixed_analysis():
+    # start_point = np.array([, 4])
+    x_lim = [0, 12]
+    y_lim = [0, 10]
+
+    attractor_position = np.array([11.5, 9.5])
+
+    control_radius = 0.6
+
+    initial_dynamics = LinearSystem(
+        attractor_position=attractor_position, maximum_velocity=1.0
+    )
+
+    analytic_environment = GradientContainer()
+    analytic_environment.append(
+        CircularObstacle(
+            center_position=np.array([8, 6]),
+            orientation=-20 * np.pi / 180,
+            radius=0.5,
+            margin_absolut=control_radius,
+        )
+    )
+
+    analytic_environment.append(
+        CircularObstacle(
+            center_position=np.array([2.4, 5]),
+            orientation=-20 * np.pi / 180,
+            radius=0.5,
+            margin_absolut=control_radius,
+        )
+    )
+
+    sampled_environment = ShapelySamplingContainer(n_samples=50)
+    sampled_environment.create_ellipse(
+        position=[10, 2.5], axes_length=[1.0, 0.7], orientation_in_degree=50
+    )
+
+    sampled_environment.create_cuboid(position=[4, 8], axes_length=[1.5, 0.9])
+
+    robot = QoloRobot(pose=ObjectPose(position=np.zeros(2), orientation=0))
+    robot.control_point = [0, 0]
+    robot.control_radius = control_radius
+
+    robot.obstacle_environment = analytic_environment
+
+    # Initialize Avoider
+    mixed_avoider = MixedEnvironmentAvoider(
+        robot=robot,
+        weight_max_norm=1e6,
+        delta_sampling=2 * np.pi / sampled_environment.n_samples * 3.5,
+        # scaling_obstacle_weight=5.0,
+        weight_power=1.0,
+        # scaling_laserscan_weight=1.2,
+    )
+
+    # Plot the vectorfield around the robot
+    # fig, ax = plt.subplots(1, 1, figsize=(12, 5))
+    fig, axs = plt.subplots(1, 2, figsize=(16, 9))
+
+    static_visualization_of_sample_avoidance_mixed(
+        robot=robot,
+        n_resolution=40,
+        dynamical_system=initial_dynamics,
+        fast_avoider=mixed_avoider,
+        # plot_initial_robot=True,
+        sample_environment=sampled_environment,
+        # show_ticks=False,
+        show_ticks=True,
+        x_lim=x_lim,
+        y_lim=y_lim,
+        ax=axs[0],
+        do_quiver=True,
+        ax_ref=axs[1],
+    )
+
+
 if (__name__) == "__main__":
     plt.ion()
     plt.close("all")
 
+    # The two main pretty scenarios:
     # vectorfield_with_scenario_mixed(save_figure=False)
-    animation_with_mixed(save_animation=False)
+    # animation_with_mixed(save_animation=False)
+
+    # And then the more down-to-earth
+    scenario_mixed_analysis()

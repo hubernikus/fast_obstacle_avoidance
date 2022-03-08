@@ -27,19 +27,27 @@ class SampledAvoider(SingleModulationAvoider):
     """
 
     def __init__(
-        self, robot: BaseRobot, evaluate_normal: bool = False, *args, **kwargs
+        self,
+        robot: BaseRobot,
+        evaluate_normal: bool = False,
+        # delta_sampling: float = delta_sampling
+        *args,
+        **kwargs
     ) -> None:
         self.robot = robot
 
         self.evaluate_normal = evaluate_normal
         self.max_angle_ref_norm = 80 * np.pi / 180
 
+        # For the moment, delta_sampling is not used
+        # self.delta_sampling = delta_sampling
+
         super().__init__(*args, **kwargs)
 
     # @property
     # def norm_angle(self):
-        # return np.
-    
+    # return np.
+
     @property
     def datapoints(self):
         # Property to make consistent with mixed avoider.
@@ -49,7 +57,7 @@ class SampledAvoider(SingleModulationAvoider):
     @datapoints.setter
     def datapoints(self, value):
         self.laser_scan = value
-    
+
     @property
     def laserscan(self):
         # Property to make consistent with mixed avoider.
@@ -62,7 +70,7 @@ class SampledAvoider(SingleModulationAvoider):
     def update_laserscan(self, laserscan=None, in_robot_frame=True):
         if in_robot_frame is False:
             raise NotImplementedError()
-        
+
         if laserscan is not None:
             self.laserscan = laserscan
             self._got_new_scan = True
@@ -70,9 +78,12 @@ class SampledAvoider(SingleModulationAvoider):
         elif self.robot.has_newscan:
             self.laserscan = self.robot.get_allscan()
             self._got_new_scan = True
-        
+
     def update_reference_direction(
-        self, laser_scan: np.ndarray = None, in_robot_frame: bool = True
+        self,
+        laser_scan: np.ndarray = None,
+        position: np.ndarray = None,
+        in_robot_frame: bool = True,
     ) -> np.ndarray:
 
         if laser_scan is None:
@@ -83,7 +94,7 @@ class SampledAvoider(SingleModulationAvoider):
         if not laser_scan.shape[1]:
             self.reference_direction = np.zeros(self.robot.pose.position.shape)
             return self.reference_direction
-
+        # TODO: position is currently unused...
         (
             laser_scan,
             ref_dirs,
@@ -94,7 +105,7 @@ class SampledAvoider(SingleModulationAvoider):
 
         weights = self.get_weight_from_distances(relative_distances)
 
-        # (-1) or not ... 
+        # (-1) or not ...
         self.reference_direction = (-1) * np.sum(
             ref_dirs * np.tile(weights, (ref_dirs.shape[0], 1)), axis=1
         )
@@ -108,13 +119,13 @@ class SampledAvoider(SingleModulationAvoider):
             self.ref_dirs = (-1) * ref_dirs
 
         # print('ref dir', self.reference_direction)
-        
+
         return self.reference_direction
 
     def update_normal_direction(self, laser_scan, weights, ref_dirs):
         """Update the normal direction and normal angle with resect to the reference."""
         # NOTE: This does not work very well anymore (!)
-        
+
         norm_ref_dir = LA.norm(self.reference_direction)
         if not norm_ref_dir:
             return

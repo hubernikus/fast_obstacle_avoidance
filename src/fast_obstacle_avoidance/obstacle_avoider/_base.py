@@ -35,7 +35,7 @@ class SingleModulationAvoider(ABC):
     def __init__(
         self,
         stretching_matrix: StretchingMatrixFunctor = None,
-        reference_update_before_modulation: bool = False,
+        reference_update_before_modulation: bool = True,
         evaluate_velocity_weight: bool = False,
         # Parameters for the weight evaluation
         weight_max_norm: float = None,

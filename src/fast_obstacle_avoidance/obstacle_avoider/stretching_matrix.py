@@ -140,8 +140,9 @@ class StretchingMatrixExponential(StretchingMatrixFunctor):
 
 
 class StretchingMatrixTrigonometric(StretchingMatrixFunctor):
-
     weight_power = 1.0 / 4
+    # weight_power = 1.0
+    # weight_power = 4
 
     def get_lambda_weights(self, weight, weight_vel):
         weight = weight ** self.weight_power

@@ -31,6 +31,16 @@ class BaseFastAnimator(Animator):
     def it_count(self):
         return self.ii
 
+    def run_without_plotting(self):
+        for self.ii in range(self.it_max):
+            self.update_step(self.ii)
+
+            if self.has_converged(self.ii):
+                # print(f"Convergence status {self.convergence_state}")
+                break
+
+        print("Done")
+
     def setup(
         self,
         robot,
@@ -77,27 +87,50 @@ class BaseFastAnimator(Animator):
         self.convergence_distance = convergence_distance
         self.velocity_normalization_margin = velocity_normalization_margin
 
+        # Initialize convergence state as 0; Check `has_converged` method for more info
         self.convergence_state = 0
 
         self.do_the_plotting = do_the_plotting
 
     def has_converged(self, ii):
         """Return values:
+
         0 : No convvergence, agent still rolling
-        1 : Velocity very low. Probably stuck somewhere
-        2 : Very close to the attractor! Great success!
+        >0: Very close to the attractor! Great success! -> number of iterations
+        -1: Velocity very low. Probably stuck somewhere
+        -2: Inside analytic obstacle
+        -3: Inisde sampled obstacle
         """
-        if True:
-            return False
-
-        if LA.norm(self.velocity_command) < self.convergence_velocity:
-            self.convergence_state = 1
-
-        elif (
-            LA.norm(sef.robot.pose.position - self.initial_dynamics.attractor_position)
+        if (
+            LA.norm(self.robot.pose.position - self.initial_dynamics.attractor_position)
             < self.convergence_distance
         ):
-            self.convergence_state = 2
+            # Check distance to attractor
+            self.convergence_state = self.ii
+
+        elif LA.norm(self.modulated_velocity) < self.convergence_velocity:
+            #  Check Velocity
+            self.convergence_state = -1
+
+        else:
+            # Check if there is a ('collision') / high proximity to obstacle
+            is_inside_an_obstacle = False
+
+            if hasattr(self.avoider, "obstacle_environment"):
+                for obs in self.avoider.obstacle_environment:
+                    if (
+                        obs.get_gamma(self.robot.pose.position, in_global_frame=True)
+                        < 1
+                    ):
+                        is_inside_an_obstacle = True
+                        self.convergence_state = -2
+                        break
+
+            if not is_inside_an_obstacle and hasattr(self, "environment"):
+                if self.environment.is_inside(
+                    position=self.robot.pose.position, margin=self.robot.control_radius
+                ):
+                    self.convergence_state = -3
 
         return self.convergence_state
 
