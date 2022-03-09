@@ -64,9 +64,107 @@ def get_random_position(x_lim, y_lim):
     return position
 
 
-def create_fourobstacle_environment(control_radius=0.5):
+def create_custom_environment(control_radius=0.5):
     dimension = 2
 
+    x_lim = [-10, 10]
+    y_lim = [-10, 10]
+
+    # User defined values
+    # pos_start = np.array([-6, -4.5])
+    # pos_attractor = np.array([6, 4.5])
+
+    x_start = -9.5
+    x_attractor = 9.5
+
+    # Random position for initial position and attractor
+    pos_start = get_random_position(x_lim, y_lim)
+    pos_start[0] = x_start
+
+    # Limit attractor range
+    pos_attractor = get_random_position(x_lim, np.array(y_lim) * 0.4)
+    pos_attractor[0] = x_attractor
+
+    axes_min = 0.4
+    axes_max = 2.0
+
+    robot = QoloRobot(pose=ObjectPose(position=pos_start, orientation=0))
+    robot.control_point = [0, 0]
+    robot.control_radius = control_radius
+
+    initial_dynamics = LinearSystem(
+        attractor_position=pos_attractor, maximum_velocity=2.0
+    )
+
+    # Set obstacle environment
+    x_lim_obs = [x_start + axes_max, x_attractor - axes_max]
+
+    main_environment = ShapelySamplingContainer(n_samples=50)
+    obs_environment = SphereContainer()
+
+    rand_it_max = 200
+
+    # Get the index of the real obstacles
+    n_tot = 4
+    n_real = 2
+    real_obs_index = np.zeros(n_tot).astype(bool)
+    real_obs_index[np.random.choice(n_tot, n_real)] = True
+
+    axes_length_star = [0.7, 2.5]
+
+    pos_list = []
+    rad_list = []
+
+    # Star 1
+    position_ref = np.array([0.0, 0])
+
+    obs_environment.append(
+        Ellipse(
+            center_position=position_ref + np.array([0, axes_length_star[1]]),
+            orientation=35 * np.pi / 180,
+            axes_length=axes_length_star,
+            margin_absolut=robot.control_radius,
+        )
+    )
+
+    # Copy to main-environment
+    main_environment.create_ellipse(obstacle=obs_environment[-1])
+
+    # Star 2
+    obs_environment.append(
+        Ellipse(
+            center_position=position_ref - np.array([0, axes_length_star[1]]),
+            orientation=-35 * np.pi / 180,
+            axes_length=axes_length_star,
+            margin_absolut=robot.control_radius,
+        )
+    )
+    # Set common reference point
+    exact_ref_point = position_ref + np.array([1, 0])
+    obs_environment[-1].set_reference_point(exact_ref_point, in_global_frame=True)
+    obs_environment[-2].set_reference_point(exact_ref_point, in_global_frame=True)
+
+    main_environment.create_ellipse(obstacle=obs_environment[-1])
+
+    position, orientation_deg, axes_length = get_random_position_orientation_and_axes(
+        x_lim=x_lim, y_lim=y_lim, axes_range=[axes_min, axes_max]
+    )
+
+    position[0] = -6.5
+    main_environment.create_ellipse(position, axes_length, orientation_deg)
+
+    position, orientation_deg, axes_length = get_random_position_orientation_and_axes(
+        x_lim=x_lim, y_lim=y_lim, axes_range=[axes_min, axes_max]
+    )
+
+    position[0] = 0
+    main_environment.create_cuboid(position, axes_length, orientation_deg)
+
+    return robot, initial_dynamics, main_environment, obs_environment
+
+
+def create_fourobstacle_environment(control_radius=0.5):
+    dimension = 2
     y_vals = [-5, 5]
 
     # User defined values
@@ -93,13 +191,18 @@ def create_fourobstacle_environment(control_radius=0.5):
     main_environment = ShapelySamplingContainer(n_samples=50)
     obs_environment = SphereContainer()
 
+    rand_it_max = 200
+
     # Get the index of the real obstacles
     n_tot = 4
     n_real = 2
     real_obs_index = np.zeros(n_tot).astype(bool)
     real_obs_index[np.random.choice(n_tot, n_real)] = True
 
-    axes_length_star = [2.0, 0.4]
+    axes_length_star = [2.8, 0.2]
+
+    pos_list = []
+    rad_list = []
 
     # Star 1
     position, orientation_deg, axes_length = get_random_position_orientation_and_axes(
@@ -111,6 +214,7 @@ def create_fourobstacle_environment(control_radius=0.5):
             center_position=position,
             orientation=orientation_deg * np.pi / 180,
             axes_length=axes_length_star,
+            margin_absolut=robot.control_radius,
         )
     )
 
@@ -122,19 +226,46 @@ def create_fourobstacle_environment(control_radius=0.5):
             center_position=position,
             orientation=orientation_deg * np.pi / 180,
             axes_length=axes_length_star,
+            margin_absolut=robot.control_radius,
         )
     )
+
+    pos_list.append(position)
+    rad_list.append(max(axes_length_star))
 
     # Star 2
-    position, orientation_deg, axes_length = get_random_position_orientation_and_axes(
-        x_lim=x_lim_obs, y_lim=y_vals, axes_range=[axes_min, axes_max]
-    )
+    for ii in range(rand_it_max):
+        (
+            position,
+            orientation_deg,
+            axes_length,
+        ) = get_random_position_orientation_and_axes(
+            x_lim=x_lim_obs, y_lim=y_vals, axes_range=[axes_min, axes_max]
+        )
+
+        distances = np.zeros(len(pos_list))
+        for pp in range(len(pos_list)):
+            distances[pp] = (
+                LA.norm(pos_list[pp] - position)
+                - rad_list[pp]
+                - max(axes_length_star)
+                - 2 * robot.control_radius
+            )
+            # distances[pp] = LA.norm(pos_list[pp]-position) - rad_list[pp] - max(axes_length_star)
+
+        if all(distances > 0):
+            break
+
+    pos_list.append(position)
+    rad_list.append(max(axes_length_star))
+
     main_environment.create_ellipse(position, axes_length_star, orientation_deg)
     obs_environment.append(
         Ellipse(
             center_position=position,
             orientation=orientation_deg * np.pi / 180,
             axes_length=axes_length_star,
+            margin_absolut=robot.control_radius,
         )
     )
 
@@ -146,19 +277,63 @@ def create_fourobstacle_environment(control_radius=0.5):
             center_position=position,
             orientation=orientation_deg * np.pi / 180,
             axes_length=axes_length_star,
+            margin_absolut=robot.control_radius,
         )
     )
 
     # Ellipse
-    position, orientation_deg, axes_length = get_random_position_orientation_and_axes(
-        x_lim=x_lim_obs, y_lim=y_vals, axes_range=[axes_min, axes_max]
-    )
+    for ii in range(rand_it_max):
+        (
+            position,
+            orientation_deg,
+            axes_length,
+        ) = get_random_position_orientation_and_axes(
+            x_lim=x_lim_obs, y_lim=y_vals, axes_range=[axes_min, axes_max]
+        )
+        distances = np.zeros(len(pos_list))
+        for pp in range(len(pos_list)):
+            distances[pp] = (
+                LA.norm(pos_list[pp] - position)
+                - rad_list[pp]
+                - max(axes_length)
+                - 2 * robot.control_radius
+            )
+
+        if all(distances > 0):
+            break
+
+    pos_list.append(position)
+    rad_list.append(max(axes_length))
+
     main_environment.create_ellipse(position, axes_length, orientation_deg)
 
     # Random cuboid
-    position, orientation_deg, axes_length = get_random_position_orientation_and_axes(
-        x_lim=x_lim_obs, y_lim=y_vals, axes_range=[axes_min, axes_max]
-    )
+    for ii in range(rand_it_max):
+        (
+            position,
+            orientation_deg,
+            axes_length,
+        ) = get_random_position_orientation_and_axes(
+            x_lim=x_lim_obs, y_lim=y_vals, axes_range=[axes_min, axes_max]
+        )
+        distances = np.zeros(len(pos_list))
+        for pp in range(len(pos_list)):
+            distances[pp] = (
+                LA.norm(pos_list[pp] - position)
+                - rad_list[pp]
+                - max(axes_length)
+                - 2 * robot.control_radius
+            )
+
+        if all(distances > 0):
+            break
+
+    pos_list.append(position)
+    rad_list.append(max(axes_length))
+
+    # position, orientation_deg, axes_length = get_random_position_orientation_and_axes(
+    # x_lim=x_lim_obs, y_lim=y_vals, axes_range=[axes_min, axes_max]
+    # )
     main_environment.create_cuboid(position, axes_length, orientation_deg)
 
     return robot, initial_dynamics, main_environment, obs_environment
@@ -304,7 +479,7 @@ def animation_comparison(
             weight_factor=weight_factor,
             weight_power=weight_power,
             reference_update_before_modulation=False,
-            delta_sampling=2 * np.pi / main_environment.n_samples * 3.5,
+            delta_sampling=2 * np.pi / main_environment.n_samples,
         )
 
         my_animator = MixedObstacleAnimator(
@@ -320,6 +495,7 @@ def animation_comparison(
         # x_lim=x_lim,
         # y_lim=y_lim,
         show_reference=True,
+        show_reference_points=True,
         do_the_plotting=do_the_plotting,
     )
 
@@ -327,7 +503,7 @@ def animation_comparison(
         my_animator.run(save_animation=False)
 
     else:
-        plt.close("all")
+        # plt.close("all")
         my_animator.run_without_plotting()
 
     print(f"Convergence state of {mode_name}: {my_animator.convergence_state}")
@@ -336,14 +512,16 @@ def animation_comparison(
     return my_animator.convergence_state
 
 
-def main_comparison(do_the_plotting=True):
+def main_comparison(
+    do_the_plotting=True,
+    n_repetitions=1,
+):
     # Do a random seed
-    np.random.seed(1)
+    np.random.seed(2)
 
     dimension = 2
 
     n_modes = 2
-    n_repetitions = 1
 
     convergence_states = np.zeros((n_modes, n_repetitions))
 
@@ -355,12 +533,19 @@ def main_comparison(do_the_plotting=True):
         # obs_environment,
         # ) = create_new_environment()
 
+        # (
+        # robot,
+        # initial_dynamics,
+        # main_environment,
+        # obs_environment,
+        # ) = create_fourobstacle_environment()
+
         (
             robot,
             initial_dynamics,
             main_environment,
             obs_environment,
-        ) = create_fourobstacle_environment()
+        ) = create_custom_environment()
 
         # Obstacle Environment
         # animation_comparison(

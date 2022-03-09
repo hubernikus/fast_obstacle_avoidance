@@ -73,19 +73,37 @@ class ShapelySamplingContainer:
     def add_obstacle(self, obstacle):
         self.environment.append(obstacle)
 
-    def create_ellipse(self, position, axes_length, orientation_in_degree=0):
+    def create_ellipse(
+        self, position=None, axes_length=None, orientation_in_degree=0, obstacle=None
+    ):
+        if obstacle is not None:
+            position = obstacle.center_position
+            axes_length = obstacle.axes_length
+            orientation_in_degree = obstacle.orientation * 180 / np.pi
+
         ellipse = shapely.geometry.Point(position[0], position[1]).buffer(1)
         ellipse = shapely.affinity.scale(ellipse, axes_length[0], axes_length[1])
         ellipse = shapely.affinity.rotate(ellipse, orientation_in_degree)
 
         self.add_obstacle(ellipse)
 
-    def create_sphere(self, position, radius):
+    def create_sphere(self, position=None, radius=None, obstacle=None):
+        if obstacle is not None:
+            position = obstacle.center_position
+            radius = obstacle.radius
+
         sphere = shapely.geometry.Point(position[0], position[1]).buffer(radius)
 
         self.add_obstacle(sphere)
 
-    def create_cuboid(self, position, axes_length, orientation_in_degree=0):
+    def create_cuboid(
+        self, position=None, axes_length=None, orientation_in_degree=0, obstacle=None
+    ):
+        if obstacle is not None:
+            position = obstacle.center_position
+            axes_length = obstacle.axes_length
+            orientation_in_degree = obstacle.orientation * 180 / np.pi
+
         cuboid = shapely.geometry.box(
             position[0] - axes_length[0],
             position[1] - axes_length[1],

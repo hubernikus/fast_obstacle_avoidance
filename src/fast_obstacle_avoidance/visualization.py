@@ -39,8 +39,6 @@ class BaseFastAnimator(Animator):
                 # print(f"Convergence status {self.convergence_state}")
                 break
 
-        print("Done")
-
     def setup(
         self,
         robot,
@@ -50,10 +48,11 @@ class BaseFastAnimator(Animator):
         x_lim=[-10, 10],
         y_lim=[-10, 10],
         show_reference=False,
+        show_reference_points=False,
         show_ticks=False,
         show_velocity=True,
-        convergence_distance=1e-2,
-        convergence_velocity=1e-3,
+        convergence_distance=1e-1,
+        convergence_velocity=1e-2,
         velocity_normalization_margin=1e-1,
         do_the_plotting=True,
     ):
@@ -77,8 +76,9 @@ class BaseFastAnimator(Animator):
         self.velocities_init = np.zeros((self.dimension, self.it_max))
         self.velocities_mod = np.zeros((self.dimension, self.it_max))
 
-        # Create
-        self.fig, self.ax = plt.subplots(figsize=(16, 10))
+        if do_the_plotting:
+            # Create
+            self.fig, self.ax = plt.subplots(figsize=(16, 10))
 
         self.velocity_command = np.zeros(self.dimension)
 
@@ -91,6 +91,9 @@ class BaseFastAnimator(Animator):
         self.convergence_state = 0
 
         self.do_the_plotting = do_the_plotting
+
+        # Reference points of the 'analytical' obstacles
+        self.show_reference_points = show_reference_points
 
     def has_converged(self, ii):
         """Return values:
@@ -326,7 +329,7 @@ class FastObstacleAnimator(BaseFastAnimator):
             ax=self.ax,
             x_lim=self.x_lim,
             y_lim=self.y_lim,
-            draw_reference=True,
+            draw_reference=self.show_reference_points,
         )
 
         self.ax.plot(self.positions[0, :ii], self.positions[1, :ii], "--", color="b")
@@ -478,6 +481,7 @@ class MixedObstacleAnimator(BaseFastAnimator):
             ax=self.ax,
             x_lim=self.x_lim,
             y_lim=self.y_lim,
+            draw_reference=self.show_reference_points,
         )
 
         self.ax.plot(self.positions[0, :ii], self.positions[1, :ii], "--", color="b")
