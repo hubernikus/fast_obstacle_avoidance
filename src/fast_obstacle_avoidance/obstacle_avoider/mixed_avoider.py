@@ -56,6 +56,8 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
 
         self.laserscan = None
 
+        self._laserscan_in_robot_frame = True
+
     @property
     def robot(self):
         # This must not be changed, otherwise the linkage is lost
@@ -78,8 +80,9 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
         return self.obstacle_avoider.obstacle_environment.dimension
 
     def update_laserscan(self, laserscan=None, in_robot_frame=True):
-        if in_robot_frame is False:
-            raise NotImplementedError()
+        self._laserscan_in_robot_frame = in_robot_frame
+        # if in_robot_frame is False:
+        # raise NotImplementedError()
 
         if laserscan is not None:
             self.laserscan = laserscan
@@ -90,7 +93,10 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
             self._got_new_scan = True
 
     def update_reference_direction(
-        self, laserscan=None, position=None, in_robot_frame=True
+        self,
+        laserscan=None,
+        position=None,
+        initial_velocity=None,
     ):
         """Clean up lidar first (remove inside obstacles)
         and then get reference, once for the avoider"""
@@ -103,25 +109,37 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
             # Nothing as changed - keep existing laserscan
             return self.reference_direction
 
-        if self.recompute_all or self._got_new_scan:
+        if (
+            self.recompute_all
+            or self._got_new_scan
+            or initial_velocity is not None
+            or not self._laserscan_in_robot_frame
+        ):
             cleanscan = self.get_scan_without_ocluded_points()
             self.lidar_avoider.update_laserscan(cleanscan)
 
             self.lidar_avoider.update_reference_direction(
                 position=position,
-                in_robot_frame=in_robot_frame,
+                in_robot_frame=self._laserscan_in_robot_frame,
+                initial_velocity=initial_velocity,
             )
 
-        if self.recompute_all or self.robot.has_new_obstacles:
+        if (
+            self.recompute_all
+            or self.robot.has_new_obstacles
+            or initial_velocity is not None
+        ):
             self.obstacle_avoider.update_reference_direction(
-                position=position, in_robot_frame=in_robot_frame
+                position=position,
+                # in_robot_frame=in_robot_frame,
+                initial_velocity=initial_velocity,
             )
 
         self.weights = self.get_mixed_weights()
 
         self.reference_direction = (
-            self.weights[0] * self.lidar_avoider.reference_direction
-            + self.weights[1] * self.obstacle_avoider.reference_direction
+            self.sample_weight * self.lidar_avoider.reference_direction
+            + self.obstacle_weight * self.obstacle_avoider.reference_direction
         )
 
         if self.lidar_avoider.relative_velocity is not None:
@@ -150,7 +168,14 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
         if self.obstacle_avoider.normal_direction is None or not LA.norm(
             self.obstacle_avoider.normal_direction
         ):
-            self.normal_direction = self.reference_direction
+            ref_norm = LA.norm(self.reference_direction)
+            if ref_norm:
+                self.normal_direction = self.reference_direction / ref_norm
+            else:
+                self.normal_direction = (
+                    np.ones(self.reference_direction.shape)
+                    / self.reference_direction.shape[0]
+                )
             return
 
         delta_normal = self.obstacle_avoider.normal_direction - self.reference_direction

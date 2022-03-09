@@ -84,6 +84,7 @@ class SampledAvoider(SingleModulationAvoider):
         laser_scan: np.ndarray = None,
         position: np.ndarray = None,
         in_robot_frame: bool = True,
+        initial_velocity: np.ndarray = None,
     ) -> np.ndarray:
 
         if laser_scan is None:
@@ -91,7 +92,7 @@ class SampledAvoider(SingleModulationAvoider):
         else:
             self.laserscan = laser_scan
 
-        if not laser_scan.shape[1]:
+        if laser_scan is None or len(laser_scan.shape) < 2 or not laser_scan.shape[1]:
             self.reference_direction = np.zeros(self.robot.pose.position.shape)
             return self.reference_direction
         # TODO: position is currently unused...

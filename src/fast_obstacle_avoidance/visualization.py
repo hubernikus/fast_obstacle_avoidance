@@ -156,11 +156,14 @@ class LaserscanAnimator(BaseFastAnimator):
             null_direction=self.velocity_command,
         )
 
-        self.avoider.update_reference_direction(data_points, in_robot_frame=False)
+        self.avodier.update_laserscan(data_points, in_robot_frame=False)
+        # self.avoider.update_reference_direction(data_points, in_robot_frame=False)
 
         # Store all
         self.initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)
-        self.modulated_velocity = self.avoider.avoid(self.initial_velocity)
+        self.modulated_velocity = self.avoider.avoid(
+            self.initial_velocity, in_robot_frame=False
+        )
 
         if LA.norm(self.modulated_velocity) > self.velocity_normalization_margin:
             # Speed up simulation
@@ -294,7 +297,9 @@ class FastObstacleAnimator(BaseFastAnimator):
 
         # Store all
         self.initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)
-        self.modulated_velocity = self.avoider.avoid(self.initial_velocity)
+        self.modulated_velocity = self.avoider.avoid(
+            self.initial_velocity, in_robot_frame=False
+        )
 
         # if LA.norm(self.modulated_velocity) > self.velocity_normalization_margin:
         # Speed up simulation
@@ -438,10 +443,9 @@ class MixedObstacleAnimator(BaseFastAnimator):
 
         self.positions[:, ii] = self.robot.pose.position
 
-        self.avoider.update_laserscan(data_points)
+        self.avoider.update_laserscan(data_points, in_robot_frame=False)
         # self.avoider.update_reference_direction(in_robot_frame=False)
-
-        self.avoider.update_reference_direction(in_robot_frame=False)
+        # self.avoider.update_reference_direction(in_robot_frame=False)
 
         # Store all
         self.initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)

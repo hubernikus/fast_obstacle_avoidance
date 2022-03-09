@@ -130,7 +130,6 @@ class SingleModulationAvoider(ABC):
         modulated_velocity = stretching_matrix @ modulated_velocity
         modulated_velocity = decomposition_matrix @ modulated_velocity
 
-        # breakpoint()
         # TODO: limit velocity with respect to maximum velocity
         if self.relative_velocity is not None:
             initial_velocity = initial_velocity + self.relative_velocity

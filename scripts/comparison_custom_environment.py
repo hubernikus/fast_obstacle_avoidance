@@ -19,11 +19,14 @@ import shapely
 from vartools.states import ObjectPose
 from vartools.dynamical_systems import LinearSystem
 
-from dynamic_obstacle_avoidance.obstacles import Ellipse, Cuboid
+# from dynamic_obstacle_avoidance.obstacles import Ellipse, Cuboid
+from dynamic_obstacle_avoidance.obstacles.ellipse_xd import EllipseWithAxes
+from dynamic_obstacle_avoidance.obstacles.cuboid_xd import CuboidXd
+
 from dynamic_obstacle_avoidance.obstacles import CircularObstacle
 
-from dynamic_obstacle_avoidance.containers import SphereContainer
-
+# from dynamic_obstacle_avoidance.containers import SphereContainer
+from dynamic_obstacle_avoidance.containers import ObstacleContainer
 from fast_obstacle_avoidance.sampling_container import ShapelySamplingContainer
 
 from fast_obstacle_avoidance.obstacle_avoider import SampledAvoider
@@ -64,8 +67,8 @@ def get_random_position(x_lim, y_lim):
 def create_custom_environment(control_radius=0.5):
     dimension = 2
 
-    x_lim = [-10, 10]
-    y_lim = [-10, 10]
+    x_lim = [-10.0, 10.0]
+    y_lim = [-10.0, 10.0]
 
     # User defined values
     pos_start = np.array([-6, -4.5])
@@ -97,11 +100,29 @@ def create_custom_environment(control_radius=0.5):
     x_lim_obs = [x_start + axes_max, x_attractor - axes_max]
 
     main_environment = ShapelySamplingContainer(n_samples=50)
-    obs_environment = SphereContainer()
+    obs_environment = ObstacleContainer()
 
-    rand_it_max = 200
+    # Boundary cuboid [could be a door]
+    main_environment.create_cuboid(
+        position=np.array([0, 0]), axes_length=np.array([19, 19]), is_boundary=True
+    )
 
-    # Get the index of the real obstacles
+    # Edge obstacle
+    obs_environment.append(
+        CuboidXd(
+            center_position=np.array([7, 0]),
+            axes_length=np.array([14, 4]),
+            margin_absolut=robot.control_radius,
+            is_boundary=False,
+        )
+    )
+
+    obs_environment[-1].set_reference_point(
+        np.array([obs_environment[-1].axes_length[0] / 2 - 1, 0]),
+        in_obstacle_frame=True,
+    )
+
+    main_environment.create_cuboid(obstacle=obs_environment[-1])
 
     return robot, initial_dynamics, main_environment, obs_environment
 
@@ -165,7 +186,7 @@ def animation_comparison(
             weight_max_norm=weight_max_norm,
             weight_factor=weight_factor,
             weight_power=weight_power,
-            reference_update_before_modulation=False,
+            reference_update_before_modulation=True,
             delta_sampling=2 * np.pi / main_environment.n_samples,
         )
 
@@ -173,7 +194,6 @@ def animation_comparison(
             it_max=it_max,
             dt_simulation=0.05,
         )
-
     my_animator.setup(
         robot=robot,
         initial_dynamics=initial_dynamics,
@@ -181,10 +201,25 @@ def animation_comparison(
         environment=main_environment,
         # x_lim=x_lim,
         # y_lim=y_lim,
+        show_ticks=True,
         show_reference=True,
         show_reference_points=True,
         do_the_plotting=do_the_plotting,
     )
+
+    # self = my_animator
+    # self.robot.pose.position = np.array([0, 0])
+    # data_points = self.environment.get_surface_points(
+    # center_position=self.robot.pose.position,
+    # null_direction=self.velocity_command,
+    # )
+    # self.avoider.update_reference_direction(data_points, in_robot_frame=False)
+    # self.initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)
+    # self.modulated_velocity = self.avoider.avoid(self.initial_velocity)
+
+    # if True:
+    # breakpoint()
+    # return
 
     if do_the_plotting:
         my_animator.run(save_animation=False)
@@ -242,12 +277,12 @@ def main_comparison(
         # )
 
         # Sample Environment
-        convergence_states[0, ii] = animation_comparison(
-            robot=robot,
-            initial_dynamics=initial_dynamics,
-            main_environment=main_environment,
-            do_the_plotting=do_the_plotting,
-        )
+        # convergence_states[0, ii] = animation_comparison(
+        # robot=robot,
+        # initial_dynamics=initial_dynamics,
+        # main_environment=main_environment,
+        # do_the_plotting=do_the_plotting,
+        # )
 
         # Mixed Environment
         convergence_states[1, ii] = animation_comparison(

@@ -11,7 +11,7 @@ import shapely
 import matplotlib.pyplot as plt
 
 
-def visualize_obstacles(container, ax=None):
+def visualize_obstacles(container, ax=None, x_lim=None, y_lim=None):
     if ax is None:
         fig, ax = plt.subplots()
 
@@ -19,9 +19,35 @@ def visualize_obstacles(container, ax=None):
         xx, yy = obs.exterior.xy
         ax.plot(xx, yy, color="black", alpha=0.3)
 
-        polygon_path = plt.Polygon(np.vstack((xx, yy)).T, alpha=0.1, zorder=-4)
-        polygon_path.set_color("black")
-        ax.add_patch(polygon_path)
+        if hasattr(obs, "is_boundary") and obs.is_boundary:
+            if x_lim is None:
+                x_min = min(xx)
+                x_max = max(xx)
+                delta_x = x_max - x_min
+
+            if y_lim is None:
+                y_min = min(yy)
+                y_max = max(yy)
+                delta_y = y_max - y_min
+
+            enclosing_path = plt.Rectangle(
+                (x_min - delta_x, y_min - delta_y),
+                3 * delta_x,
+                3 * delta_y,
+                alpha=0.1,
+                zorder=-5,
+            )
+            enclosing_path.set_color("black")
+            ax.add_patch(enclosing_path)
+
+            polygon_path = plt.Polygon(np.vstack((xx, yy)).T, alpha=1.0, zorder=-4)
+            polygon_path.set_color("white")
+            ax.add_patch(polygon_path)
+
+        else:
+            polygon_path = plt.Polygon(np.vstack((xx, yy)).T, alpha=0.1, zorder=-4)
+            polygon_path.set_color("black")
+            ax.add_patch(polygon_path)
 
     return ax
 
@@ -62,7 +88,9 @@ class ShapelySamplingContainer:
                 temp_pos = position + rel_pos / LA.norm(rel_pos) * margin
                 point = shapely.geometry.Point(temp_pos)
 
-            if obs.contains(point):
+            if obs.contains(point) != (hasattr(obs, "is_boundary") and obs.is_boundary):
+                # Inside and not boundary
+                # OR outside and and boundary
                 return True
 
         return False
@@ -79,10 +107,16 @@ class ShapelySamplingContainer:
         if obstacle is not None:
             position = obstacle.center_position
             axes_length = obstacle.axes_length
-            orientation_in_degree = obstacle.orientation * 180 / np.pi
+
+            if obstacle.orientation is None:
+                orientation_in_degree = 0
+            else:
+                orientation_in_degree = obstacle.orientation * 180 / np.pi
 
         ellipse = shapely.geometry.Point(position[0], position[1]).buffer(1)
-        ellipse = shapely.affinity.scale(ellipse, axes_length[0], axes_length[1])
+        ellipse = shapely.affinity.scale(
+            ellipse, axes_length[0] * 0.5, axes_length[1] * 0.5
+        )
         ellipse = shapely.affinity.rotate(ellipse, orientation_in_degree)
 
         self.add_obstacle(ellipse)
@@ -97,21 +131,35 @@ class ShapelySamplingContainer:
         self.add_obstacle(sphere)
 
     def create_cuboid(
-        self, position=None, axes_length=None, orientation_in_degree=0, obstacle=None
+        self,
+        position=None,
+        axes_length=None,
+        orientation_in_degree=0,
+        obstacle=None,
+        is_boundary=False,
     ):
         if obstacle is not None:
             position = obstacle.center_position
-            axes_length = obstacle.axes_length
-            orientation_in_degree = obstacle.orientation * 180 / np.pi
+            axes_length = np.array(obstacle.axes_length)
+            if obstacle.orientation is None:
+                orientation_in_degree = 0
+            else:
+                orientation_in_degree = obstacle.orientation * 180 / np.pi
 
+        semiaxes = axes_length * 0.5
         cuboid = shapely.geometry.box(
-            position[0] - axes_length[0],
-            position[1] - axes_length[1],
-            position[0] + axes_length[0],
-            position[1] + axes_length[1],
+            position[0] - semiaxes[0],
+            position[1] - semiaxes[1],
+            position[0] + semiaxes[0],
+            position[1] + semiaxes[1],
         )
 
         cuboid = shapely.affinity.rotate(cuboid, orientation_in_degree)
+        if is_boundary:
+            # TODO: now `is_boundary` is just added to the `shapely`-figure;
+            # should there be a encompassing obstacle created?
+            cuboid.is_boundary = is_boundary
+
         self.add_obstacle(cuboid)
 
     def get_surface_points(
@@ -143,10 +191,15 @@ class ShapelySamplingContainer:
                     # min_dist = min(dists)
                     # breakpoint()
                     # sample_list[:, ii] = min(sample_list[:, ii], min_dist)
-                    min_dist = LA.norm(np.array(intersection_line[0]) - center_position)
+                    if hasattr(obs, "is_boundary") and obs.is_boundary:
+                        surface_point = np.array(intersection_line[1])
+                    else:
+                        surface_point = np.array(intersection_line[0])
+
+                    min_dist = LA.norm(surface_point - center_position)
 
                     if sample_dist[ii] < 0 or sample_dist[ii] > min_dist:
-                        sample_points[:, ii] = intersection_line[0]
+                        sample_points[:, ii] = surface_point
                         sample_dist[ii] = min_dist
 
         return sample_points[:, sample_dist > 0]
