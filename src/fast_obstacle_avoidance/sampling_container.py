@@ -146,7 +146,7 @@ class ShapelySamplingContainer:
             else:
                 orientation_in_degree = obstacle.orientation * 180 / np.pi
 
-        semiaxes = axes_length * 0.5
+        semiaxes = np.array(axes_length) * 0.5
         cuboid = shapely.geometry.box(
             position[0] - semiaxes[0],
             position[1] - semiaxes[1],

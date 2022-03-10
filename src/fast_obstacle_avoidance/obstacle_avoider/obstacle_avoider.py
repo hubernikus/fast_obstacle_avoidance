@@ -178,7 +178,16 @@ class FastObstacleAvoider(SingleModulationAvoider):
         # Check if normal directions are valid
         ind_nonzero = LA.norm(norm_dirs, axis=0) > 0
         if not np.sum(ind_nonzero):
-            self.normal_direction = self.reference_direction
+            if LA.norm(self.reference_direction):
+                self.normal_direction = self.reference_direction / LA.norm(
+                    self.reference_direction
+                )
+            else:
+                self.normal_direction = (
+                    np.ones(self.reference_direction.shape)
+                    / self.reference_direction.shape[0]
+                )
+
             return self.normal_direction
 
         ref_dirs = ref_dirs[:, ind_nonzero]
@@ -285,7 +294,7 @@ class FastObstacleAvoider(SingleModulationAvoider):
             weights[ind_zero] = 1 / np.sum(ind_zero)
             return weights
 
-        weights = ref_dists / gammas ** (self.dimension)
+        weights = ref_dists / (gammas - 1) ** (self.dimension)
 
         if (
             self.evaluate_velocity_weight

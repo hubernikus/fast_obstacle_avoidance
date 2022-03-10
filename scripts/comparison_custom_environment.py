@@ -54,14 +54,17 @@ def get_random_position_orientation_and_axes(x_lim, y_lim, axes_range):
     return position, orientation_deg, axes_length
 
 
-def get_random_position(x_lim, y_lim):
+def get_random_position(x_lim, y_lim=None):
     dimension = 2
 
-    position = np.random.rand(dimension)
-    position[0] = position[0] * (x_lim[1] - x_lim[0]) + x_lim[0]
-    position[1] = position[1] * (y_lim[1] - y_lim[0]) + y_lim[0]
+    pos = np.random.rand(2)
+    pos[0] = pos[0] * (x_lim[1] - x_lim[0]) + x_lim[0]
+    if y_lim is None:
+        return pos[0]
 
-    return position
+    pos[1] = pos[1] * (y_lim[1] - y_lim[0]) + y_lim[0]
+
+    return pos
 
 
 def create_custom_environment(control_radius=0.5):
@@ -71,11 +74,12 @@ def create_custom_environment(control_radius=0.5):
     y_lim = [-10.0, 10.0]
 
     # User defined values
-    pos_start = np.array([-6, -4.5])
-    pos_attractor = np.array([6, 4.5])
+    x_lim_pos = [-9, 9]
+    y_start = -8.5
+    y_attractor = 8.5
 
-    x_start = -9.0
-    x_attractor = 9.0
+    pos_start = np.array([get_random_position(x_lim_pos), y_start])
+    pos_attractor = np.array([get_random_position(x_lim_pos), y_attractor])
 
     # Random position for initial position and attractor
     # pos_start = get_random_position(x_lim, y_lim)
@@ -93,11 +97,11 @@ def create_custom_environment(control_radius=0.5):
     robot.control_radius = control_radius
 
     initial_dynamics = LinearSystem(
-        attractor_position=pos_attractor, maximum_velocity=2.0
+        attractor_position=pos_attractor, maximum_velocity=1.5
     )
 
     # Set obstacle environment
-    x_lim_obs = [x_start + axes_max, x_attractor - axes_max]
+    # x_lim_obs = [x_start + axes_max, x_attractor - axes_max]
 
     main_environment = ShapelySamplingContainer(n_samples=50)
     obs_environment = ObstacleContainer()
@@ -110,16 +114,33 @@ def create_custom_environment(control_radius=0.5):
     # Edge obstacle
     obs_environment.append(
         CuboidXd(
-            center_position=np.array([7, 0]),
-            axes_length=np.array([14, 4]),
+            center_position=np.array([5.5, -3]),
+            axes_length=np.array([8.2, 2.5]),
             margin_absolut=robot.control_radius,
             is_boundary=False,
         )
     )
 
     obs_environment[-1].set_reference_point(
-        np.array([obs_environment[-1].axes_length[0] / 2 - 1, 0]),
-        in_obstacle_frame=True,
+        np.array([9.55, -3]),
+        in_obstacle_frame=False,
+    )
+
+    main_environment.create_cuboid(obstacle=obs_environment[-1])
+
+    # Edge obstacle
+    obs_environment.append(
+        CuboidXd(
+            center_position=np.array([-5.5, 3]),
+            axes_length=np.array([8.2, 2.5]),
+            margin_absolut=robot.control_radius,
+            is_boundary=False,
+        )
+    )
+
+    obs_environment[-1].set_reference_point(
+        np.array([-9.55, 3]),
+        in_obstacle_frame=False,
     )
 
     main_environment.create_cuboid(obstacle=obs_environment[-1])
@@ -151,7 +172,7 @@ def animation_comparison(
             weight_max_norm=weight_max_norm,
             weight_factor=2 * np.pi / main_environment.n_samples * 3.5,
             weight_power=weight_power,
-            reference_update_before_modulation=False,
+            reference_update_before_modulation=True,
         )
 
         my_animator = LaserscanAnimator(
@@ -168,7 +189,7 @@ def animation_comparison(
             # weight_max_norm=weight_max_norm,
             # weight_factor=weight_factor,
             # weight_power=weight_power,
-            reference_update_before_modulation=False,
+            reference_update_before_modulation=True,
             evaluate_velocity_weight=True,
         )
 
@@ -235,8 +256,8 @@ def animation_comparison(
 
 
 def main_comparison(
-    do_the_plotting=True,
-    n_repetitions=1,
+    do_the_plotting=False,
+    n_repetitions=100,
 ):
     # Do a random seed
     np.random.seed(2)
@@ -274,15 +295,16 @@ def main_comparison(
         # robot=robot,
         # initial_dynamics=initial_dynamics,
         # obstacle_environment=obs_environment,
+        # do_the_plotting=do_the_plotting,
         # )
 
         # Sample Environment
-        # convergence_states[0, ii] = animation_comparison(
-        # robot=robot,
-        # initial_dynamics=initial_dynamics,
-        # main_environment=main_environment,
-        # do_the_plotting=do_the_plotting,
-        # )
+        convergence_states[0, ii] = animation_comparison(
+            robot=robot,
+            initial_dynamics=initial_dynamics,
+            main_environment=main_environment,
+            do_the_plotting=do_the_plotting,
+        )
 
         # Mixed Environment
         convergence_states[1, ii] = animation_comparison(
@@ -297,9 +319,38 @@ def main_comparison(
     return convergence_states
 
 
+def example_vectorfield(save_figure=False):
+    np.random.seed(1)
+
+    (
+        robot,
+        initial_dynamics,
+        main_environment,
+        obs_environment,
+    ) = create_custom_environment()
+
+
+def evaluation_convergence(convergence_states):
+    sum_states = np.sum(convergence_states > 0, axis=1)
+
+    print(f"Convergence")
+    print(f"Sampled : {sum_states[0]} | Mixed : {sum_states[1]}")
+    print()
+
+    ind_succ = np.logical_and(
+        convergence_states[0, :] > 0, convergence_states[1, :] > 0
+    )
+    mean_time = np.mean(convergence_states[:, ind_succ], axis=0)
+
+    print(f"Mean Time")
+    print(f"Sampled : {mean_time[0]} | Mixed : {mean_time[1]}")
+    print()
+
+
 if (__name__) == "__main__":
 
     plt.close("all")
     plt.ion()
 
-    convergence_states = main_comparison()
+    # convergence_states = main_comparison()
+    evaluation_convergence(convergence_states)

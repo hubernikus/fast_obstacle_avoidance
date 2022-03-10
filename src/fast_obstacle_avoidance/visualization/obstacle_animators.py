@@ -129,7 +129,11 @@ class BaseFastAnimator(Animator):
                         self.convergence_state = -2
                         break
 
-            if not is_inside_an_obstacle and hasattr(self, "environment"):
+            if (
+                not is_inside_an_obstacle
+                and hasattr(self, "environment")
+                and hasattr(self.environment, "is_inside")
+            ):
                 if self.environment.is_inside(
                     position=self.robot.pose.position, margin=self.robot.control_radius
                 ):
@@ -156,14 +160,13 @@ class LaserscanAnimator(BaseFastAnimator):
             null_direction=self.velocity_command,
         )
 
-        self.avodier.update_laserscan(data_points, in_robot_frame=False)
         # self.avoider.update_reference_direction(data_points, in_robot_frame=False)
+
+        self.avoider.update_laserscan(data_points, in_robot_frame=False)
 
         # Store all
         self.initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)
-        self.modulated_velocity = self.avoider.avoid(
-            self.initial_velocity, in_robot_frame=False
-        )
+        self.modulated_velocity = self.avoider.avoid(self.initial_velocity)
 
         if LA.norm(self.modulated_velocity) > self.velocity_normalization_margin:
             # Speed up simulation
@@ -297,9 +300,7 @@ class FastObstacleAnimator(BaseFastAnimator):
 
         # Store all
         self.initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)
-        self.modulated_velocity = self.avoider.avoid(
-            self.initial_velocity, in_robot_frame=False
-        )
+        self.modulated_velocity = self.avoider.avoid(self.initial_velocity)
 
         # if LA.norm(self.modulated_velocity) > self.velocity_normalization_margin:
         # Speed up simulation
@@ -407,6 +408,17 @@ class FastObstacleAnimator(BaseFastAnimator):
                 width=arrow_width,
                 head_width=arrow_headwith,
                 label="Reference direction",
+            )
+
+            self.ax.arrow(
+                self.robot.pose.position[0],
+                self.robot.pose.position[1],
+                self.avoider.normal_direction[0],
+                self.avoider.normal_direction[1],
+                color="#FF6347",
+                width=arrow_width,
+                head_width=arrow_headwith,
+                label="Normal Direction",
             )
 
             drawn_arrow = True

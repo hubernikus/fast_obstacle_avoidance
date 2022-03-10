@@ -68,8 +68,9 @@ class SampledAvoider(SingleModulationAvoider):
         self.laser_scan = value
 
     def update_laserscan(self, laserscan=None, in_robot_frame=True):
-        if in_robot_frame is False:
-            raise NotImplementedError()
+        self._laserscan_in_robot_frame = in_robot_frame
+        # if in_robot_frame is False:
+        # raise NotImplementedError()
 
         if laserscan is not None:
             self.laserscan = laserscan
@@ -83,9 +84,11 @@ class SampledAvoider(SingleModulationAvoider):
         self,
         laser_scan: np.ndarray = None,
         position: np.ndarray = None,
-        in_robot_frame: bool = True,
+        in_robot_frame: bool = None,
         initial_velocity: np.ndarray = None,
     ) -> np.ndarray:
+        if in_robot_frame:
+            self._laserscan_in_robot_frame = in_robot_frame
 
         if laser_scan is None:
             laser_scan = self.laserscan
@@ -101,7 +104,7 @@ class SampledAvoider(SingleModulationAvoider):
             ref_dirs,
             relative_distances,
         ) = self.robot.get_relative_positions_and_dists(
-            laser_scan, in_robot_frame=in_robot_frame
+            laser_scan, in_robot_frame=self._laserscan_in_robot_frame
         )
 
         weights = self.get_weight_from_distances(relative_distances)
