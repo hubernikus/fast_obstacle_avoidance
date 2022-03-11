@@ -37,7 +37,7 @@ from fast_obstacle_avoidance.visualization import FastObstacleAnimator
 from fast_obstacle_avoidance.visualization import MixedObstacleAnimator
 
 
-def static_visualization_of_sample_avoidanceb(
+def static_visualization_of_sample_avoidance(
     main_environment,
     dynamical_system,
     fast_avoider=None,

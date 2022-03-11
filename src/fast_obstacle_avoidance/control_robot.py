@@ -22,6 +22,77 @@ from .utils import laserscan_to_numpy
 class BaseRobot:
     """Basic Robot Class"""
 
+    def __init__(
+        self,
+        pose: ObjectPose = None,
+        control_points=None,
+        control_radiuses=None,
+        dimension=2,
+        obstacle_environment=None,
+    ):
+        self.dimension = dimension
+
+        self.robot_image = None
+
+        self._got_new_scan = False
+        self._got_new_obstacles = True
+
+        if control_points is None:
+            self.control_points = np.zeros((self.dimension, 1))
+        else:
+            self.control_points = control_points
+
+        if control_radiuses is None:
+            self.control_radiuses = np.array([1.0])
+        else:
+            self.control_radiuses = control_radiuses
+
+        if obstacle_environment is None:
+            self.obstacle_environment = containers.SphereContainer()
+        else:
+            self.obstacle_environment = obstacle_environment
+
+        if pose is None:
+            self.pose = ObjectPose(position=np.zeros(self.dimension))
+        else:
+            self.pose = pose
+
+    @property
+    def rotation_matrix(self):
+        cos_, sin_ = np.cos(self.pose.orientation), np.sin(self.pose.orientation)
+        return np.array([[cos_, sin_], [(-1) * sin_, cos_]])
+
+    @property
+    def has_newscan(self):
+        return self._got_new_scan
+
+    @property
+    def has_new_obstacles(self):
+        return self._got_new_obstacles
+
+    # Simplified environment for (only) one point
+    @property
+    def control_point(self):
+        return self.control_points[:, 0]
+
+    @control_point.setter
+    def control_point(self, value):
+        self.control_points[:, 0] = value
+
+    @property
+    def control_radius(self):
+        return self.control_radiuses[0]
+
+    @control_radius.setter
+    def control_radius(self, value):
+        self.control_radiuses[0] = value
+
+    def retrieved_obstacles(self):
+        self._got_new_obstacles = False
+
+    def get_all_intensities(self):
+        return np.hstack([insenties for insenties in self.intensity_data.values()])
+
     @property
     def num_control_points(self) -> int:
         return self.control_radiuses.shape[0]
@@ -91,24 +162,19 @@ class QoloRobot(BaseRobot):
     """
 
     # [WARNING] (min) lidar radius is around 0.47 - BUT door width is 0.97
-    def __init__(self, pose: ObjectPose = None):
-        self.dimension = 2
-
-        self.robot_image = None
-
-        self._got_new_scan = False
-        self._got_new_obstacles = True
-
-        if pose is None:
-            self.pose = ObjectPose(position=np.zeros(self.dimension))
-        else:
-            self.pose = pose
-
-        # self.control_points: np.ndarray = np.array([[0.035, 0]]).T
-        self.control_points: np.ndarray = np.array([[0.035, 0]]).T
+    def __init__(self, **kwargs):
         # self.control_radiuses: np.ndarray = np.array([0.350])
         # self.control_radiuses: np.ndarray = np.array([0.470])
-        self.control_radiuses: np.ndarray = np.array([0.43])
+
+        # Default values for QOLO
+        super().__init__(
+            control_points=np.array([[0.035, 0]]).T,
+            control_radiuses=np.array([0.43]),
+            dimension=2,
+            **kwargs,
+        )
+
+        self.robot_image = None
 
         self.laser_poses: dict = {
             "/front_lidar/scan": ObjectPose(
@@ -123,7 +189,6 @@ class QoloRobot(BaseRobot):
 
         # self.obstacle_environment = containers.ObstacleContainer()
         # self.obstacle_environment = containers.GradientContainer()
-        self.obstacle_environment = containers.SphereContainer()
 
         self.laser_data = {}
         self.robot_image = None
@@ -132,42 +197,6 @@ class QoloRobot(BaseRobot):
 
         # Maximum normalization - above this full repulsion is taking effect!
         self.weight_max_norm = 6.99580150e04
-
-    @property
-    def rotation_matrix(self):
-        cos_, sin_ = np.cos(self.pose.orientation), np.sin(self.pose.orientation)
-        return np.array([[cos_, sin_], [(-1) * sin_, cos_]])
-
-    @property
-    def has_newscan(self):
-        return self._got_new_scan
-
-    @property
-    def has_new_obstacles(self):
-        return self._got_new_obstacles
-
-    # Simplified environment for (only) one point
-    @property
-    def control_point(self):
-        return self.control_points[:, 0]
-
-    @control_point.setter
-    def control_point(self, value):
-        self.control_points[:, 0] = value
-
-    @property
-    def control_radius(self):
-        return self.control_radiuses[0]
-
-    @control_radius.setter
-    def control_radius(self, value):
-        self.control_radiuses[0] = value
-
-    def retrieved_obstacles(self):
-        self._got_new_obstacles = False
-
-    def get_all_intensities(self):
-        return np.hstack([insenties for insenties in self.intensity_data.values()])
 
     def get_allscan(self, in_robot_frame=True):
         self._got_new_scan = False
@@ -263,7 +292,7 @@ class QoloRobot(BaseRobot):
 
         self._got_new_obstacles = True
 
-    def plot_robot(self, ax, bag_dir="figures/qolo", length_x=1019.23*1e-3):
+    def plot_robot(self, ax, bag_dir="figures/qolo", length_x=1019.23 * 1e-3):
         self.length_x = length_x
         if self.robot_image is None:
             import matplotlib.image as mpimg
