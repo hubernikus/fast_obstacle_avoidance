@@ -39,6 +39,11 @@ from fast_obstacle_avoidance.visualization import MixedObstacleAnimator
 from fast_obstacle_avoidance.visualization import FastObstacleAnimator
 from fast_obstacle_avoidance.visualization import LaserscanAnimator
 
+from fast_obstacle_avoidance.visualization import (
+    static_visualization_of_sample_avoidance,
+    static_visualization_of_sample_avoidance_mixed,
+)
+
 
 def get_random_position_orientation_and_axes(x_lim, y_lim, axes_range):
     dimension = 2
@@ -320,6 +325,8 @@ def main_comparison(
 
 
 def example_vectorfield(save_figure=False):
+    x_lim = [-10, 10]
+    y_lim = [-10, 10]
     np.random.seed(1)
 
     (
@@ -328,6 +335,33 @@ def example_vectorfield(save_figure=False):
         main_environment,
         obs_environment,
     ) = create_custom_environment()
+
+    # Plot the vectorfield around the robot
+    fig, ax = plt.subplots(1, 1, figsize=(5, 4))
+
+    mixed_avoider = MixedEnvironmentAvoider(
+        robot=robot,
+        weight_max_norm=1e9,
+        weight_factor=1,
+        weight_power=1.0,
+        scaling_laserscan_weight=1.1,
+    )
+
+    static_visualization_of_sample_avoidance_mixed(
+        robot=robot,
+        n_resolution=100,
+        dynamical_system=initial_dynamics,
+        fast_avoider=mixed_avoider,
+        plot_initial_robot=True,
+        sample_environment=main_environment,
+        # show_ticks=False,
+        show_ticks=True,
+        x_lim=x_lim,
+        y_lim=y_lim,
+        ax=ax,
+    )
+
+    static_visualization_of_sample_avoidance_mixed()
 
 
 def evaluation_convergence(convergence_states):
@@ -353,4 +387,6 @@ if (__name__) == "__main__":
     plt.ion()
 
     # convergence_states = main_comparison()
-    evaluation_convergence(convergence_states)
+    # evaluation_convergence(convergence_states)
+
+    example_vectorfield()

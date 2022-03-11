@@ -37,7 +37,7 @@ from fast_obstacle_avoidance.visualization import FastObstacleAnimator
 from fast_obstacle_avoidance.visualization import MixedObstacleAnimator
 
 
-def static_visualization_of_sample_avoidance(
+def static_visualization_of_sample_avoidanceb(
     main_environment,
     dynamical_system,
     fast_avoider=None,
@@ -475,8 +475,9 @@ def static_visualization_of_sample_avoidance_mixed(
             center_position=robot.pose.position,
         )
 
-        fast_avoider.update_laserscan(data_points)
-        fast_avoider.update_reference_direction(in_robot_frame=False)
+        # fast_avoider.update_laserscan(data_points)
+        # fast_avoider.update_reference_direction(in_robot_frame=False)
+        fast_avoider.update_laserscan(data_points, in_robot_frame=False)
 
         # Store all
         initial_velocity = dynamical_system.evaluate(robot.pose.position)

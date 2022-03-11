@@ -294,7 +294,13 @@ class FastObstacleAvoider(SingleModulationAvoider):
             weights[ind_zero] = 1 / np.sum(ind_zero)
             return weights
 
-        weights = ref_dists / (gammas - 1) ** (self.dimension)
+        # Distance weight * weight factor
+        weights = (
+            1
+            / (gammas - 1)
+            * ref_dists
+            / (gammas - 1 + ref_dists) ** (self.dimension - 1)
+        )
 
         if (
             self.evaluate_velocity_weight
