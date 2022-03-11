@@ -12,7 +12,7 @@ git clone --recurse-submodules https://github.com/epfl-lasa/dynamic_obstacle_avo
 
 Go to file directory:
 ```sh
-cd dynamic_obstacle_avoidance
+cd fast_obstacle_avoidance
 ``` 
 
 Setup your environment, with Python>3.7 (here Python 3.9):
