@@ -295,12 +295,12 @@ class FastObstacleAvoider(SingleModulationAvoider):
             return weights
 
         # Distance weight * weight factor
-        weights = (
-            1
-            / (gammas - 1)
-            * ref_dists
-            / (gammas - 1 + ref_dists) ** (self.dimension - 1)
+        distance_weights = 1 / (gammas - 1)
+        size_weights = (
+            2 * ref_dists / (gammas - 1 + 2 * ref_dists) ** (self.dimension - 1)
         )
+        # size_weights = 1
+        weights = distance_weights * size_weights
 
         if (
             self.evaluate_velocity_weight
@@ -311,10 +311,7 @@ class FastObstacleAvoider(SingleModulationAvoider):
 
         self.distance_weight_sum = np.sum(weights)
 
-        if any(np.isnan(weights)) or any(np.isnan(weights / self.distance_weight_sum)):
-            breakpoint()
-
-        if np.sum(self.distance_weight_sum) > 1:
+        if self.distance_weight_sum > 1:
             return weights / self.distance_weight_sum
         else:
             return weights

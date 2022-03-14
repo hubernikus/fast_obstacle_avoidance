@@ -226,6 +226,7 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
                     gamma_vals[ii] = obs.get_gamma(
                         laserscan[:, ii],
                         in_global_frame=not (self._laserscan_in_robot_frame),
+                        margin_absolut=0,
                     )
 
                 is_outside = gamma_vals > 1
@@ -267,6 +268,7 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
             weights = np.zeros(ind_max.shape)
             weights[ind_max] = max_weight
             weights[~ind_max] = 1 / (1 - weights[~ind_max])
+
         else:
             weights = 1 / (1 - weights)
             weights = np.minimum(weights, max_weight)

@@ -205,11 +205,11 @@ def animation_with_mixed(save_animation):
 def scenario_mixed_analysis():
     # start_point = np.array([, 4])
 
-    # x_lim = [0, 12]
-    # y_lim = [0, 10]
+    x_lim = [0, 12]
+    y_lim = [0, 10]
 
-    x_lim = [5, 7]
-    y_lim = [5.5, 7]
+    # x_lim = [5, 7]
+    # y_lim = [5.5, 7]
 
     attractor_position = np.array([11.5, 9.5])
 
@@ -255,7 +255,7 @@ def scenario_mixed_analysis():
     mixed_avoider = MixedEnvironmentAvoider(
         robot=robot,
         weight_max_norm=1e6,
-        delta_sampling=2 * np.pi / sampled_environment.n_samples * 3.5,
+        delta_sampling=2 * np.pi / sampled_environment.n_samples * 5,
         # scaling_obstacle_weight=5.0,
         weight_power=1.0,
         # scaling_laserscan_weight=1.2,
