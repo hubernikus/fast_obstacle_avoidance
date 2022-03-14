@@ -180,7 +180,7 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
             self.lidar_avoider.normal_direction
         ):
             raise NotImplementedError(
-                "[WARNING] Non-normalized sample norm can give unexpected restuls"
+                "[WARNING] Non-normalized sample norm can give unexpected restults."
             )
 
         if (
