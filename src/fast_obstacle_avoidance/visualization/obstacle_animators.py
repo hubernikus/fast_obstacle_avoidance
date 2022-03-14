@@ -296,7 +296,7 @@ class FastObstacleAnimator(BaseFastAnimator):
             obs.do_velocity_step(delta_time=self.dt_simulation)
 
         self.positions[:, ii] = self.robot.pose.position
-        self.avoider.update_reference_direction(position=self.robot.pose.position)
+        # self.avoider.update_reference_direction(position=self.robot.pose.position)
 
         # Store all
         self.initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)

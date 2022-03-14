@@ -76,6 +76,7 @@ class SingleModulationAvoider(ABC):
         self,
         initial_velocity: np.ndarray,
         limit_velocity_magnitude: bool = True,
+        normalize_velocity: bool = True,
         position: np.ndarray = None,
     ) -> None:
         """Modulate velocity and return DS."""
@@ -140,6 +141,12 @@ class SingleModulationAvoider(ABC):
 
             if mod_norm > init_norm:
                 modulated_velocity = modulated_velocity * (init_norm / mod_norm)
+
+            elif normalize_velocity:
+                # TODO: should also take into account proximity to obstacles
+                if mod_norm > 1e-1:
+                    # Speed up simulation
+                    modulated_velocity = modulated_velocity / mod_norm * init_norm
 
         return modulated_velocity
 
