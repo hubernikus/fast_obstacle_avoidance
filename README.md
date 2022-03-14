@@ -6,7 +6,7 @@ Dynamic but Fast Obstacle Avoidance
 ## Setup
 To setup got to your install/code directory, and type:
 ```sh
-git clone --recurse-submodules https://github.com/epfl-lasa/dynamic_obstacle_avoidance.git
+git clone --recurse-submodules https://github.com/hubernikus/fast_obstacle_avoidance.git
 ```
 (Make sure submodules are there if various_tools librarys is not installed.)
 
