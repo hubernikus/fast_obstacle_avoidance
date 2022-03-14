@@ -19,8 +19,10 @@ import shapely
 from vartools.states import ObjectPose
 from vartools.dynamical_systems import LinearSystem
 
-from dynamic_obstacle_avoidance.obstacles import Ellipse, Cuboid
-from dynamic_obstacle_avoidance.obstacles import CircularObstacle
+# from dynamic_obstacle_avoidance.obstacles import Ellipse, Cuboid
+from dynamic_obstacle_avoidance.obstacles import EllipseWithAxes
+from dynamic_obstacle_avoidance.obstacles import CuboidXd
+
 
 # from dynamic_obstacle_avoidance.containers import ObstacleContainer
 # from dynamic_obstacle_avoidance.containers import GradientContainer
@@ -85,8 +87,8 @@ def create_custom_environment(control_radius=0.5):
     pos_attractor = get_random_position(x_lim, np.array(y_lim) * 0.4)
     pos_attractor[0] = x_attractor
 
-    axes_min = 0.4
-    axes_max = 2.0
+    axes_min = 0.8
+    axes_max = 4.0
 
     robot = QoloRobot(pose=ObjectPose(position=pos_start, orientation=0))
     robot.control_point = [0, 0]
@@ -110,7 +112,7 @@ def create_custom_environment(control_radius=0.5):
     real_obs_index = np.zeros(n_tot).astype(bool)
     real_obs_index[np.random.choice(n_tot, n_real)] = True
 
-    axes_length_star = [0.7, 2.5]
+    axes_length_star = [1.6, 5.0]
 
     pos_list = []
     rad_list = []
@@ -119,9 +121,9 @@ def create_custom_environment(control_radius=0.5):
     position_ref = np.array([0.0, 0])
 
     obs_environment.append(
-        Ellipse(
-            center_position=position_ref + np.array([0, axes_length_star[1]]),
-            orientation=35 * np.pi / 180,
+        EllipseWithAxes(
+            center_position=position_ref + np.array([0, axes_length_star[1] / 2]),
+            orientation=30 * np.pi / 180,
             axes_length=axes_length_star,
             margin_absolut=robot.control_radius,
         )
@@ -132,15 +134,16 @@ def create_custom_environment(control_radius=0.5):
 
     # Star 2
     obs_environment.append(
-        Ellipse(
-            center_position=position_ref - np.array([0, axes_length_star[1]]),
-            orientation=-35 * np.pi / 180,
+        EllipseWithAxes(
+            center_position=position_ref - np.array([0, axes_length_star[1] / 2]),
+            orientation=-30 * np.pi / 180,
             axes_length=axes_length_star,
             margin_absolut=robot.control_radius,
         )
     )
     # Set common reference point
     exact_ref_point = position_ref + np.array([1, 0])
+
     obs_environment[-1].set_reference_point(exact_ref_point, in_global_frame=True)
     obs_environment[-2].set_reference_point(exact_ref_point, in_global_frame=True)
 
@@ -443,7 +446,7 @@ def animation_comparison(
             weight_max_norm=weight_max_norm,
             weight_factor=2 * np.pi / main_environment.n_samples * 3.5,
             weight_power=weight_power,
-            reference_update_before_modulation=False,
+            # reference_update_before_modulation=,
         )
 
         my_animator = LaserscanAnimator(
@@ -460,7 +463,7 @@ def animation_comparison(
             # weight_max_norm=weight_max_norm,
             # weight_factor=weight_factor,
             # weight_power=weight_power,
-            reference_update_before_modulation=False,
+            # reference_update_before_modulation=False,
             evaluate_velocity_weight=True,
         )
 
@@ -478,7 +481,7 @@ def animation_comparison(
             weight_max_norm=weight_max_norm,
             weight_factor=weight_factor,
             weight_power=weight_power,
-            reference_update_before_modulation=False,
+            # reference_update_before_modulation=False,
             delta_sampling=2 * np.pi / main_environment.n_samples,
         )
 
@@ -514,7 +517,7 @@ def animation_comparison(
 
 def main_comparison(
     do_the_plotting=True,
-    n_repetitions=1,
+    n_repetitions=10,
 ):
     # Do a random seed
     np.random.seed(2)

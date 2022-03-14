@@ -43,6 +43,8 @@ def vectorfield_with_scenario_mixed(save_figure=False):
     start_point = np.array([13, 4])
     x_lim = [0, 18]
     y_lim = [0, 8]
+    # x_lim = [5, 7]
+    # y_lim = [5.5, 7]
 
     control_radius = 0.6
 
@@ -120,6 +122,8 @@ def vectorfield_with_scenario_mixed(save_figure=False):
 def animation_with_mixed(save_animation):
     start_point = np.array([3, 4])
 
+    # x_lim = [0, 18]
+    # y_lim = [0, 8]
     x_lim = [0, 18]
     y_lim = [0, 8]
 
@@ -200,8 +204,12 @@ def animation_with_mixed(save_animation):
 
 def scenario_mixed_analysis():
     # start_point = np.array([, 4])
-    x_lim = [0, 12]
-    y_lim = [0, 10]
+
+    # x_lim = [0, 12]
+    # y_lim = [0, 10]
+
+    x_lim = [5, 7]
+    y_lim = [5.5, 7]
 
     attractor_position = np.array([11.5, 9.5])
 
@@ -271,6 +279,7 @@ def scenario_mixed_analysis():
         ax=axs[0],
         do_quiver=True,
         ax_ref=axs[1],
+        plot_norm_dirs=True,
     )
 
 

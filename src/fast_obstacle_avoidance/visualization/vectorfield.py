@@ -453,6 +453,7 @@ def static_visualization_of_sample_avoidance_mixed(
     ax=None,
     do_quiver=False,
     plot_ref_vectorfield=False,
+    plot_norm_dirs=False,
     plot_velocities=False,
     ax_ref=None,
 ):
@@ -581,6 +582,8 @@ def static_visualization_of_sample_avoidance_mixed(
         ):
             continue
 
+        # robot.pose.position = np.array([5.41, 5.99])
+        # robot.pose.position = np.array([8.00, 2.55])
         data_points = sample_environment.get_surface_points(
             center_position=robot.pose.position,
         )
@@ -670,7 +673,22 @@ def static_visualization_of_sample_avoidance_mixed(
             # scale=scale_vel,
             # width=arrow_width,
             color="red",
+            label="Reference directions",
         )
+
+        if plot_norm_dirs:
+            ax_ref.quiver(
+                positions[0, :],
+                positions[1, :],
+                norm_dirs[0, :],
+                norm_dirs[1, :],
+                angles="xy",
+                scale_units="xy",
+                # scale=scale_vel,
+                # width=arrow_width,
+                color="green",
+                label="Normal directions",
+            )
 
         # visualize_obstacles(main_environment, ax=ax_ref)
 

@@ -79,8 +79,10 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
     def dimension(self):
         return self.obstacle_avoider.obstacle_environment.dimension
 
-    def update_laserscan(self, laserscan=None, in_robot_frame=True):
-        self._laserscan_in_robot_frame = in_robot_frame
+    def update_laserscan(self, laserscan=None, in_robot_frame=None):
+        if in_robot_frame is not None:
+            self._laserscan_in_robot_frame = in_robot_frame
+
         # if in_robot_frame is False:
         # raise NotImplementedError()
 
@@ -116,11 +118,14 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
             or not self._laserscan_in_robot_frame
         ):
             cleanscan = self.get_scan_without_ocluded_points()
-            self.lidar_avoider.update_laserscan(cleanscan)
+
+            self.lidar_avoider.update_laserscan(
+                cleanscan, in_robot_frame=self._laserscan_in_robot_frame
+            )
 
             self.lidar_avoider.update_reference_direction(
                 position=position,
-                in_robot_frame=self._laserscan_in_robot_frame,
+                # in_robot_frame=self._laserscan_in_robot_frame,
                 initial_velocity=initial_velocity,
             )
 
@@ -155,37 +160,54 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
         if self.evaluate_normal:
             self.update_normal_direction(self.weights)
 
+        # breakpoint()
         return self.reference_direction
 
     def update_normal_direction(self, weights):
         """Normal direction update is simplified to environment
         where only one has the actual normal."""
+        reference_norm = LA.norm(self.reference_direction)
+        if not reference_norm:
+            self.normal_direction = (
+                np.ones(self.reference_direction.shape)
+                / self.reference_direction.shape[0]
+            )
+            return self.normal_direction
+
+        normalized_reference = self.reference_direction / reference_norm
+
         if self.lidar_avoider.normal_direction is not None and LA.norm(
             self.lidar_avoider.normal_direction
         ):
-            raise NotImplementedError()
+            raise NotImplementedError(
+                "[WARNING] Non-normalized sample norm can give unexpected restuls"
+            )
 
-        if self.obstacle_avoider.normal_direction is None or not LA.norm(
-            self.obstacle_avoider.normal_direction
+        if (
+            self.obstacle_avoider.normal_direction is None
+            or not self.obstacle_weight
+            or not LA.norm(self.obstacle_avoider.normal_direction)
         ):
-            ref_norm = LA.norm(self.reference_direction)
-            if ref_norm:
-                self.normal_direction = self.reference_direction / ref_norm
-            else:
-                self.normal_direction = (
-                    np.ones(self.reference_direction.shape)
-                    / self.reference_direction.shape[0]
-                )
-            return
+            self.normal_direction = normalized_reference
+            return self.normal_direction
 
-        delta_normal = self.obstacle_avoider.normal_direction - self.reference_direction
-        self.normal_direction = (
-            self.reference_direction + self.obstacle_weight * delta_normal
+        # Normalized reference of the obstacle (it's non-zero, as the weight is nonzero)
+        normalized_ref_obs = self.obstacle_avoider.reference_direction / LA.norm(
+            self.obstacle_avoider.reference_direction
         )
+        delta_normal = self.obstacle_avoider.normal_direction - normalized_ref_obs
+        self.normal_direction = (
+            normalized_reference + self.obstacle_weight * delta_normal
+        )
+
+        # Normalize normal
+        self.normal_direction = self.normal_direction / LA.norm(self.normal_direction)
+        return self.normal_direction
 
     def get_scan_without_ocluded_points(self):
         """Remove laserscan which is within boundaries of obstacles
         and then update lidar-reference direction."""
+
         self.update_laserscan()
         laserscan = np.copy(self.laserscan)
 
@@ -202,8 +224,10 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
                 gamma_vals = np.zeros(laserscan.shape[1])
                 for ii in range(laserscan.shape[1]):
                     gamma_vals[ii] = obs.get_gamma(
-                        laserscan[:, ii], in_global_frame=True
+                        laserscan[:, ii],
+                        in_global_frame=not (self._laserscan_in_robot_frame),
                     )
+
                 is_outside = gamma_vals > 1
 
             if not np.sum(is_outside):

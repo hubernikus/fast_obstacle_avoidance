@@ -44,6 +44,8 @@ class SampledAvoider(SingleModulationAvoider):
 
         super().__init__(*args, **kwargs)
 
+        self._laserscan_in_robot_frame = True
+
     # @property
     # def norm_angle(self):
     # return np.
@@ -67,8 +69,9 @@ class SampledAvoider(SingleModulationAvoider):
     def laserscan(self, value):
         self.laser_scan = value
 
-    def update_laserscan(self, laserscan=None, in_robot_frame=True):
-        self._laserscan_in_robot_frame = in_robot_frame
+    def update_laserscan(self, laserscan=None, in_robot_frame=None):
+        if in_robot_frame is not None:
+            self._laserscan_in_robot_frame = in_robot_frame
         # if in_robot_frame is False:
         # raise NotImplementedError()
 
@@ -87,7 +90,8 @@ class SampledAvoider(SingleModulationAvoider):
         in_robot_frame: bool = None,
         initial_velocity: np.ndarray = None,
     ) -> np.ndarray:
-        if in_robot_frame:
+
+        if in_robot_frame is not None:
             self._laserscan_in_robot_frame = in_robot_frame
 
         if laser_scan is None:
@@ -121,8 +125,6 @@ class SampledAvoider(SingleModulationAvoider):
         if hasattr(self, "debug_mode") and self.debug_mode:
             warnings.warn("Storing refs and norms.")
             self.ref_dirs = (-1) * ref_dirs
-
-        # print('ref dir', self.reference_direction)
 
         return self.reference_direction
 
