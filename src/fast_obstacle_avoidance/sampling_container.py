@@ -82,7 +82,7 @@ class ShapelySamplingContainer:
                 rel_pos = center_position - position
 
                 rel_pos_norm = LA.norm(rel_pos)
-                if rel_pos_norm < margin:
+                if rel_pos_norm <= margin:
                     return True
 
                 temp_pos = position + rel_pos / LA.norm(rel_pos) * margin

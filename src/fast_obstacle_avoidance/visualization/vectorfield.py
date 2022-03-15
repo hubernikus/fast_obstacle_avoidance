@@ -626,10 +626,11 @@ def static_visualization_of_sample_avoidance_mixed(
             # scale=scale_vel,
             # width=arrow_width,
             color="blue",
-            zorder=-4,
+            zorder=-2,
         )
 
     visualize_obstacles(sample_environment, ax=ax)
+
     plot_obstacles(
         ax=ax,
         obstacle_container=fast_avoider.obstacle_environment,

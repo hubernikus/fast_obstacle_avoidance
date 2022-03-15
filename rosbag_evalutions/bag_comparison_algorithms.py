@@ -12,7 +12,7 @@ from numpy import linalg as LA
 import matplotlib.pyplot as plt
 
 # import pandas as pd
-import rosbag
+# import rosbag
 
 from vartools.states import ObjectPose
 from vartools.dynamical_systems import LinearSystem
@@ -349,7 +349,7 @@ def time_integration_fast(
 
         # Do such that the mixed avoider updates everything
         avoider.robot._got_new_obstacles = True
-        if hasattr(avoider, 'update_laserscan'):
+        if hasattr(avoider, "update_laserscan"):
             avoider.update_laserscan(lasercan)
 
         initial_ds = dynamical_system.evaluate(avoider.robot.pose.position)
@@ -466,9 +466,7 @@ def compare_numerically_algorithms(qolo):
         sample_avoider.robot.pose.position = start_position
 
         run_results[0, ii] = time_integration_fast(
-            sample_avoider,
-            dynamical_system, ax=axs[0],
-            lasercan=np.copy(temp_scan)
+            sample_avoider, dynamical_system, ax=axs[0], lasercan=np.copy(temp_scan)
         )
 
         # Do for the mixed environment
@@ -478,10 +476,7 @@ def compare_numerically_algorithms(qolo):
 
         # mixed_avoider.update_laserscan()
         run_results[1, ii] = time_integration_fast(
-            mixed_avoider,
-            dynamical_system,
-            ax=axs[1],
-            lasercan=np.copy(temp_scan)
+            mixed_avoider, dynamical_system, ax=axs[1], lasercan=np.copy(temp_scan)
         )
 
     print("Sampled Avoider Results")
@@ -507,7 +502,8 @@ def compare_two_vectorfields(qolo, save_figure=False, n_sampels=100):
         x_lim=x_lim,
         y_lim=y_lim,
         n_sampels=n_sampels,
-        show_quiver=True)
+        show_quiver=True,
+    )
 
     if True:
         return
@@ -515,9 +511,11 @@ def compare_two_vectorfields(qolo, save_figure=False, n_sampels=100):
     if save_figure:
         figure_name = "mixed_environment_scan"
         plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
-    
+
     fig, ax = plt.subplots(figsize=(6, 5))
-    visualization_sampledata(ax, qolo, dynamical_system, x_lim, y_lim, n_sampels=n_sampels)
+    visualization_sampledata(
+        ax, qolo, dynamical_system, x_lim, y_lim, n_sampels=n_sampels
+    )
 
     if save_figure:
         figure_name = "mixed_environment_both"

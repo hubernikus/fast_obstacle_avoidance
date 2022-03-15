@@ -94,9 +94,6 @@ def create_custom_environment(control_radius=0.5):
     # pos_attractor = get_random_position(x_lim, np.array(y_lim)*0.4)
     # pos_attractor[0] = x_attractor
 
-    axes_min = 0.4
-    axes_max = 2.0
-
     robot = QoloRobot(pose=ObjectPose(position=pos_start, orientation=0))
     robot.control_point = [0, 0]
     robot.control_radius = control_radius
@@ -117,10 +114,15 @@ def create_custom_environment(control_radius=0.5):
     )
 
     # Edge obstacle
+
+    width_edge = 8.5
+    edge_shape = np.array([width_edge + 0.2, 2.5])
+    center_x = 10 - width_edge / 2.0
+
     obs_environment.append(
         CuboidXd(
-            center_position=np.array([5.5, -3]),
-            axes_length=np.array([8.2, 2.5]),
+            center_position=np.array([center_x, -3]),
+            axes_length=edge_shape,
             margin_absolut=robot.control_radius,
             is_boundary=False,
         )
@@ -136,8 +138,8 @@ def create_custom_environment(control_radius=0.5):
     # Edge obstacle
     obs_environment.append(
         CuboidXd(
-            center_position=np.array([-5.5, 3]),
-            axes_length=np.array([8.2, 2.5]),
+            center_position=np.array([(-1) * center_x, 3]),
+            axes_length=edge_shape,
             margin_absolut=robot.control_radius,
             is_boundary=False,
         )
@@ -149,6 +151,30 @@ def create_custom_environment(control_radius=0.5):
     )
 
     main_environment.create_cuboid(obstacle=obs_environment[-1])
+
+    # 2x Random ellipses
+    axes_min = 0.7
+    axes_max = 2.5
+
+    position, orientation_deg, axes_length = get_random_position_orientation_and_axes(
+        x_lim=[-10, 0], y_lim=[-7.5, 2.5], axes_range=[axes_min, axes_max]
+    )
+    main_environment.create_ellipse(
+        position=position,
+        orientation_in_degree=orientation_deg,
+        axes_length=axes_length,
+    )
+
+    position, orientation_deg, axes_length = get_random_position_orientation_and_axes(
+        x_lim=[0, 10], y_lim=[-2.5, 7.5], axes_range=[axes_min, axes_max]
+    )
+    main_environment.create_ellipse(
+        position=position,
+        orientation_in_degree=orientation_deg,
+        axes_length=axes_length,
+    )
+
+    robot.obstacle_environment = obs_environment
 
     return robot, initial_dynamics, main_environment, obs_environment
 
@@ -186,7 +212,6 @@ def animation_comparison(
         )
     elif main_environment is None:
         mode_name = "obstacle"
-        robot.obstacle_environment = obstacle_environment
 
         fast_avoider = FastObstacleAvoider(
             robot=robot,
@@ -205,7 +230,6 @@ def animation_comparison(
 
     else:
         mode_name = "mixed"
-        robot.obstacle_environment = obstacle_environment
 
         fast_avoider = MixedEnvironmentAvoider(
             robot=robot,
@@ -261,8 +285,8 @@ def animation_comparison(
 
 
 def main_comparison(
-    do_the_plotting=False,
-    n_repetitions=100,
+    do_the_plotting=True,
+    n_repetitions=10,
 ):
     # Do a random seed
     np.random.seed(2)
@@ -324,7 +348,7 @@ def main_comparison(
     return convergence_states
 
 
-def example_vectorfield(save_figure=False):
+def example_vectorfield(save_figure=False, n_resolution=10, figisze=(5, 4)):
     x_lim = [-10, 10]
     y_lim = [-10, 10]
     np.random.seed(1)
@@ -336,23 +360,34 @@ def example_vectorfield(save_figure=False):
         obs_environment,
     ) = create_custom_environment()
 
+    # del main_environment.environment[1]
+    # del main_environment.environment[1]
+
+    # point = np.array([3, 3])
+
+    # is_it = main_environment.is_inside(point)
+    # print(is_it)
+
+    # breakpoint()
+
     # Plot the vectorfield around the robot
-    fig, ax = plt.subplots(1, 1, figsize=(5, 4))
+    fig, ax = plt.subplots(1, 1, figsize=figisze)
 
     mixed_avoider = MixedEnvironmentAvoider(
         robot=robot,
         weight_max_norm=1e9,
         weight_factor=1,
         weight_power=1.0,
-        scaling_laserscan_weight=1.1,
+        # scaling_laserscan_weight=1.0,
+        delta_sampling=2 * np.pi / main_environment.n_samples,
     )
 
     static_visualization_of_sample_avoidance_mixed(
         robot=robot,
-        n_resolution=100,
+        n_resolution=n_resolution,
         dynamical_system=initial_dynamics,
         fast_avoider=mixed_avoider,
-        plot_initial_robot=True,
+        plot_initial_robot=False,
         sample_environment=main_environment,
         # show_ticks=False,
         show_ticks=True,
@@ -361,14 +396,41 @@ def example_vectorfield(save_figure=False):
         ax=ax,
     )
 
-    static_visualization_of_sample_avoidance_mixed()
+    fig, ax = plt.subplots(1, 1, figsize=figisze)
+
+    sampled_avoider = SampledAvoider(
+        robot=robot,
+        weight_max_norm=1e9,
+        weight_power=1.0,
+        weight_factor=2 * np.pi / main_environment.n_samples,
+    )
+
+    static_visualization_of_sample_avoidance(
+        robot=robot,
+        n_resolution=n_resolution,
+        dynamical_system=initial_dynamics,
+        fast_avoider=sampled_avoider,
+        plot_initial_robot=False,
+        main_environment=main_environment,
+        # show_ticks=False,
+        show_ticks=True,
+        x_lim=x_lim,
+        y_lim=y_lim,
+        ax=ax,
+    )
 
 
 def evaluation_convergence(convergence_states):
     sum_states = np.sum(convergence_states > 0, axis=1)
+    n_runs = convergence_states.shape[1]
 
+    print(f"Run Evaluation with {n_runs} iterations.")
+    print()
     print(f"Convergence")
-    print(f"Sampled : {sum_states[0]} | Mixed : {sum_states[1]}")
+    print(
+        f"Sampled : {round(sum_states[0]/n_runs, 1)*100}% "
+        + f"| Mixed : {round(sum_states[1]/n_runs, 1)*100}%"
+    )
     print()
 
     ind_succ = np.logical_and(
@@ -379,6 +441,7 @@ def evaluation_convergence(convergence_states):
     print(f"Mean Time")
     print(f"Sampled : {mean_time[0]} | Mixed : {mean_time[1]}")
     print()
+    print()
 
 
 if (__name__) == "__main__":
@@ -386,7 +449,8 @@ if (__name__) == "__main__":
     plt.close("all")
     plt.ion()
 
-    # convergence_states = main_comparison()
-    # evaluation_convergence(convergence_states)
+    # convergence_states = main_comparison(do_the_plotting=True, n_repetitions=1)
+    convergence_states = main_comparison(do_the_plotting=False, n_repetitions=30)
+    evaluation_convergence(convergence_states)
 
-    example_vectorfield()
+    # example_vectorfield(n_resolution=10
