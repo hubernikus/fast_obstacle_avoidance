@@ -75,8 +75,8 @@ def get_random_position(x_lim, y_lim=None):
 def create_custom_environment(control_radius=0.5):
     dimension = 2
 
-    x_lim = [-10.0, 10.0]
-    y_lim = [-10.0, 10.0]
+    x_lim = [-11.0, 11.0]
+    y_lim = [-11.0, 11.0]
 
     # User defined values
     x_lim_pos = [-9, 9]
@@ -115,7 +115,7 @@ def create_custom_environment(control_radius=0.5):
 
     # Edge obstacle
 
-    width_edge = 8.5
+    width_edge = 7.5
     edge_shape = np.array([width_edge + 0.2, 2.5])
     center_x = 10 - width_edge / 2.0
 
@@ -153,8 +153,8 @@ def create_custom_environment(control_radius=0.5):
     main_environment.create_cuboid(obstacle=obs_environment[-1])
 
     # 2x Random ellipses
-    axes_min = 0.7
-    axes_max = 2.5
+    axes_min = 1.5
+    axes_max = 4.0
 
     position, orientation_deg, axes_length = get_random_position_orientation_and_axes(
         x_lim=[-10, 0], y_lim=[-7.5, 2.5], axes_range=[axes_min, axes_max]
@@ -201,7 +201,7 @@ def animation_comparison(
         fast_avoider = SampledAvoider(
             robot=robot,
             weight_max_norm=weight_max_norm,
-            weight_factor=2 * np.pi / main_environment.n_samples * 3.5,
+            weight_factor=2 * np.pi / main_environment.n_samples * 10,
             weight_power=weight_power,
             reference_update_before_modulation=True,
         )
@@ -237,7 +237,7 @@ def animation_comparison(
             weight_factor=weight_factor,
             weight_power=weight_power,
             reference_update_before_modulation=True,
-            delta_sampling=2 * np.pi / main_environment.n_samples,
+            delta_sampling=2 * np.pi / main_environment.n_samples * 10,
         )
 
         my_animator = MixedObstacleAnimator(
@@ -348,10 +348,16 @@ def main_comparison(
     return convergence_states
 
 
-def example_vectorfield(save_figure=False, n_resolution=10, figisze=(5, 4)):
-    x_lim = [-10, 10]
-    y_lim = [-10, 10]
-    np.random.seed(1)
+def example_vectorfield(
+    save_figure=False,
+    n_resolution=10,
+    figisze=(4.5, 4),
+    # figisze=(9.0, 8),
+):
+    np.random.seed(2)
+
+    x_lim = [-11, 11]
+    y_lim = [-11, 11]
 
     (
         robot,
@@ -379,7 +385,7 @@ def example_vectorfield(save_figure=False, n_resolution=10, figisze=(5, 4)):
         weight_factor=1,
         weight_power=1.0,
         # scaling_laserscan_weight=1.0,
-        delta_sampling=2 * np.pi / main_environment.n_samples,
+        delta_sampling=2 * np.pi / main_environment.n_samples * 15,
     )
 
     static_visualization_of_sample_avoidance_mixed(
@@ -389,12 +395,21 @@ def example_vectorfield(save_figure=False, n_resolution=10, figisze=(5, 4)):
         fast_avoider=mixed_avoider,
         plot_initial_robot=False,
         sample_environment=main_environment,
-        # show_ticks=False,
-        show_ticks=True,
+        show_ticks=False,
+        # show_ticks=True,
+        do_quiver=False,
+        # do_quiver=True,
         x_lim=x_lim,
         y_lim=y_lim,
         ax=ax,
     )
+
+    if save_figure:
+        figure_name = "custom_environment_for_comparison_sampled"
+        plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
+
+    # if True:
+    # return
 
     fig, ax = plt.subplots(1, 1, figsize=figisze)
 
@@ -402,7 +417,7 @@ def example_vectorfield(save_figure=False, n_resolution=10, figisze=(5, 4)):
         robot=robot,
         weight_max_norm=1e9,
         weight_power=1.0,
-        weight_factor=2 * np.pi / main_environment.n_samples,
+        weight_factor=2 * np.pi / main_environment.n_samples * 10,
     )
 
     static_visualization_of_sample_avoidance(
@@ -412,12 +427,18 @@ def example_vectorfield(save_figure=False, n_resolution=10, figisze=(5, 4)):
         fast_avoider=sampled_avoider,
         plot_initial_robot=False,
         main_environment=main_environment,
-        # show_ticks=False,
-        show_ticks=True,
+        show_ticks=False,
+        # show_ticks=True,
+        # do_quiver=False,
+        # do_quiver=True,
         x_lim=x_lim,
         y_lim=y_lim,
         ax=ax,
     )
+
+    if save_figure:
+        figure_name = "custom_environment_for_comparison_mixed"
+        plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
 
 
 def evaluation_convergence(convergence_states):
@@ -428,8 +449,8 @@ def evaluation_convergence(convergence_states):
     print()
     print(f"Convergence")
     print(
-        f"Sampled : {round(sum_states[0]/n_runs, 1)*100}% "
-        + f"| Mixed : {round(sum_states[1]/n_runs, 1)*100}%"
+        f"Sampled : {round(sum_states[0]/n_runs*100, 1)}% "
+        + f"| Mixed : {round(sum_states[1]/n_runs*100, 1)}%"
     )
     print()
 
@@ -450,7 +471,7 @@ if (__name__) == "__main__":
     plt.ion()
 
     # convergence_states = main_comparison(do_the_plotting=True, n_repetitions=1)
-    convergence_states = main_comparison(do_the_plotting=False, n_repetitions=30)
-    evaluation_convergence(convergence_states)
+    # convergence_states = main_comparison(do_the_plotting=False, n_repetitions=100)
+    # evaluation_convergence(convergence_states)
 
-    # example_vectorfield(n_resolution=10
+    example_vectorfield(n_resolution=100, save_figure=True)
