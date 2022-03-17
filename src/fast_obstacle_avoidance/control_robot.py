@@ -11,6 +11,8 @@ from numpy import linalg as LA
 from scipy.spatial.transform import Rotation
 from scipy import ndimage
 
+import matplotlib.pyplot as plt
+
 from vartools.states import ObjectPose
 
 from dynamic_obstacle_avoidance import containers
@@ -130,11 +132,20 @@ class BaseRobot:
                 + np.tile(ctrl_point, (num_points, 1)).T
             )
 
-            ax.plot(temp_cicle[0, :], temp_cicle[1, :], "--", color="k")
-
             ax.plot(ctrl_point[0], ctrl_point[1], ".", color="k")
 
-        ax.plot(self.pose.position[0], self.pose.position[1], "H", color="k")
+            ax.plot(self.pose.position[0], self.pose.position[1], "H", color="k")
+
+            circle = plt.Circle(
+                self.pose.position,
+                self.control_radius,
+                color="#add8e6",
+                zorder=-1,
+                alpha=0.5,
+            )
+            ax.add_patch(circle)
+
+            ax.plot(temp_cicle[0, :], temp_cicle[1, :], "--", color="k", zorder=-1)
 
 
 # @dataclass

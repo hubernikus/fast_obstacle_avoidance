@@ -55,6 +55,7 @@ class BaseFastAnimator(Animator):
         convergence_velocity=1e-2,
         velocity_normalization_margin=1e-1,
         do_the_plotting=True,
+        plot_lidarlines=False,
     ):
         self.dimension = 2
 
@@ -76,7 +77,8 @@ class BaseFastAnimator(Animator):
         self.velocities_init = np.zeros((self.dimension, self.it_max))
         self.velocities_mod = np.zeros((self.dimension, self.it_max))
 
-        if do_the_plotting:
+        self.do_the_plotting = do_the_plotting
+        if self.do_the_plotting:
             # Create
             self.fig, self.ax = plt.subplots(figsize=(16, 10))
 
@@ -90,7 +92,7 @@ class BaseFastAnimator(Animator):
         # Initialize convergence state as 0; Check `has_converged` method for more info
         self.convergence_state = 0
 
-        self.do_the_plotting = do_the_plotting
+        self.plot_lidarlines = plot_lidarlines
 
         # Reference points of the 'analytical' obstacles
         self.show_reference_points = show_reference_points
@@ -190,7 +192,18 @@ class LaserscanAnimator(BaseFastAnimator):
         self.ax.clear()
 
         data_points = self.avoider.datapoints
-        self.ax.plot(data_points[0, :], data_points[1, :], "o", color="k")
+
+        self.ax.plot(data_points[0, :], data_points[1, :], "o", color="k", zorder=-1)
+        if self.plot_lidarlines:
+            for jj in range(data_points.shape[1]):
+                self.ax.plot(
+                    [data_points[0, jj], self.robot.pose.position[0]],
+                    [data_points[1, jj], self.robot.pose.position[1]],
+                    "--",
+                    color="k",
+                    alpha=0.5,
+                    zorder=-3,
+                )
 
         self.ax.plot(
             self.robot.pose.position[0], self.robot.pose.position[1], "o", color="b"
