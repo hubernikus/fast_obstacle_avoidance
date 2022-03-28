@@ -39,9 +39,8 @@ from fast_obstacle_avoidance.visualization import MixedObstacleAnimator
 from fast_obstacle_avoidance.visualization import FastObstacleAnimator
 from fast_obstacle_avoidance.visualization import LaserscanAnimator
 
-from fast_obstacle_avoidance.visualization import (
-    static_visualization_of_sample_avoidance,
-    static_visualization_of_sample_avoidance_mixed,
+from fast_obstacle_avoidance.visualization.integration_plot import (
+    visualization_mixed_environment_with_multiple_integration,
 )
 
 
@@ -115,7 +114,7 @@ def create_custom_environment(control_radius=0.5):
 
     # Edge obstacle
 
-    width_edge = 7.5
+    width_edge = 8.0
     edge_shape = np.array([width_edge + 0.2, 2.5])
     center_x = 10 - width_edge / 2.0
 
@@ -405,7 +404,7 @@ def example_vectorfield(
     )
 
     if save_figure:
-        figure_name = "custom_environment_for_comparison_sampled"
+        figure_name = "custom_environment_for_comparison_mixed"
         plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
 
     # if True:
@@ -437,7 +436,82 @@ def example_vectorfield(
     )
 
     if save_figure:
-        figure_name = "custom_environment_for_comparison_mixed"
+        figure_name = "custom_environment_for_comparison_sampled"
+        plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
+
+
+def example_integrations(
+    save_figure=False,
+    n_resolution=10,
+    figisze=(4.5, 4),
+    n_trajectories=9,
+    max_it=1000,
+    dt=0.1
+    # figisze=(9.0, 8),
+):
+    np.random.seed(4)
+
+    x_lim = [-11, 11]
+    y_lim = [-11, 11]
+
+    (
+        robot,
+        initial_dynamics,
+        main_environment,
+        obs_environment,
+    ) = create_custom_environment()
+
+    initial_positions = np.linspace([-8, -8], [8, -8], n_trajectories).T
+
+    fig, ax = plt.subplots(1, 1, figsize=figisze)
+    mixed_avoider = MixedEnvironmentAvoider(
+        robot=robot,
+        weight_max_norm=1e9,
+        weight_factor=1,
+        weight_power=1.0,
+        # scaling_laserscan_weight=1.0,
+        delta_sampling=2 * np.pi / main_environment.n_samples * 15,
+    )
+
+    visualization_mixed_environment_with_multiple_integration(
+        dynamical_system=initial_dynamics,
+        start_positions=initial_positions,
+        sample_environment=main_environment,
+        robot=robot,
+        fast_avoider=mixed_avoider,
+        max_it=max_it,
+        ax=ax,
+        x_lim=x_lim,
+        y_lim=y_lim,
+    )
+
+    if save_figure:
+        figure_name = "custom_environment_integration_for_comparison_sampled"
+        plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
+
+    fig, ax = plt.subplots(1, 1, figsize=figisze)
+
+    sampled_avoider = SampledAvoider(
+        robot=robot,
+        weight_max_norm=1e9,
+        weight_power=1.0,
+        weight_factor=2 * np.pi / main_environment.n_samples * 10,
+    )
+
+    visualization_mixed_environment_with_multiple_integration(
+        dynamical_system=initial_dynamics,
+        start_positions=initial_positions,
+        sample_environment=main_environment,
+        robot=robot,
+        fast_avoider=sampled_avoider,
+        max_it=max_it,
+        ax=ax,
+        x_lim=x_lim,
+        y_lim=y_lim,
+    )
+
+    if save_figure:
+        figure_name = "custom_environment_integration_for_comparison_mixed"
         plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
 
 
@@ -474,4 +548,5 @@ if (__name__) == "__main__":
     # convergence_states = main_comparison(do_the_plotting=False, n_repetitions=100)
     # evaluation_convergence(convergence_states)
 
-    example_vectorfield(n_resolution=100, save_figure=True)
+    # example_vectorfield(n_resolution=100, save_figure=True)
+    example_integrations(save_figure=True)
