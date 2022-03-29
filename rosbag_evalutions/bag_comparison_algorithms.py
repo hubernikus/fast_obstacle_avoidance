@@ -350,10 +350,10 @@ def time_integration_fast(
         # Do such that the mixed avoider updates everything
         avoider.robot._got_new_obstacles = True
         if hasattr(avoider, "update_laserscan"):
-            avoider.update_laserscan(lasercan)
+            avoider.update_laserscan(lasercan, in_robot_frame=False)
 
         initial_ds = dynamical_system.evaluate(avoider.robot.pose.position)
-        avoider.update_reference_direction(in_robot_frame=False)
+        avoider.update_reference_direction()
         modulated_ds = avoider.avoid(initial_ds)
 
         avoider.robot.pose.position = avoider.robot.pose.position + modulated_ds * dt

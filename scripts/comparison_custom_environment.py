@@ -445,8 +445,8 @@ def example_integrations(
     n_resolution=10,
     figisze=(4.5, 4),
     n_trajectories=9,
-    max_it=1000,
-    dt=0.1
+    max_it=3000,
+    dt=0.1,
     # figisze=(9.0, 8),
 ):
     np.random.seed(4)
@@ -540,7 +540,6 @@ def evaluation_convergence(convergence_states):
 
 
 if (__name__) == "__main__":
-
     plt.close("all")
     plt.ion()
 

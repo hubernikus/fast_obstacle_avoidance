@@ -12,7 +12,7 @@ from numpy import linalg as LA
 import matplotlib.pyplot as plt
 
 # import pandas as pd
-import rosbag
+# import rosbag
 
 from vartools.states import ObjectPose
 from vartools.dynamical_systems import LinearSystem
@@ -35,16 +35,16 @@ def is_interesecting(obstacle_environment, position):
             return True
     return False
 
+
 def run_vectorfield_mixed(qolo):
     """Draw the vectorfield mixed"""
     qolo._got_new_obstacles = True
 
     my_avoider = MixedEnvironmentAvoider(qolo)
     qolo.obstacle_environment.update_reference_points()
-    
+
     my_avoider.update_laserscan(qolo.get_allscan())
     my_avoider.update_reference_direction()
-    
 
     # x_lim = [-3, 4]
     # y_lim = [-3, 3]
@@ -79,20 +79,19 @@ def run_vectorfield_mixed(qolo):
         _, _, relative_distances = qolo.get_relative_positions_and_dists(
             temp_scan, in_robot_frame=False
         )
-        
+
         if any(relative_distances < 0):
             continue
 
         if is_interesecting(qolo.obstacle_environment, positions[:, it]):
             continue
 
-        my_avoider.update_laserscan(temp_scan)
-        my_avoider.update_reference_direction(in_robot_frame=False)
+        my_avoider.update_laserscan(temp_scan, in_robot_frame=False)
+        my_avoider.update_reference_direction()
 
         velocities_init[:, it] = dynamical_system.evaluate(positions[:, it])
         velocities_mod[:, it] = my_avoider.avoid(velocities_init[:, it])
         reference_dirs[:, it] = my_avoider.reference_direction
-
 
     fig, ax = plt.subplots(figsize=(10, 8))
     ax.plot(
@@ -130,30 +129,31 @@ def run_vectorfield_mixed(qolo):
     if plot_quiver:
         arrow_width = 0.003
         scale_vel = 2  #
-        
+
         if scale_vel is not None:
             ax.quiver(
-            positions[0, :],
-            positions[1, :],
-            velocities_init[0, :],
-            velocities_init[1, :],
-            angles='xy', scale_units='xy',
-            scale=scale_vel,
-            width=arrow_width,
-            color="black",
-            alpha=0.3,
+                positions[0, :],
+                positions[1, :],
+                velocities_init[0, :],
+                velocities_init[1, :],
+                angles="xy",
+                scale_units="xy",
+                scale=scale_vel,
+                width=arrow_width,
+                color="black",
+                alpha=0.3,
             )
 
             # ax.quiver(
-                # positions[0, :],
-                # positions[1, :],
-                # velocities_mod[0, :],
-                # velocities_mod[1, :],
-                # angles="xy",
-                # scale_units="xy",
-                # scale=scale_vel,
-                # width=arrow_width,
-                # color="blue",
+            # positions[0, :],
+            # positions[1, :],
+            # velocities_mod[0, :],
+            # velocities_mod[1, :],
+            # angles="xy",
+            # scale_units="xy",
+            # scale=scale_vel,
+            # width=arrow_width,
+            # color="blue",
             # )
     else:
         ax.streamplot(
@@ -184,7 +184,7 @@ def run_vectorfield_mixed(qolo):
 
     # breakpoint()
     figure_name = "mixed_environment_streamplot"
- 
+
     if figure_name:
         plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight", dpi=300)
 
@@ -194,10 +194,10 @@ if (__name__) == "__main__":
     plt.ion()
 
     # run_vectorfield_mixed()
-    
+
     do_the_import = False
     # do_the_import = False
-    if not 'qolo' in vars() or not 'qolo' in globals() or do_the_import:
+    if not "qolo" in vars() or not "qolo" in globals() or do_the_import:
         qolo = QoloRobot(
             pose=ObjectPose(position=[0.7, -0.7], orientation=30 * np.pi / 180)
         )

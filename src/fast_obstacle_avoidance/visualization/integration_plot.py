@@ -50,6 +50,8 @@ def visualization_mixed_environment_with_multiple_integration(
     x_lim=None,
     y_lim=None,
     ax=None,
+    convergence_dist=1e-1,
+    convergence_vel=1e-1,
 ):
     """Visualization of mixed environment."""
     # Created for 2D
@@ -104,12 +106,14 @@ def visualization_mixed_environment_with_multiple_integration(
                         break
 
                 if is_inside_an_obstacle:
+                    print(f"Collision with analytic at it={ii}")
                     break
 
             if sample_environment is not None:
                 if sample_environment.is_inside(
                     position=robot.pose.position, margin=robot.control_radius
                 ):
+                    print(f"Collision on sample at it={ii}")
                     break
 
                 data_points = sample_environment.get_surface_points(
@@ -118,8 +122,29 @@ def visualization_mixed_environment_with_multiple_integration(
 
                 fast_avoider.update_laserscan(data_points, in_robot_frame=False)
 
+            if hasattr(dynamical_system, "attractor_position"):
+                dist_attractor = LA.norm(
+                    robot.pose.position - dynamical_system.attractor_position
+                )
+                if dist_attractor < convergence_dist:
+                    print(f"Convergence at it={ii}")
+                    break
+
             velocities_init[-1][:, ii] = dynamical_system.evaluate(robot.pose.position)
             velocities_mod[-1][:, ii] = fast_avoider.avoid(velocities_init[-1][:, ii])
+
+            mod_velocity_norm = LA.norm(velocities_mod[-1][:, ii])
+            if mod_velocity_norm < convergence_vel:
+                print(f"Local minima at it={ii}")
+                break
+
+            if hasattr(dynamical_system, "attractor_position"):
+                if dist_attractor > 2 * convergence_dist:
+                    velocities_mod[-1][:, ii] = (
+                        velocities_mod[-1][:, ii]
+                        / mod_velocity_norm
+                        * LA.norm(velocities_init[-1][:, ii])
+                    )
 
             robot.pose.position = (
                 robot.pose.position + delta_time * velocities_mod[-1][:, ii]
