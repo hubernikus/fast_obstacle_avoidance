@@ -240,6 +240,7 @@ def execute_avoidance_with_single_obstacle(save_figure=False, create_animation=F
             x_lim=x_lim,
             y_lim=y_lim,
             plot_lidarlines=True,
+            show_reference=True,
         )
 
         my_animator.run(save_animation=save_figure)
