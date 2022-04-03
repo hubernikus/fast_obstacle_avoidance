@@ -199,16 +199,15 @@ class SingleModulationAvoider(ABC):
         # it needs to be done each 'avoid' funtion to incoorporate this...
         dir_weights = (
             1
-            + (-1)
-            * np.sum(
+            - np.sum(
                 directions * np.tile(initial_velocity, (directions.shape[1], 1)).T,
                 axis=0,
             )
             / (LA.norm(directions, axis=0) * LA.norm(initial_velocity))
         )
 
-        dir_weights = (dir_weights * 0.5) ** 2
-
+        dir_weights = (dir_weights * 0.5)
+        
         ind_nonzero = dir_weights > 0
 
         weight_fact = weights / np.sum(weights)

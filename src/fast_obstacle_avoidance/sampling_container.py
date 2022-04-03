@@ -1,4 +1,4 @@
-""" Script to evaluate the rosbag. """
+""" Script to evaluate qthe rosbag. """
 # Author: Lukas Huber
 # Created: 2021-12-14
 # Email: lukas.huber@epfl.ch
@@ -196,7 +196,7 @@ class ShapelySamplingContainer:
     def __len__(self):
         return len(self.environment)
 
-    def add_obstacle(self, obstacle):
+    def add_obstacle(self, obstacle: SampledObstacle):
         self.environment.append(obstacle)
 
     def create_ellipse(self, **kwargs):
