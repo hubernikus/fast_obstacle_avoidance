@@ -30,8 +30,18 @@ class LaserScanAnimator(Animator):
         self, static_laserscan, initial_dynamics, robot, x_lim=[-3, 4], y_lim=[-3, 3]
     ):
         self.robot = robot
+        self.robot.control_point = np.zeros(2)
+        self.robot.control_radius = 0.35
+
         self.initial_dynamics = initial_dynamics
-        self.fast_avoider = FastLidarAvoider(robot=self.robot)
+        self.fast_avoider = FastLidarAvoider(
+            robot=self.robot,
+            weight_max_norm=1e5,
+            weight_factor=1,
+            evaluate_velocity_weight=False,
+            weight_power=2.0,
+        )
+
         self.static_laserscan = static_laserscan
 
         self.fig, self.ax = plt.subplots(figsize=(12, 8))
@@ -51,7 +61,7 @@ class LaserScanAnimator(Animator):
         temp_scan = reset_laserscan(self.static_laserscan, self.robot.pose.position)
 
         t_start = timer()
-        self.fast_avoider.update_reference_direction(temp_scan, in_robot_frame=False)
+        self.fast_avoider.update_laserscan(temp_scan, in_robot_frame=False)
         # self.fast_avoider.update_reference_direction(temp_scan)
         modulated_velocity = self.fast_avoider.avoid(initial_velocity)
         t_end = timer()
@@ -84,13 +94,28 @@ class LaserScanAnimator(Animator):
         # self.ax.plot(self.robot.pose.position[0],
         # self.robot.pose.position[1], 'o', color='k')
 
-        self.ax.plot(
+        self.ax.scatter(
             self.static_laserscan[0, :],
             self.static_laserscan[1, :],
-            ".",
+            # color='black',
+            # c=intensities,
+            # cmap="copper",
+            # cmap='hot',
+            # ".",
             color=self.obstacle_color,
+            s=4.0,
+            # alpha=(intensities/255.),
+            # alpha=(1-intensities/255.),
+            alpha=0.8,
             zorder=-1,
         )
+        # self.ax.plot(
+        # self.static_laserscan[0, :],
+        # self.static_laserscan[1, :],
+        # ".",
+        # color=self.obstacle_color,
+        # zorder=-1,
+        # )
 
         self.ax.set_xlim(self.x_lim)
         self.ax.set_ylim(self.y_lim)
@@ -108,8 +133,10 @@ class LaserScanAnimator(Animator):
             arrow_scale * initial_velocity[1],
             width=0.03,
             head_width=0.2,
-            color="g",
-            label="Initial",
+            color="#008080",
+            label="Initial velocity",
+            # color="g",
+            # label="Initial",
         )
 
         self.ax.arrow(
@@ -119,19 +146,36 @@ class LaserScanAnimator(Animator):
             arrow_scale * modulated_velocity[1],
             width=0.03,
             head_width=0.2,
-            color="b",
-            label="Modulated",
+            color="#000080",
+            label="Modulated velocity",
+            # color="b",
+            # label="Modulated",
+        )
+
+        self.ax.arrow(
+            self.robot.pose.position[0],
+            self.robot.pose.position[1],
+            self.fast_avoider.reference_direction[0],
+            self.fast_avoider.reference_direction[1],
+            color="#9b1503",
+            width=0.03,
+            head_width=0.2,
+            label="Reference direction",
         )
 
         self.robot.plot2D(self.ax)
+
         self.ax.plot(
             self.initial_dynamics.attractor_position[0],
             self.initial_dynamics.attractor_position[1],
             "*",
             color="black",
+            linewidth=18.0,
+            markersize=18,
         )
         # print(tt)
         self.ax.grid()
+        self.ax.legend(loc="upper right", fontsize=18)
 
     def has_converged(self, ii):
         conv_margin = 1e-4
@@ -201,7 +245,7 @@ def static_plot(allscan, qolo, dynamical_system, fast_avoider):
 
 
 def main_animator(
-    bag_name='2021-12-13-18-33-06.bag',
+    bag_name="2021-12-13-18-33-06.bag",
     eval_time=0,
     # bag_name="2021-12-21-14-21-00.bag",
     # bag_name="2021-12-23-18-23-16.bag",
@@ -243,11 +287,12 @@ def main_animator(
         initial_dynamics=dynamical_system,
         robot=qolo,
     )
-    
+
     main_animator.run(save_animation=save_animation)
-    
+
     # main_animator.run(save_animation=True)
     # main_animator.update_step(ii=0)
+
 
 def animator_office_room():
     main_animator(
@@ -257,13 +302,14 @@ def animator_office_room():
         save_animation=False,
     )
 
+
 def animator_doorpassing():
     main_animator(
-        bag_name='2021-12-13-18-33-06.bag',
+        bag_name="2021-12-13-18-33-06.bag",
         eval_time=0,
-        start_position=np.array([1.0, -0.4]),
+        start_position=np.array([0.6, -0.8]),
         attractor_position=np.array([-1.7, 1.6]),
-        save_animation=False,
+        save_animation=True,
     )
 
 

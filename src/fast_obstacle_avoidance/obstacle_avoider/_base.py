@@ -151,45 +151,6 @@ class SingleModulationAvoider(ABC):
 
         return modulated_velocity
 
-    def get_weight_from_distances(
-        self,
-        distances: np.ndarray,
-        directions: np.ndarray = None,
-        initial_velocity: np.ndarray = None,
-    ):
-        """Returns an array of weights with the same dimensions as distances input."""
-        # => get weighted evaluation along the robot
-        # to obtain linear + angular velocity
-        if any(distances < self.margin_weight):
-            warnings.warn("Treat the small-weight case.")
-
-            distances = distances - np.min(distances) + self.margin_weight
-
-        num_points = distances.shape[0]
-        weights = (1 / distances) ** self.weight_power * (
-            self.weight_factor / num_points
-        )
-
-        self.distance_weight_sum = np.sum(weights)
-
-        if (
-            self.evaluate_velocity_weight
-            and directions is not None
-            and initial_velocity is not None
-        ):
-            weights = self.reduce_wake_effect(weights, initial_velocity, directions)
-
-        if (
-            self.weight_max_norm is not None
-            and self.distance_weight_sum > self.weight_max_norm
-        ):
-            self.distance_weight_sum = self.weight_max_norm
-
-        if self.distance_weight_sum > 1:
-            return weights / self.distance_weight_sum
-        else:
-            return weights
-
     def reduce_wake_effect(self, weights, initial_velocity, directions):
         """Reduce wake effect behind an obstacle and returns adapted weights.
 
@@ -206,8 +167,8 @@ class SingleModulationAvoider(ABC):
             / (LA.norm(directions, axis=0) * LA.norm(initial_velocity))
         )
 
-        dir_weights = (dir_weights * 0.5)
-        
+        dir_weights = dir_weights * 0.5
+
         ind_nonzero = dir_weights > 0
 
         weight_fact = weights / np.sum(weights)

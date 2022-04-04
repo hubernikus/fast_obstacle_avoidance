@@ -103,6 +103,7 @@ class ReplayQoloCording(Animator):
         topic_names=None,
         figsize=(16, 10),
         display_time=True,
+        show_grid=False,
     ):
         self.robot = robot
 
@@ -149,6 +150,9 @@ class ReplayQoloCording(Animator):
         self.position_list = np.tile(
             self.robot.pose.position, (position_storing_length, 1)
         ).T
+
+        # Various paramters
+        self.show_grid = show_grid
 
     def update_step(self, ii):
         """Do one update step."""
@@ -331,6 +335,9 @@ class ReplayQoloCording(Animator):
 
         if drawn_arrow:
             self.ax.legend(loc="upper left", fontsize=18)
+
+        if self.show_grid:
+            self.ax.grid(True)
 
     def has_converged(self, ii):
         """ROS-state indicates"""
@@ -537,14 +544,27 @@ if (__name__) == "__main__":
             indoor_setup = {
                 "plot_width_x": 11,
                 "plot_width_y": 10,
-                "bag_dir": "../data_qolo/indoor_with_david_2022_01/",
-                "bag_name": "2022-01-26-17-50-23.bag",
+                # "bag_dir": "../data_qolo/indoor_with_david_2022_01/",
+                # "bag_name": "2022-01-26-17-50-23.bag",
+                "bag_dir": "../data_qolo/marketplace_lausanne_2022/",
+                "bag_name": "2022-01-28-14-03-04.bag",
                 "figsize": (8, 7),
                 "display_time": False,
             }
 
+            outdoor_setup = {
+                "plot_width_x": 16,
+                "plot_width_y": 9,
+                "bag_dir": "../data_qolo/marketplace_lausanne_2022/",
+                "bag_name": "2022-01-28-14-03-04.bag",
+                "figsize": (17, 10),
+                "display_time": False,
+                "show_grid": True,
+            }
+
             # Choose the one!
-            my_setup = indoor_setup
+            # my_setup = indoor_setup
+            my_setup = outdoor_setup
 
             my_bag = rosbag.Bag(my_setup["bag_dir"] + my_setup["bag_name"])
 

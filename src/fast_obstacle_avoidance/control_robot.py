@@ -137,7 +137,8 @@ class BaseRobot:
             ax.plot(self.pose.position[0], self.pose.position[1], "H", color="k")
 
             circle = plt.Circle(
-                self.pose.position,
+                # self.pose.position,
+                ctrl_point,
                 self.control_radius,
                 color="#add8e6",
                 zorder=-1,

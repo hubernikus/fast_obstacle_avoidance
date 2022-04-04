@@ -128,9 +128,46 @@ class SampledAvoider(SingleModulationAvoider):
 
         return self.reference_direction
 
+    def get_weight_from_distances(
+        self,
+        distances: np.ndarray,
+        directions: np.ndarray = None,
+        initial_velocity: np.ndarray = None,
+    ):
+        """Returns an array of weights with the same dimensions as distances input."""
+        # => get weighted evaluation along the robot
+        # to obtain linear + angular velocity
+        if any(distances < self.margin_weight):
+            warnings.warn("Treat the small-weight case.")
+
+            distances = distances - np.min(distances) + self.margin_weight
+
+        num_points = distances.shape[0]
+        weights = (1 / distances) ** self.weight_power * (self.weight_factor)
+
+        self.distance_weight_sum = np.sum(weights)
+
+        if (
+            self.evaluate_velocity_weight
+            and directions is not None
+            and initial_velocity is not None
+        ):
+            weights = self.reduce_wake_effect(weights, initial_velocity, directions)
+
+        if (
+            self.weight_max_norm is not None
+            and self.distance_weight_sum > self.weight_max_norm
+        ):
+            self.distance_weight_sum = self.weight_max_norm
+
+        if self.distance_weight_sum > 1:
+            return weights / self.distance_weight_sum
+        else:
+            return weights
+
     def update_normal_direction(self, laser_scan, weights, ref_dirs):
         """Update the normal direction and normal angle with resect to the reference."""
-        # NOTE: This does not work very well anymore (!)
+        # NOTE: This does not work very well [anymore] ?!
 
         norm_ref_dir = LA.norm(self.reference_direction)
         if not norm_ref_dir:

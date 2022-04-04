@@ -44,7 +44,9 @@ def main_vectorfield(
 
     # fast_avoider = FastLidarAvoider(robot=qolo, evaluate_normal=True)
     fast_avoider = FastLidarAvoider(
-        robot=qolo, evaluate_normal=False, weight_max_norm=6.99580150e04
+        robot=qolo,
+        evaluate_normal=False,
+        weight_max_norm=1e4,
     )
 
     dynamical_system = LinearSystem(
@@ -103,7 +105,8 @@ def main_vectorfield(
 
         t_start = timer()
         # fast_avoider.update_reference_direction(temp_scan, in_robot_frame=False)
-        fast_avoider.update_reference_direction(temp_scan)
+        fast_avoider.update_laserscan(temp_scan, in_robot_frame=False)
+        # fast_avoider.update_reference_direction()
         velocities_mod[:, it] = fast_avoider.avoid(velocities_init[:, it])
         t_end = timer()
         print(f"Time modulation {np.round((t_end-t_start) * 1000, 3)}ms")
