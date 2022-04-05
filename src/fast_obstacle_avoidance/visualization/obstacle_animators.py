@@ -143,7 +143,58 @@ class BaseFastAnimator(Animator):
 
         return self.convergence_state
 
-    def basic_plotting(self):
+    def _plot_general(self, ii):
+        """General environment setup and plotting.
+        Preferably call this last since it sets the x_lim / y_lim."""
+        self.ax.plot(
+            self.robot.pose.position[0], self.robot.pose.position[1], "o", color="b"
+        )
+
+        self.ax.plot(self.positions[0, :ii], self.positions[1, :ii], "--", color="b")
+        self.ax.set_aspect("equal")
+
+        self.ax.plot(
+            self.initial_dynamics.attractor_position[0],
+            self.initial_dynamics.attractor_position[1],
+            "k*",
+            linewidth=18.0,
+            markersize=18,
+            zorder=5,
+        )
+
+        self.robot.plot2D(ax=self.ax)
+        self.ax.plot(
+            self.robot.pose.position[0],
+            self.robot.pose.position[1],
+            "o",
+            color="black",
+            markersize=13,
+            zorder=5,
+        )
+        self.ax.set_xlim(self.x_lim)
+        self.ax.set_ylim(self.y_lim)
+
+        # if not show_ticks:
+        self.ax.axes.xaxis.set_visible(False)
+        self.ax.axes.yaxis.set_visible(False)
+
+    def _plot_sampled_environment(self, ii):
+        data_points = self.avoider.datapoints
+        self.ax.plot(data_points[0, :], data_points[1, :], "o", color="k", zorder=-1)
+        if self.plot_lidarlines:
+            for jj in range(data_points.shape[1]):
+                self.ax.scatter(
+                    [data_points[0, jj], self.robot.pose.position[0]],
+                    [data_points[1, jj], self.robot.pose.position[1]],
+                    "--",
+                    color="k",
+                    alpha=0.5,
+                    zorder=-3,
+                )
+
+        visualize_obstacles(self.environment, ax=self.ax)
+
+    def _plot_analytic_environment(self, ii):
         pass
 
 
@@ -161,8 +212,6 @@ class LaserscanAnimator(BaseFastAnimator):
             center_position=self.robot.pose.position,
             null_direction=self.velocity_command,
         )
-
-        # self.avoider.update_reference_direction(data_points, in_robot_frame=False)
 
         self.avoider.update_laserscan(data_points, in_robot_frame=False)
 
@@ -184,57 +233,15 @@ class LaserscanAnimator(BaseFastAnimator):
         )
 
         if self.do_the_plotting:
-            self.plot_environment(ii=ii)
+            self.ax.clear()
 
-    def plot_environment(self, ii):
+            self._plot_specific(ii=ii)
+            self._plot_sampled_environment(ii=ii)
+
+            self._plot_general(ii=ii)
+
+    def _plot_specific(self, ii):
         """Plot the environment"""
-        # Restart plotting
-        self.ax.clear()
-
-        data_points = self.avoider.datapoints
-
-        self.ax.plot(data_points[0, :], data_points[1, :], "o", color="k", zorder=-1)
-        if self.plot_lidarlines:
-            for jj in range(data_points.shape[1]):
-                self.ax.plot(
-                    [data_points[0, jj], self.robot.pose.position[0]],
-                    [data_points[1, jj], self.robot.pose.position[1]],
-                    "--",
-                    color="k",
-                    alpha=0.5,
-                    zorder=-3,
-                )
-
-        self.ax.plot(
-            self.robot.pose.position[0], self.robot.pose.position[1], "o", color="b"
-        )
-
-        visualize_obstacles(self.environment, ax=self.ax)
-
-        self.ax.plot(self.positions[0, :ii], self.positions[1, :ii], "--", color="b")
-
-        self.ax.set_aspect("equal")
-        # self.ax.grid(True)
-
-        self.ax.plot(
-            self.initial_dynamics.attractor_position[0],
-            self.initial_dynamics.attractor_position[1],
-            "k*",
-            linewidth=18.0,
-            markersize=18,
-            zorder=5,
-        )
-
-        self.robot.plot2D(ax=self.ax)
-        self.ax.plot(
-            self.robot.pose.position[0],
-            self.robot.pose.position[1],
-            "o",
-            color="black",
-            markersize=13,
-            zorder=5,
-        )
-
         margin_velocity_plot = 2e-1
         arrow_scale = 0.5
         arrow_width = 0.07
@@ -287,13 +294,6 @@ class LaserscanAnimator(BaseFastAnimator):
 
         if drawn_arrow:
             self.ax.legend(loc="upper left", fontsize=18)
-
-        self.ax.set_xlim(self.x_lim)
-        self.ax.set_ylim(self.y_lim)
-
-        # if not show_ticks:
-        self.ax.axes.xaxis.set_visible(False)
-        self.ax.axes.yaxis.set_visible(False)
 
 
 class FastObstacleAnimator(BaseFastAnimator):

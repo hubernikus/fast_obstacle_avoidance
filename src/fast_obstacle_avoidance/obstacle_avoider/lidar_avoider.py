@@ -111,15 +111,15 @@ class SampledAvoider(SingleModulationAvoider):
             laser_scan, in_robot_frame=self._laserscan_in_robot_frame
         )
 
-        weights = self.get_weight_from_distances(relative_distances)
+        self.weights = self.get_weight_from_distances(relative_distances)
 
         # (-1) or not ...
         self.reference_direction = (-1) * np.sum(
-            ref_dirs * np.tile(weights, (ref_dirs.shape[0], 1)), axis=1
+            ref_dirs * np.tile(self.weights, (ref_dirs.shape[0], 1)), axis=1
         )
 
         if self.evaluate_normal:
-            self.update_normal_direction(laser_scan, weights, ref_dirs)
+            self.update_normal_direction(laser_scan, self.weights, ref_dirs)
 
         # For Temporary plotting [remove after submission]
         if hasattr(self, "debug_mode") and self.debug_mode:

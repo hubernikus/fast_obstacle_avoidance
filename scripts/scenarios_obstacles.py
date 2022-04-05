@@ -341,8 +341,7 @@ if (__name__) == "__main__":
     plt.ion()
     # plt.close("all")
 
-    # execute_avoidance_with_obstacle(save_figure=True)
     # test_multi_obstacles()
-    vectorfield_with_many_obstacles(save_figure=False, create_animation=False)
+    # vectorfield_with_many_obstacles(save_figure=False, create_animation=False)
 
     # test_various_surface_points()

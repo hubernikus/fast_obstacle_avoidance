@@ -195,7 +195,6 @@ def execute_avoidance_with_single_obstacle(save_figure=False, create_animation=F
     )
 
     main_environment = ShapelySamplingContainer(n_samples=100)
-
     main_environment.add_obstacle(
         SampledEllipse(
             position=np.array([0.5, 0.5]),
@@ -240,10 +239,12 @@ def execute_avoidance_with_single_obstacle(save_figure=False, create_animation=F
             x_lim=x_lim,
             y_lim=y_lim,
             plot_lidarlines=True,
+            show_reference=True,
         )
 
         my_animator.run(save_animation=save_figure)
 
+        print(f"Done the animation. Saved={save_figure}.")
         return
 
     fig, ax = plt.subplots(1, 1, figsize=(7, 5))
@@ -299,7 +300,7 @@ def execute_avoidance_with_single_obstacle(save_figure=False, create_animation=F
         plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
 
 
-def vectorfield_with_many_obstacles(save_figure=False):
+def vectorfield_with_many_obstacles(save_figure=False, create_animation=True):
     start_point = np.array([-1, 1])
     x_lim = [-8, 4]
     y_lim = [-1.0, 4.6]
@@ -312,22 +313,35 @@ def vectorfield_with_many_obstacles(save_figure=False):
     main_environment = ShapelySamplingContainer(n_samples=50)
 
     # Ellipse
-    ellipse = shapely.affinity.scale(
-        shapely.geometry.Point(-3, 3.5).buffer(1), 1.0, 0.8
+    main_environment.create_ellipse(
+        position=np.array([-3, 3.5]),
+        orientation_in_degree=50,
+        axes_length=np.array([1.0, 0.8]),
     )
-    ellipse = shapely.affinity.rotate(ellipse, 50)
-    main_environment.add_obstacle(ellipse)
 
     # Ellipse
-    ellipse = shapely.affinity.scale(shapely.geometry.Point(2, 0).buffer(1), 1.0, 0.8)
-    ellipse = shapely.affinity.rotate(ellipse, -20)
-    main_environment.add_obstacle(ellipse)
+    main_environment.create_ellipse(
+        position=np.array([2, 0]),
+        orientation_in_degree=-20,
+        axes_length=np.array([1.0, 0.8]),
+    )
+
+    # ellipse = shapely.affinity.scale(
+    # shapely.geometry.Point(-3, 3.5).buffer(1), 1.0, 0.8
+    # )
+    # ellipse = shapely.affinity.rotate(ellipse, 50)
+    # main_environment.add_obstacle(ellipse)
+
+    # Ellipse
+    # ellipse = shapely.affinity.scale(shapely.geometry.Point(2, 0).buffer(1), 1.0, 0.8)
+    # ellipse = shapely.affinity.rotate(ellipse, -20)
+    # main_environment.add_obstacle(ellipse)
 
     # Box
-    main_environment.add_obstacle(shapely.geometry.box(-6, -1, -5, 1.5))
+    main_environment.create_cuboid(geometry=shapely.geometry.box(-6, -1, -5, 1.5))
 
     # Second Box
-    main_environment.add_obstacle(shapely.geometry.box(0, 4, 1, 8))
+    main_environment.create_cuboid(geometry=shapely.geometry.box(0, 4, 1, 8))
 
     robot = QoloRobot(pose=ObjectPose(position=start_point, orientation=0))
     robot.control_point = [0, 0]
@@ -340,7 +354,6 @@ def vectorfield_with_many_obstacles(save_figure=False):
         weight_power=1.0,
     )
 
-    create_animation = True
     if create_animation:
         simu_environment = copy.deepcopy(main_environment)
         simu_environment.n_samples = 100
@@ -527,10 +540,11 @@ if (__name__) == "__main__":
     plt.ion()
     plt.close("all")
 
-    execute_avoidance_with_single_obstacle(save_figure=True, create_animation=True)
+    # execute_avoidance_with_single_obstacle(
+    # save_figure=True, create_animation=True)
 
     # test_multi_obstacles()
-    # vectorfield_with_many_obstacles(save_figure=False)
+    vectorfield_with_many_obstacles(save_figure=True, create_animation=True)
     # vectorfield_with_many_obstacles(save_figure=False)
 
     # test_various_surface_points()

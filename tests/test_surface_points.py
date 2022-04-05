@@ -11,6 +11,7 @@ from fast_obstacle_avoidance.sampling_container import ShapelySamplingContainer
 
 from fast_obstacle_avoidance.visalization import explore_specific_point
 
+
 def test_surface_points():
     main_environment = ShapelySamplingContainer()
     main_environment.add_obstacle(shapely.geometry.box(0, 2, -1, 1))

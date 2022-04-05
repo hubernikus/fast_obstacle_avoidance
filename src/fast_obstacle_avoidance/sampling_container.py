@@ -58,38 +58,39 @@ class SampledObstacle(ABC):
     """Sampled Obstacle Wrapper which allows for additional properties and
     custom construction."""
 
-    def __init__(self, is_boundary=False):
+    def __init__(self, geometry, is_boundary=False):
+        self.geometry = geometry
         self.is_boundary = is_boundary
 
     @property
     def obstacle(self):
-        return self._obstacle
+        return self.geometry
 
     @obstacle.setter
     def obstacle(self, value):
-        self._obstacle = value
+        self.geometry = value
 
     @property
     def exterior(self):
-        return self._obstacle.exterior
+        return self.geometry.exterior
 
     def intersection(self, shapely_line):
-        return self._obstacle.intersection(shapely_line)
+        return self.geometry.intersection(shapely_line)
 
     def contains(self, shapely_point):
-        return self._obstacle.contains(shapely_point)
+        return self.geometry.contains(shapely_point)
 
 
 class SampledEllipse(SampledObstacle):
-    def __init__(
-        self,
+    @classmethod
+    def from_obstacle(
+        cls,
         position=None,
         axes_length=None,
         orientation_in_degree=0,
         obstacle=None,
         **kwargs
     ):
-        super().__init__(**kwargs)
         if obstacle is not None:
             position = obstacle.center_position
             axes_length = obstacle.axes_length
@@ -103,20 +104,21 @@ class SampledEllipse(SampledObstacle):
         ellipse = shapely.affinity.scale(
             ellipse, axes_length[0] * 0.5, axes_length[1] * 0.5
         )
-        self._obstacle = shapely.affinity.rotate(ellipse, orientation_in_degree)
+        ellipse = shapely.affinity.rotate(ellipse, orientation_in_degree)
+        return cls(geometry=ellipse, **kwargs)
 
 
 class SampledCuboid(SampledObstacle):
-    def __init__(
-        self,
+    @classmethod
+    def from_obstacle(
+        cls,
         position=None,
         axes_length=None,
         orientation_in_degree=0,
         obstacle=None,
         **kwargs
     ):
-        super().__init__(**kwargs)
-
+        """Alternative Constructor using the Basic Obstacle Arguments."""
         if obstacle is not None:
             position = obstacle.center_position
             axes_length = np.array(obstacle.axes_length)
@@ -132,19 +134,18 @@ class SampledCuboid(SampledObstacle):
             position[0] + semiaxes[0],
             position[1] + semiaxes[1],
         )
-
-        self._obstacle = shapely.affinity.rotate(cuboid, orientation_in_degree)
+        cuboid = shapely.affinity.rotate(cuboid, orientation_in_degree)
+        return cls(geometry=cuboid, **kwargs)
 
 
 class SampledSphere(SampledObstacle):
-    def __init__(self, position=None, radius=None, obstacle=None, **kwargs):
-        super().__init__(**kwargs)
-
+    def from_geometry(self, position=None, radius=None, obstacle=None, **kwargs):
         if obstacle is not None:
             position = obstacle.center_position
             radius = obstacle.radius
 
-        self._obstacle = shapely.geometry.Point(position[0], position[1]).buffer(radius)
+        sphere = shapely.geometry.Point(position[0], position[1]).buffer(radius)
+        super().__init__(geometry=sphere, **kwargs)
 
 
 class ShapelySamplingContainer:
@@ -199,14 +200,39 @@ class ShapelySamplingContainer:
     def add_obstacle(self, obstacle):
         self.environment.append(obstacle)
 
-    def create_ellipse(self, **kwargs):
-        self.environment.append(SampledEllipse(**kwargs))
+    def create_ellipse(self, geometry=None, is_boundary=False, **kwargs):
+        if geometry is None:
+            self.environment.append(
+                SampledEllipse.from_obstacle(is_boundary=is_boundary, **kwargs)
+            )
+        else:
+            self.environment.append(
+                SampledEllipse(geometry=geometry, is_boundary=is_boundary)
+            )
 
-    def create_sphere(self, **kwargs):
-        self.environment.append(SampledSphere(**kwargs))
+        # self.environment.append(SampledSphere(**kwargs))
 
-    def create_cuboid(self, **kwargs):
-        self.environment.append(SampledCuboid(**kwargs))
+    def create_sphere(self, geometry=None, is_boundary=False, **kwargs):
+        if geometry is None:
+            self.environment.append(
+                SampledEllipse.from_obstacle(is_boundary=is_boundary, **kwargs)
+            )
+        else:
+            self.environment.append(
+                SampledEllipse(geometry=geometry, is_boundary=is_boundary)
+            )
+
+        # self.environment.append(SampledSphere(**kwargs))
+
+    def create_cuboid(self, geometry=None, is_boundary=False, **kwargs):
+        if geometry is None:
+            self.environment.append(
+                SampledCuboid.from_obstacle(is_boundary=is_boundary, **kwargs)
+            )
+        else:
+            self.environment.append(
+                SampledCuboid(geometry=geometry, is_boundary=is_boundary)
+            )
 
     def get_surface_points(
         self, center_position, n_samples=None, null_direction=None, dist_max=1e3

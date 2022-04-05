@@ -61,7 +61,7 @@ def import_first_scans(
     for topic, msg, t in my_bag.read_messages(
         topics=["/front_lidar/scan", "/rear_lidar/scan"]
     ):
-        
+
         if start_time is not None and t.to_sec() < start_time:
             continue
 

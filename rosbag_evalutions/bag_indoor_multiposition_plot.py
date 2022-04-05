@@ -101,7 +101,7 @@ class MultiPloter:
             self.visual_times = [0, 1]
         else:
             self.visual_times = visual_times
-            
+
         self.dimension = 2
 
         delta_orientation = 0 / 180.0 * np.pi
@@ -119,17 +119,20 @@ class MultiPloter:
 
         # Initialization of variables
         self.my_generator = self.rosbag_generator(my_bag)
-        while (
-            self.initial_velocity is None
-            or self.modulated_velocity is None
-        ):
+        while self.initial_velocity is None or self.modulated_velocity is None:
             self.ros_state = next(self.my_generator)
             print("Waiting to recieve")
-            
+
         self.start_time = self.ros_time
 
-    def create(self, save_figure=False, bag_name=None, do_subplots=True,
-               time_text=True, draw_laserscan=True):
+    def create(
+        self,
+        save_figure=False,
+        bag_name=None,
+        do_subplots=True,
+        time_text=True,
+        draw_laserscan=True,
+    ):
         global_ctrl_point = np.zeros(self.dimension)
 
         # self.fig, self.ax = plt.subplots(figsize=(16, 10))
@@ -289,7 +292,7 @@ class MultiPloter:
 
         if not do_subplots:
             return
-        
+
         self.fig.tight_layout()
         self.fig.subplots_adjust(top=0.9, left=0.1, right=0.9, bottom=0.09)
         self.axs.flatten()[-2].legend(
@@ -329,10 +332,13 @@ def main(my_bag, bag_name):
     )
 
     # my_ploter.create(save_figure=True, bag_name=bag_name)
-    my_ploter.create(save_figure=True, bag_name=bag_name, do_subplots=False,
-                     time_text=True,
-                     # draw_laserscan=True,
-                     )
+    my_ploter.create(
+        save_figure=True,
+        bag_name=bag_name,
+        do_subplots=False,
+        time_text=True,
+        # draw_laserscan=True,
+    )
 
     # my_ploter.ax.set_xlim([-7.4, 2.4])
     # my_ploter.ax.set_ylim([-4, 4])

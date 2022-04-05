@@ -34,26 +34,22 @@ def single_cirlce_in_corner(
         attractor_position=np.array([-4, -5]),
         maximum_velocity=0.8,
     )
-    
-    obstacle_environment = ObstacleContainer()
-    obstacle_environment.append(Ellipse(
-        axes_length=np.array([2, 2]),
-        center_position=np.array([0, 0])
-        ))
 
-    main_avoider = FastObstacleAvoider(
-        obstacle_environment=obstacle_environment
-        )
-    
+    obstacle_environment = ObstacleContainer()
+    obstacle_environment.append(
+        Ellipse(axes_length=np.array([2, 2]), center_position=np.array([0, 0]))
+    )
+
+    main_avoider = FastObstacleAvoider(obstacle_environment=obstacle_environment)
 
     plot_obstacles(
-            ax=ax,
-            obstacle_container=obstacle_environment,
-            x_lim=x_lim,
-            y_lim=y_lim,
-            noTicks=True,
-            draw_reference=True,
-        )
+        ax=ax,
+        obstacle_container=obstacle_environment,
+        x_lim=x_lim,
+        y_lim=y_lim,
+        noTicks=True,
+        draw_reference=True,
+    )
 
     nx = ny = n_grid
     x_vals, y_vals = np.meshgrid(
@@ -69,27 +65,28 @@ def single_cirlce_in_corner(
     for it in range(positions.shape[1]):
         if LA.norm(positions[:, it]) < obstacle_environment[0].axes_length[0]:
             continue
-        
+
         main_avoider.update_reference_direction(position=positions[:, it])
         initial_vel = initial_dynamics.evaluate(position=positions[:, it])
-        
+
         # mod_vel[:, it] = main_avoider.avoid(initial_vel)
         # initial_velds_init = (position, x0=xAttractor)
         mod_vel[:, it] = obs_avoidance_interpolation_moving(
-            positions[:, it], initial_vel, obstacle_environment)
+            positions[:, it], initial_vel, obstacle_environment
+        )
 
     # ax.quiver(
-        # positions[0, :],
-        # positions[1, :],
-        # mod_vel[0, :],
-        # mod_vel[1, :],
-        # color="black",
-        # scale=30,
-        # alpha=0.8,
+    # positions[0, :],
+    # positions[1, :],
+    # mod_vel[0, :],
+    # mod_vel[1, :],
+    # color="black",
+    # scale=30,
+    # alpha=0.8,
     # )
-    
+
     # if True:
-        # return
+    # return
     ax.streamplot(
         positions[0, :].reshape(nx, ny),
         positions[1, :].reshape(nx, ny),
@@ -102,6 +99,7 @@ def single_cirlce_in_corner(
 
     figure_name = "avoidance_circle"
     plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
+
 
 if (__name__) == "__main__":
     # plt.close('all')

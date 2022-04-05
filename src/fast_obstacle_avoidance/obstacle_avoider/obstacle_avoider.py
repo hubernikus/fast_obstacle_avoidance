@@ -59,7 +59,7 @@ class FastObstacleAvoider(SingleModulationAvoider):
         linear_velocities = np.zeros((self.dimension, weights.shape[0]))
         angular_velocities = np.zeros((weights.shape[0]))
 
-        weights = weights ** weight_pow
+        weights = weights**weight_pow
         weights = weights / np.sum(weights)
 
         summed_angular = np.zeros(position.shape[0])
