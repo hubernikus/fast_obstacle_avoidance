@@ -3,7 +3,11 @@
 # Created: 2021-02-22
 # Email: lukas.huber@epfl.ch
 
+from vartools.dynamical_systems import LinearSystem
+
 from fast_obstacle_avoidance.obstacle_avoider._base import StretchingMatrixTrigonometric
+from fast_obstacle_avoidance.sampling_container import ShapelySamplingContainer
+from fast_obstacle_avoidance.sampling_container import SampledEllipse
 
 import numpy as np
 from numpy import linalg as LA
@@ -18,7 +22,7 @@ def test_trigonometric_eigenvalues():
     vals_tan = np.zeros(ref_norms.shape)
     vals_ref = np.zeros(ref_norms.shape)
 
-    # ref and vel oposing
+    # ref and vel opposing
     ref_dir = np.array([1, 0])
     initial_vel = np.array([-1, 0])
 
@@ -54,12 +58,15 @@ def test_various_surface_points():
 
     # main_environment.add_obstacle(shapely.geometry.box(-5, -1, 2, 1))
     # circle =   # type(circle)=polygon
-
-    ellipse = shapely.affinity.scale(
-        shapely.geometry.Point(0.5, -0.5).buffer(1), 2.0, 1.5
-    )
-    ellipse = shapely.affinity.rotate(ellipse, 90)
-
+    
+    # ellipse = shapely.affinity.scale(shapely.geometry.Point(0.5, -0.5).buffer(1), 2.0, 1.5)
+    # ellipse = shapely.affinity.rotate(ellipse, 90)
+    main_environment.append_obstacle(SampledEllipse(
+        position=[0.5, -0.5],
+        axes_length=[2.0, 1.5],
+        orientation_in_degree=90
+    ))
+    
     main_environment.add_obstacle(ellipse)
     robot = QoloRobot(pose=ObjectPose(position=start_point, orientation=0))
     robot.control_radius = 0.6

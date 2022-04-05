@@ -267,10 +267,10 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
         if any(ind_max):
             weights = np.zeros(ind_max.shape)
             weights[ind_max] = max_weight
-            weights[~ind_max] = 1 / (1 - weights[~ind_max])
+            weights[~ind_max] = 1 / (1 - weights[~ind_max]) -1
 
         else:
-            weights = 1 / (1 - weights)
+            weights = 1 / (1 - weights) - 1
             weights = np.minimum(weights, max_weight)
 
         # Do scaling of laserscan weight
