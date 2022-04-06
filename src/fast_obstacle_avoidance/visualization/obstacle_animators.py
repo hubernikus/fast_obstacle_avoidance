@@ -61,6 +61,8 @@ class BaseFastAnimator(Animator):
         do_the_plotting=True,
         plot_lidarlines=False,
         show_lidarweight=False,
+        figsize=(16, 10),
+        colobar_pos=None
     ):
         self.dimension = 2
 
@@ -86,7 +88,10 @@ class BaseFastAnimator(Animator):
         self.do_the_plotting = do_the_plotting
         if self.do_the_plotting:
             # Create
-            self.fig, self.ax = plt.subplots(figsize=(16, 10))
+            self.figsize = figsize
+            self.fig, self.ax = plt.subplots(figsize=self.figsize)
+
+            self.colorbar_pos = colobar_pos
 
         self.velocity_command = np.zeros(self.dimension)
 
@@ -106,6 +111,8 @@ class BaseFastAnimator(Animator):
 
         # Reference points of the 'analytical' obstacles
         self.show_reference_points = show_reference_points
+
+        self._restore_figsize()
 
     def has_converged(self, ii):
         """Return values:
@@ -188,6 +195,17 @@ class BaseFastAnimator(Animator):
         self.ax.axes.xaxis.set_visible(False)
         self.ax.axes.yaxis.set_visible(False)
 
+        self._restore_figsize()
+
+    def _restore_figsize(self):
+        """Reset to correct figure size before saving -
+        Somehow three times fixes the size -> I'm really not sure why this hast to be done.
+        but it overcomes the 'ffmpeg'-saving error. """
+        self.fig.set_dpi(100)
+        for _ in range(3):
+            
+            self.fig.set_size_inches(self.figsize[0], self.figsize[1], forward=True)
+
     def _plot_sampled_environment(self, ii):
         data_points = self.avoider.datapoints
         if self.plot_lidarlines:
@@ -222,10 +240,12 @@ class BaseFastAnimator(Animator):
             if self.cax is None:
                 # self.cax.clear()
                 # self.cax.set_position([0.67, 0.80, 0.11, 0.02])
-                self.cax = self.fig.add_axes([0.67, 0.80, 0.11, 0.02])
+                if self.colorbar_pos is None:
+                    self.colorbar_pos = [0.67, 0.80, 0.11, 0.02]
+                self.cax = self.fig.add_axes(self.colorbar_pos)
                 self.fig.colorbar(sc, cax=self.cax, orientation='horizontal',
                                             extend='max', ticks=colorbar_ticks,)
-                self.cax.set_title("Sample weight", fontsize=16)
+                self.cax.set_title("Importance weight", fontsize=16)
 
                 # if self.show_lidarweight:
                 # self.cax = self.fig.add_axes([0.67, 0.80, 0.11, 0.02])
@@ -239,8 +259,6 @@ class BaseFastAnimator(Animator):
                 "o",
                 color="k",
                 zorder=-1)
-
-            
 
     def _plot_analytic_environment(self, ii):
         pass
