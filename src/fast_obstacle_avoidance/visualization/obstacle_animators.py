@@ -31,6 +31,10 @@ class BaseFastAnimator(Animator):
     def it_count(self):
         return self.ii
 
+    @it_count.setter
+    def it_count(self, value):
+        self.ii = value
+
     def run_without_plotting(self):
         for self.ii in range(self.it_max):
             self.update_step(self.ii)
@@ -56,6 +60,7 @@ class BaseFastAnimator(Animator):
         velocity_normalization_margin=1e-1,
         do_the_plotting=True,
         plot_lidarlines=False,
+        show_lidarweight=False,
     ):
         self.dimension = 2
 
@@ -72,7 +77,8 @@ class BaseFastAnimator(Animator):
         self.x_lim = x_lim
         self.y_lim = y_lim
 
-        self.positions = np.zeros((self.dimension, self.it_max))
+        self.positions = np.zeros((self.dimension, self.it_max+1))
+        self.positions[:, 0] = self.robot.pose.position
 
         self.velocities_init = np.zeros((self.dimension, self.it_max))
         self.velocities_mod = np.zeros((self.dimension, self.it_max))
@@ -93,6 +99,10 @@ class BaseFastAnimator(Animator):
         self.convergence_state = 0
 
         self.plot_lidarlines = plot_lidarlines
+        self.show_lidarweight = show_lidarweight
+
+        if self.show_lidarweight:
+            self.cax = None
 
         # Reference points of the 'analytical' obstacles
         self.show_reference_points = show_reference_points
@@ -180,10 +190,9 @@ class BaseFastAnimator(Animator):
 
     def _plot_sampled_environment(self, ii):
         data_points = self.avoider.datapoints
-        self.ax.plot(data_points[0, :], data_points[1, :], "o", color="k", zorder=-1)
         if self.plot_lidarlines:
             for jj in range(data_points.shape[1]):
-                self.ax.scatter(
+                self.ax.plot(
                     [data_points[0, jj], self.robot.pose.position[0]],
                     [data_points[1, jj], self.robot.pose.position[1]],
                     "--",
@@ -193,6 +202,45 @@ class BaseFastAnimator(Animator):
                 )
 
         visualize_obstacles(self.environment, ax=self.ax)
+
+        if self.show_lidarweight:
+            colorbar_ticks = [0, 0.1, 0.2]
+            sc = self.ax.scatter(
+                data_points[0, :],
+                data_points[1, :],
+                c=self.avoider.weights,
+                cmap="copper_r",
+                marker="o",
+                s=50,
+                vmin=colorbar_ticks[0],
+                vmax=colorbar_ticks[-1],
+                # extend='max',
+                alpha=1.0,
+                zorder=-1)
+            # self.ax.colobar(sc)
+
+            if self.cax is None:
+                # self.cax.clear()
+                # self.cax.set_position([0.67, 0.80, 0.11, 0.02])
+                self.cax = self.fig.add_axes([0.67, 0.80, 0.11, 0.02])
+                self.fig.colorbar(sc, cax=self.cax, orientation='horizontal',
+                                            extend='max', ticks=colorbar_ticks,)
+                self.cax.set_title("Sample weight", fontsize=16)
+
+                # if self.show_lidarweight:
+                # self.cax = self.fig.add_axes([0.67, 0.80, 0.11, 0.02])
+
+            # breakpoint()
+
+        else:
+            self.ax.plot(
+                data_points[0, :],
+                data_points[1, :],
+                "o",
+                color="k",
+                zorder=-1)
+
+            
 
     def _plot_analytic_environment(self, ii):
         pass
@@ -206,7 +254,8 @@ class LaserscanAnimator(BaseFastAnimator):
         if not (ii % 10):
             print(f"It {ii}")
 
-        self.positions[:, ii] = self.robot.pose.position
+
+        # self.positions[:, ii] = self.robot.pose.position
 
         data_points = self.environment.get_surface_points(
             center_position=self.robot.pose.position,
@@ -228,9 +277,10 @@ class LaserscanAnimator(BaseFastAnimator):
             )
 
         # Update step
-        self.robot.pose.position = (
-            self.robot.pose.position + self.modulated_velocity * self.dt_simulation
+        self.positions[:, ii + 1] = (
+            self.positions[:, ii] + self.modulated_velocity * self.dt_simulation
         )
+        self.robot.pose.position = self.positions[:, ii + 1]
 
         if self.do_the_plotting:
             self.ax.clear()
