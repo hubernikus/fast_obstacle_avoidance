@@ -4,3 +4,6 @@
 # pycryptodome # I don't think this is needed...
 pycryptodomex
 rospkg
+
+wheel
+gnupg

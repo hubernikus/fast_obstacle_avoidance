@@ -483,7 +483,8 @@ if (__name__) == "__main__":
 
     # test_multi_obstacles()
     # vectorfield_with_many_obstacles(create_animation=True, save_figure=False)
-    vectorfield_with_many_obstacles(create_animation=True, save_figure=True)
+    vectorfield_with_many_obstacles(
+        create_animation=True, save_figure=False)
     # vectorfield_with_many_obstacles(save_figure=False)
 
     # test_various_surface_points()
