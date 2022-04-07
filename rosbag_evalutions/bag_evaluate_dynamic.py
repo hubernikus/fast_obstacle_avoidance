@@ -27,7 +27,8 @@ from fast_obstacle_avoidance.laserscan_utils import import_first_scans, reset_la
 
 class LaserScanAnimator(Animator):
     def setup(
-        self, static_laserscan, initial_dynamics, robot, x_lim=[-3, 4], y_lim=[-3, 3]
+        self, static_laserscan, initial_dynamics, robot, x_lim=[-3, 4], y_lim=[-3, 3],
+        colorbar_pos=None,
     ):
         self.robot = robot
         self.robot.control_point = np.zeros(2)
@@ -41,7 +42,7 @@ class LaserScanAnimator(Animator):
             evaluate_velocity_weight=False,
             weight_power=2.0,
         )
-
+        
         self.static_laserscan = static_laserscan
 
         self.fig, self.ax = plt.subplots(figsize=(12, 8))
@@ -53,6 +54,12 @@ class LaserScanAnimator(Animator):
 
         dimension = 2
         self.position_list = np.zeros((dimension, self.it_max + 1))
+
+        self.cax = None
+        self.colorbar_pos = colorbar_pos
+
+        self._restore_figsize()
+
 
     def update_step(self, ii):
         """Update robot and position."""
@@ -70,11 +77,12 @@ class LaserScanAnimator(Animator):
         # print('init vel', initial_velocity)
         # print('mod vel', modulated_velocity)
 
-        print(
-            "Time for modulation {}ms at it={}".format(
-                np.round((t_end - t_start) * 1000, 3), ii
+        if not (ii % 10): 
+            print(
+                "Time for modulation {}ms at it={}".format(
+                    np.round((t_end - t_start) * 1000, 3), ii
+                )
             )
-        )
 
         # Update qolo
         self.robot.pose.position = (
@@ -94,28 +102,59 @@ class LaserScanAnimator(Animator):
         # self.ax.plot(self.robot.pose.position[0],
         # self.robot.pose.position[1], 'o', color='k')
 
-        self.ax.scatter(
-            self.static_laserscan[0, :],
-            self.static_laserscan[1, :],
-            # color='black',
-            # c=intensities,
-            # cmap="copper",
-            # cmap='hot',
-            # ".",
-            color=self.obstacle_color,
-            s=4.0,
-            # alpha=(intensities/255.),
-            # alpha=(1-intensities/255.),
-            alpha=0.8,
-            zorder=-1,
-        )
-        # self.ax.plot(
-        # self.static_laserscan[0, :],
-        # self.static_laserscan[1, :],
-        # ".",
-        # color=self.obstacle_color,
-        # zorder=-1,
-        # )
+        self.show_lidarweight = True
+
+        if self.show_lidarweight:
+            colorbar_ticks = [0, 0.005, 0.01]
+            sc = self.ax.scatter(
+                self.static_laserscan[0, :],
+                self.static_laserscan[1, :],
+                c=self.fast_avoider.weights,
+                cmap="copper_r",
+                marker="o",
+                s=5,
+                vmin=colorbar_ticks[0],
+                vmax=colorbar_ticks[-1],
+                # extend='max',
+                alpha=1.0,
+                zorder=-1)
+            # self.ax.colobar(sc)
+
+            if self.cax is None:
+                # self.cax.clear()
+                # self.cax.set_position([0.67, 0.80, 0.11, 0.02])
+                if self.colorbar_pos is None:
+                    # self.colorbar_pos = [0.67, 0.80, 0.11, 0.02]
+                    self.colorbar_pos = [0.25, 0.16, 0.17, 0.025]
+                    self.cax = self.fig.add_axes(self.colorbar_pos)
+                    cbar = self.fig.colorbar(sc, cax=self.cax, orientation='horizontal',
+                                      extend='max',
+                                      ticks=colorbar_ticks,
+                                      )
+                    cbar.ax.set_xticklabels(
+                       # [f"{round(lbl*1000)}e-3" for lbl in colorbar_ticks]
+                       ["0", "0.5e-3", "1e-3"]
+                    )
+                    
+                    self.cax.set_title("Importance weight", fontsize=16)
+
+        else:
+            self.ax.scatter(
+                self.static_laserscan[0, :],
+                self.static_laserscan[1, :],
+                # color='black',
+                # c=intensities,
+                # cmap="copper",
+                # cmap='hot',
+                # ".",
+                color=self.obstacle_color,
+                s=4.0,
+                # alpha=(intensities/255.),
+                # alpha=(1-intensities/255.),
+                alpha=0.8,
+                zorder=-1,
+            )
+        
 
         self.ax.set_xlim(self.x_lim)
         self.ax.set_ylim(self.y_lim)
@@ -176,6 +215,8 @@ class LaserScanAnimator(Animator):
         # print(tt)
         self.ax.grid()
         self.ax.legend(loc="upper right", fontsize=18)
+
+        self._restore_figsize()
 
     def has_converged(self, ii):
         conv_margin = 1e-4
@@ -254,6 +295,7 @@ def main_animator(
     start_position=None,
     attractor_position=None,
     save_animation=False,
+    animation_name=None,
 ):
     # sample_freq = 20
     # allscan = allscan[:,  np.logical_not(np.mod(np.arange(allscan.shape[1]), sample_freq))]
@@ -281,7 +323,9 @@ def main_animator(
         it_max=160,
         dt_simulation=0.04,
         # animation_name="indoor_scattered"
+        animation_name=animation_name,
     )
+    
     main_animator.setup(
         static_laserscan=qolo.get_allscan(),
         initial_dynamics=dynamical_system,
@@ -303,13 +347,14 @@ def animator_office_room():
     )
 
 
-def animator_doorpassing():
+def animator_doorpassing(save_animation=False):
     main_animator(
         bag_name="2021-12-13-18-33-06.bag",
         eval_time=0,
         start_position=np.array([0.6, -0.8]),
         attractor_position=np.array([-1.7, 1.6]),
-        save_animation=True,
+        save_animation=save_animation,
+        animation_name="doorstep_passing",
     )
 
 
@@ -327,7 +372,9 @@ if (__name__) == "__main__":
 
     # main_animator()
     # animator_office_room()
-    animator_doorpassing()
+    
+    animator_doorpassing(save_animation=False)
+    
     # Evaluation_shared_control()
 
     pass

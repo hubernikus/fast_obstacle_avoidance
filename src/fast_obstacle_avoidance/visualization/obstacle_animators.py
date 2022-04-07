@@ -197,15 +197,6 @@ class BaseFastAnimator(Animator):
 
         self._restore_figsize()
 
-    def _restore_figsize(self):
-        """Reset to correct figure size before saving -
-        Somehow three times fixes the size -> I'm really not sure why this hast to be done.
-        but it overcomes the 'ffmpeg'-saving error. """
-        self.fig.set_dpi(100)
-        for _ in range(3):
-            
-            self.fig.set_size_inches(self.figsize[0], self.figsize[1], forward=True)
-
     def _plot_sampled_environment(self, ii):
         data_points = self.avoider.datapoints
         if self.plot_lidarlines:
@@ -244,7 +235,7 @@ class BaseFastAnimator(Animator):
                     self.colorbar_pos = [0.67, 0.80, 0.11, 0.02]
                 self.cax = self.fig.add_axes(self.colorbar_pos)
                 self.fig.colorbar(sc, cax=self.cax, orientation='horizontal',
-                                            extend='max', ticks=colorbar_ticks,)
+                                  extend='max', ticks=colorbar_ticks,)
                 self.cax.set_title("Importance weight", fontsize=16)
 
                 # if self.show_lidarweight:
