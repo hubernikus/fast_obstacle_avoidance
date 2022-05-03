@@ -232,6 +232,8 @@ class MultiPloter:
         # angles = np.linspace(min_val, max_val, num_bars + 1)
         # angles = (angles[1:] + angles[:-1]) * 0.5
 
+        self.ax.set_titl(bag_name[:-4])
+
         if save_figure:
             figure_name = "bag_moduation_angle_"
             if bag_name is not None:
@@ -245,10 +247,7 @@ def bag_evaluate_deviation(my_bag, bag_name, save_figure=True):
         pose=ObjectPose(position=np.array([0, 0]), orientation=0 * np.pi / 180)
     )
 
-    my_ploter = MultiPloter(
-        robot=qolo,
-        my_bag=my_bag,
-    )
+    my_ploter = MultiPloter(robot=qolo, my_bag=my_bag)
 
     my_ploter.create(save_figure=save_figure, bag_name=bag_name)
 
@@ -273,7 +272,8 @@ if (__name__) == "__main__":
     plt.close("all")
     plt.ion()
 
-    bag_dir = "../data_qolo/marketplace_lausanne_2022/"
+    # bag_dir = "../data_qolo/marketplace_lausanne_2022/"
+    bag_dir = "../data_qolo/marketplace_lausanne_2022_01_28/"
     main_batch_processing(bag_dir)
 
     # Single bags

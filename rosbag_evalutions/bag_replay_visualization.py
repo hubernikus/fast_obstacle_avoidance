@@ -393,9 +393,7 @@ def evaluate_bag(
         animation_name = f"animation_bag_{bag_name[:-4]}"
 
     replayer = ReplayQoloCording(
-        it_max=it_max,
-        dt_simulation=dt_simulation,
-        animation_name=animation_name,
+        it_max=it_max, dt_simulation=dt_simulation, animation_name=animation_name
     )
 
     replayer.setup(
