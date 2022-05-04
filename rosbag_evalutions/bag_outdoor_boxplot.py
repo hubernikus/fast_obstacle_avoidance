@@ -3,6 +3,9 @@
 # Created: 2022-05-03
 # Github: hubernikus
 
+import os
+import logging
+
 import numpy as np
 from numpy import linalg as LA
 
@@ -32,8 +35,19 @@ class DataHandler:
             return
 
         if bag_names is None:
-            bag_names = ["2022-01-28-13-33-32.bag"]
-            self.method_names = ["Disparate"]
+            bag_tuples = [
+                # ("2022-01-28-13-50-27.bag", "Sampled slow"),  # mostlystanding
+                ("2022-01-28-13-33-32.bag", "Sampled"),
+                # ("2022-01-28-13-20-25.bag", "Sampled"),  # Very short -> nonusefull
+                ("2022-01-28-13-20-46.bag", "Sampled"),
+                ("2022-01-28-14-00-39.bag", "Sampled"),
+                ("2022-01-28-14-03-04.bag", "Sampled"),
+                ("2022-01-28-14-08-47.bag", "Sampled"),
+            ]
+            bag_names = [name for name, _ in bag_tuples]
+            self.experiment_id = [name[-9:-7] + name[-6:-4] for name, _ in bag_tuples]
+
+            self.detection_type = [dettype for _, dettype in bag_tuples]
 
         self.linear_vels = []
         self.ctrl_contributions = []
@@ -71,7 +85,6 @@ class DataHandler:
         linear_vel = []
         ctrl_contribution = []
         closest_distance = []
-
         for topic, msg, t in my_bag.read_messages(
             topics=[
                 "/front_lidar/scan",
@@ -89,8 +102,7 @@ class DataHandler:
                 self._last_back = msg
 
             if self._last_front is not None and self._last_back is not None:
-                n_min_values = 5
-                # breakpoint()
+                n_min_values = 10
 
                 self.robot.set_laserscan(
                     self._last_front,
@@ -132,7 +144,20 @@ class DataHandler:
                         self.robot.control_point[0] * np.cos(self._last_user.data[1]),
                     ]
                 )
-                ctrl_contribution.append(LA.norm(remote_xy - user_xy))
+                norm_user = LA.norm(user_xy)
+                if not norm_user:
+                    continue
+
+                ctrl_contribution.append(LA.norm(remote_xy - user_xy) / norm_user)
+
+                # norm_remote = LA.norm(remote_xy)
+                # if not norm_remote:
+                # continue
+
+                # remote_xy = remote_xy / norm_remote
+                # user_xy = user_xy / norm_user
+
+                # ctrl_contribution.append(LA.norm(remote_xy - user_xy))
 
                 # remote_xy = remote_xy / LA.norm(remote_xy)
                 # user_xy = user_xy / LA.norm(user_xy)
@@ -145,81 +170,117 @@ class DataHandler:
 
             # Get linear_velocity
             if topic == "/qolo/twist":
-                linear_vel.append(LA.norm(msg.twist.linear.x))
+
+                # Velocity is added only above a minimal margin
+                vel_magintude = LA.norm(msg.twist.linear.x)
+                # if vel_magintude > (1e-1):
+                if True:
+                    linear_vel.append(vel_magintude)
 
         # self.closest_distances.append(pd.DataFrame({"Value": closest_distance}))
 
         # Make sure were getting the next bag
         self.it_bag += 1
+        time_range = [0, t]
 
         return {
             "linear_vel": linear_vel,
             "ctrl_contribution": ctrl_contribution,
             "closest_distance": closest_distance,
+            "time_range": time_range,
         }
 
 
-def create_boxplots(data_handler):
-    fig, ax = plt.subplots(figsize=(5, 4))
-    for data in data_handler.data_list:
-        ax.boxplot(data["ctrl_contribution"])
-    ax.set_ylabel("Control contribution")
+def boxplot_of_creator(
+    data_handler,
+    data_key="linear_vel",
+    data_label="Linear velocity [m / s]",
+    figure_name=None,
+):
+    fig, ax_sb = plt.subplots(figsize=(5, 3))
 
-    fig, ax = plt.subplots(figsize=(5, 4))
-    for data in data_handler.data_list:
-        ax.boxplot(data["linear_vel"])
-    ax.set_ylabel("Linear velocity")
-
-    fig, ax = plt.subplots(figsize=(5, 4))
-    for data in data_handler.data_list:
-        bplot = ax.boxplot(data["closest_distance"])
-    ax.set_ylabel("Closest distance")
-
-    colors = ["pink", "lightblue", "lightgreen"]
-    # for bplot in (bplot1, bplot2):
-    # for patch, color in zip(bplot["boxes"], colors):
-    # patch.set_facecolor(color)
-
-
-def box_plot_with_sns(data_handler):
     # Control contribution
     ctrl_contributions = []
 
     for ii, data in enumerate(data_handler.data_list):
-        new_frame = pd.DataFrame(data["ctrl_contribution"])
+        new_frame = pd.DataFrame(data[data_key], columns=[data_label])
+
         # new_frame["method"] = data_handler.method_names[ii]
-        new_frame["method"] = "disparate"
+        # new_frame["Detection"] = data_handler.detection_type[ii]
+        new_frame["Experiment"] = data_handler.experiment_names[ii]
 
         ctrl_contributions.append(new_frame)
 
     pd_ctrl = pd.concat(
-        ctrl_contributions,
-        keys=[ii for ii in range(len(ctrl_contributions))],
-        names=["series_id", "it_count"],
+        ctrl_contributions, keys=[ii for ii in range(len(ctrl_contributions))]
     )
 
-    mdf = pd.melt(pd_ctrl, id_vars=["method", "values"], var_name=["series_id"])
-    # mdf = pd.melt(pd_ctrl, id_vars=["Trial"], var_name=["Number"])
-    # breakpoint()
-
-    # ax = sns.boxplot(x="keys", y="")
-
-    # sns.set_theme(style="whitegrid")
-    # tips = sns.load_dataset("tips")
+    # mdf = pd.melt(pd_ctrl, id_vars=["Experiment"])
+    sns.set_theme(style="whitegrid")
     ax = sns.boxplot(
-        x="Trial",
-        y="Number",
-        data=mdf,
-        # hue="method",
-        linewidth=2.5,
+        x=pd_ctrl["Experiment"],
+        y=pd_ctrl[data_label],
+        # hue=pd_ctrl["Detection"],
+        # linewidth=2.5,
+        # showfliers=False,
+        flierprops=dict(markerfacecolor="0.50", markersize=2),
     )
 
-    # tips["weekend"] = tips["day"].isin(["Sat", "Sun"])
-    # ax = sns.boxplot(x="day", y="total_bill", hue="weekend", data=tips, dodge=False)
-    # breakpoint()
+    if figure_name is not None:
+        fig.savefig(os.path.join("figures", figure_name))
+
+    # ax_sb.set_xlim([0.5, ax_sb.get_xlim()[1]])
+    return fig, ax
+
+
+def plot_normalized_over_time(
+    data_handler, data_key="linear_vel", data_label="Linear velocity [m / s]"
+):
+    # boxplot_of_creator(data_handler, "ctrl_contribution", "Control contribution")
+    # fig, ax = boxplot_of_creator(data_handler, "linear_vel", "Linear velocity [m / s]")
+    # data_handler, "closest_distance", "Closest distance [m]"
+    fig, axs = plt.subplots(len(data_handler.data_list), 1, figsize=(14, 12))
+
+    for ii, data in enumerate(data_handler.data_list):
+        ax = axs[ii]
+        # x_vals = np.linspace(0, 1, len(data[data_key]))
+        # ax.plot(x_vals, data[data_key], label=f"{ii+1}")
+        ax.plot(data[data_key], label=f"{ii+1}")
+
+    axs[3].set_ylabel(data_label)
+    # ax.set_xlim([0, 1])
+    axs[3].legend()
+
+    return fig, ax
+
+
+def box_plotter(main_handler, save_figure=True):
+    plt.close("all")
+    fig, ax = boxplot_of_creator(data_handler, "linear_vel", "Linear velocity [m / s]")
+    if save_figure:
+        fig.savefig("figures/linear_velocity_boxplot.pdf")
+
+    fig, ax = boxplot_of_creator(
+        data_handler, "closest_distance", "Closest distance [m]"
+    )
+    ax.set_ylim([0.0, ax.get_ylim()[1]])
+    ax.plot(ax.get_xlim(), [0.45, 0.45], "--", linewidth=0.5)
+    if save_figure:
+        fig.savefig("figures/boxplot_closest_distance.pdf")
+
+    boxplot_of_creator(data_handler, "ctrl_contribution", "Control contribution")
+    if save_figure:
+        fig.savefig("figures/boxplot_ctrl_contribution.pdf")
 
 
 if (__name__) == "__main__":
+    logging.basicConfig(
+        # level=logging.DEBUG,
+        # format="%(message)s",
+        # format="%(asctime) %(levelname)-8s %(threadName)s %(message)s",
+    )
+
+    plt.ion()
     test_store_one_only = False
     if test_store_one_only:
         # Get single bag
@@ -241,6 +302,13 @@ if (__name__) == "__main__":
         data_handler = DataHandler()
 
     # create_boxplots(data_handler)
-    box_plot_with_sns(data_handler)
+    # boxplot_of_ctrl_contribution(data_handler)
+    # boxplot_of_distance(data_handler)
+    # boxplot_of_velocity(data_handler)
 
-    print("Done.")
+    logging.info("Execution finished.")
+
+    plt.close("all)")
+    plot_normalized_over_time(data_handler, "linear_vel", "Linear velocity [m / s]")
+    plot_normalized_over_time(data_handler, "closest_distance", "Closest distance [m]")
+    plot_normalized_over_time(data_handler, "ctrl_contribution", "Control contribution")
