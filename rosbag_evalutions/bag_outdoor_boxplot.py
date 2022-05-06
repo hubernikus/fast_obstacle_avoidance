@@ -19,6 +19,8 @@ from fast_obstacle_avoidance.control_robot import QoloRobot
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from .bag_utils import boxplot_of_creator
+
 
 class DataHandler:
     def __init__(
