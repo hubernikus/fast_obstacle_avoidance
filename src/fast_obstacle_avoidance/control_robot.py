@@ -99,6 +99,10 @@ class BaseRobot:
     def num_control_points(self) -> int:
         return self.control_radiuses.shape[0]
 
+    @property
+    def control_position(self):
+        return self.pose.transform_position_from_relative(self.control_point)
+
     def get_relative_positions_and_dists(
         self, positions: np.ndarray, in_robot_frame: bool = True
     ) -> np.ndarray:

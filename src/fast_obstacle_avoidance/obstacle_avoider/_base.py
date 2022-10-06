@@ -158,14 +158,10 @@ class SingleModulationAvoider(ABC):
         a non-zero power will reduce the influence."""
         # TODO: the way the weight is caluclated has to be changed slightly,
         # it needs to be done each 'avoid' funtion to incoorporate this...
-        dir_weights = (
-            1
-            - np.sum(
-                directions * np.tile(initial_velocity, (directions.shape[1], 1)).T,
-                axis=0,
-            )
-            / (LA.norm(directions, axis=0) * LA.norm(initial_velocity))
-        )
+        dir_weights = 1 - np.sum(
+            directions * np.tile(initial_velocity, (directions.shape[1], 1)).T,
+            axis=0,
+        ) / (LA.norm(directions, axis=0) * LA.norm(initial_velocity))
 
         dir_weights = dir_weights * 0.5
 
