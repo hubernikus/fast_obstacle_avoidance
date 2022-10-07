@@ -240,7 +240,7 @@ def multiple_random_circles():
 
 
 if (__name__) == "__main__":
-    start_global_matlab_engine = True
+    start_global_matlab_engine = False
     if start_global_matlab_engine and not "matlab_eng" in locals():
         import matlab
         import matlab.engine
