@@ -1,9 +1,21 @@
 clc; clear all; close all;
 
-my_vfh = controllerVFH;
+angles = linspace(-pi/2, pi/2, 1000);
+ranges = 2.0 - cos(angles);
+%ranges = ranges;
 
-target_dir = 0.1;
-angles = linspace(0, 2*pi, 10);
-ranges = 1 - cos(angles);
+input_direction = 0.1;
 
-output = my_vfh(ranges, angles, target_dir)
+% vfh = controllerVFH('NumAngularSectors', 10);
+vfh = controllerVFH();
+vfh.NumAngularSectors = 20;
+vfh.NumAngularSectors = [3 5];
+% vfh.RobotRadius = vfh_options.RobotRadius;
+
+output_direction = vfh(ranges, angles, input_direction)
+
+% output_direction = vfh_func(ranges, angles, input_direction)
+
+h = figure;
+set(h,'Position',[50 50 800 400])
+show(vfh)

@@ -214,7 +214,6 @@ class FastObstacleAvoider(SingleModulationAvoider):
 
         if dot_prod < np.sqrt(2) / 2:
             normal_scaling = 1
-
         else:
             normal_scaling = np.sqrt(2) * dot_prod
 
@@ -226,8 +225,6 @@ class FastObstacleAvoider(SingleModulationAvoider):
         )
         self.normal_direction = self.normal_direction / LA.norm(self.normal_direction)
 
-        if any(np.isnan(self.normal_direction)):
-            breakpoint()
         return self.normal_direction
 
     def update_normal_direction_with_relative_rotation(

@@ -18,13 +18,13 @@ import matlab
 from fast_obstacle_avoidance.obstacle_avoider.lidar_avoider import SampledAvoider
 
 # from ._base import SingleModulationAvoider
-from fast_obstacle_avoidance.comparison.vfh_python.lib.robot import Robot as VFH_Robot
-from fast_obstacle_avoidance.comparison.vfh_python.lib.polar_histogram import (
-    PolarHistogram,
-)
-from fast_obstacle_avoidance.comparison.vfh_python.lib.path_planner import (
-    PathPlanner as VFH_Planner,
-)
+# from fast_obstacle_avoidance.comparison.vfh_python.lib.robot import Robot as VFH_Robot
+# from fast_obstacle_avoidance.comparison.vfh_python.lib.polar_histogram import (
+#     PolarHistogram,
+# )
+# from fast_obstacle_avoidance.comparison.vfh_python.lib.path_planner import (
+#     PathPlanner as VFH_Planner,
+# )
 
 
 class VFH_Avoider_Matlab:
@@ -49,33 +49,80 @@ class VFH_Avoider_Matlab:
             import matlab.engine
 
             matlab_engine = matlab.engine.start_matlab()
-
             # Add local helper-files to path
             matlab_engine.addpath("src/fast_obstacle_avoidance/comparison")
+
+        # VFH properties
+        self.histogram_thresholds = None
+        self.num_angular_sectors = None
 
         self.matlab_engine = matlab_engine
 
     def update_reference_direction(self, *args, **kwargs):
         warnings.warn("Not performing anything.")
 
-    def avoid(self, initial_velocity):
+    def compute_histogram_props(self, angles):
+        n_angles = angles.shape[1]
+        d_angle = angles[1:] - angles[:1]
+
+        breakpoint()  # Assuming that a third of the angles is close (!)
+        d_angles = np.sort(d_angle)[: int(n_angles / 3.0)]
+
+        n_max_sections = 2 * math.pi / np.mean(d_angles)
+
+        # If very few sections -> 
+        if n_max_sections < 20:
+            self.histogram_thresholds = []1, 1]
+            self.num_angular_sectors = n_max_sections
+            return 
+        elif n_max_sections > 360:
+            self.histogram_thresholds =
+
+        else:
+            
+            
+            
+            
+
+    def avoid(self, initial_velocity, in_global_frame=True):
         if not LA.norm(initial_velocity):
-            return
+            return initial_velocity
+
+        if not len(self.ranges):
+            return initial_velocity
+
+        if in_global_frame:
+            initial_velocity = self.robot.pose.transform_direction_to_relative(
+                initial_velocity
+            )
 
         target_dir = np.arctan2(initial_velocity[1], initial_velocity[0])
-        m_steering_direction = self.matlab_engine.vfh_func(
+
+        if self.histogram_thresholds is None:
+            self.compute_histogram_props(self.angles)
+
+        breakpoint()
+        steering_dir = self.matlab_engine.vfh_func(
             matlab.double(self.ranges),
             matlab.double(self.angles),
             target_dir,
-            {"RobotRadius": self.robot.control_radius},
+            {
+                "RobotRadius": self.robot.control_radius,
+                "HistogramThresholds": matlab.double(self.histogram_thresholds),
+                "NumAngularSectors": self.num_angular_sectors,
+            },
         )
-        # self.m_vfh.UseLidarScan = True
-        # m_steering_direction = self.m_vfh(m_scan, target_dir)
-        steering_direction = float(m_steering_direction)
+
         output_velocity = np.array(
-            [math.cos(m_steering_direction), math.sin(m_steering_direction)]
+            [math.cos(steering_dir), math.sin(steering_dir)]
         ) * LA.norm(initial_velocity)
 
+        if in_global_frame:
+            output_velocity = self.robot.pose.transform_direction_from_relative(
+                output_velocity
+            )
+
+        breakpoint()
         return output_velocity
 
     def update_laserscan(self, points, in_robot_frame=False):
@@ -84,11 +131,10 @@ class VFH_Avoider_Matlab:
             # Set global datapoints
         else:
             self.datapoints = points
-            points = self.robot.pose.transform_position_to_relative(points)
+            points = self.robot.pose.transform_positions_to_relative(points)
 
         self.angles = np.arctan2(points[1, :], points[0, :])
         self.ranges = LA.norm(points, axis=0)
-        breakpoint()
 
 
 class VectorFieldHistogramAvoider(SampledAvoider):

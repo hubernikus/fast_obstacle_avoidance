@@ -1,7 +1,18 @@
+# Install the basic requirements
+# .requirements.txt
+
+# Plus the additional libraries
 ipython
 
-
+# Code testing
 pytest
 
+# Code check
 pre-commit
 black
+
+
+# Matlab -> for comparison scripts (VFH)
+# First run
+# $ cd "matlabroot\extern\engines\python"
+# $ python -m pip install .

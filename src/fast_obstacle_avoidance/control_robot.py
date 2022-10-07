@@ -121,13 +121,13 @@ class BaseRobot:
 
     def plot2D(self, ax, num_points: int = 30) -> None:
         if self.robot_image is not None:
-            raise NotImplementedError("Nothing is being done so far for robot images.")
+            raise NotImplementedError("Nothing is being done so far with robot images.")
 
         angles = np.linspace(0, 2 * np.pi, num_points)
         unit_circle = np.vstack((np.cos(angles), np.sin(angles)))
 
         for ii in range(self.control_radiuses.shape[0]):
-            ctrl_point = self.pose.transform_position_from_local_to_reference(
+            ctrl_point = self.pose.transform_position_from_relative(
                 self.control_points[:, ii]
             )
 

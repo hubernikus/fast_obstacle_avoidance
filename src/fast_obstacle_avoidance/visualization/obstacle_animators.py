@@ -62,7 +62,7 @@ class BaseFastAnimator(Animator):
         plot_lidarlines=False,
         show_lidarweight=False,
         figsize=(16, 10),
-        colobar_pos=None
+        colobar_pos=None,
     ):
         self.dimension = 2
 
@@ -79,7 +79,7 @@ class BaseFastAnimator(Animator):
         self.x_lim = x_lim
         self.y_lim = y_lim
 
-        self.positions = np.zeros((self.dimension, self.it_max+1))
+        self.positions = np.zeros((self.dimension, self.it_max + 1))
         self.positions[:, 0] = self.robot.pose.position
 
         self.velocities_init = np.zeros((self.dimension, self.it_max))
@@ -191,9 +191,9 @@ class BaseFastAnimator(Animator):
         self.ax.set_xlim(self.x_lim)
         self.ax.set_ylim(self.y_lim)
 
-        # if not show_ticks:
-        self.ax.axes.xaxis.set_visible(False)
-        self.ax.axes.yaxis.set_visible(False)
+        if not self.show_ticks:
+            self.ax.axes.xaxis.set_visible(False)
+            self.ax.axes.yaxis.set_visible(False)
 
         self._restore_figsize()
 
@@ -225,7 +225,8 @@ class BaseFastAnimator(Animator):
                 vmax=colorbar_ticks[-1],
                 # extend='max',
                 alpha=1.0,
-                zorder=-1)
+                zorder=-1,
+            )
             # self.ax.colobar(sc)
 
             if self.cax is None:
@@ -234,8 +235,13 @@ class BaseFastAnimator(Animator):
                 if self.colorbar_pos is None:
                     self.colorbar_pos = [0.67, 0.80, 0.11, 0.02]
                 self.cax = self.fig.add_axes(self.colorbar_pos)
-                self.fig.colorbar(sc, cax=self.cax, orientation='horizontal',
-                                  extend='max', ticks=colorbar_ticks,)
+                self.fig.colorbar(
+                    sc,
+                    cax=self.cax,
+                    orientation="horizontal",
+                    extend="max",
+                    ticks=colorbar_ticks,
+                )
                 self.cax.set_title("Importance weight", fontsize=16)
 
                 # if self.show_lidarweight:
@@ -245,11 +251,8 @@ class BaseFastAnimator(Animator):
 
         else:
             self.ax.plot(
-                data_points[0, :],
-                data_points[1, :],
-                "o",
-                color="k",
-                zorder=-1)
+                data_points[0, :], data_points[1, :], "o", color="k", zorder=-1
+            )
 
     def _plot_analytic_environment(self, ii):
         pass
@@ -262,7 +265,6 @@ class LaserscanAnimator(BaseFastAnimator):
         # Print very few steps
         if not (ii % 10):
             print(f"It {ii}")
-
 
         # self.positions[:, ii] = self.robot.pose.position
 
@@ -503,9 +505,9 @@ class FastObstacleAnimator(BaseFastAnimator):
         if not self.y_lim is None:
             self.ax.set_ylim(self.y_lim)
 
-        # if not show_ticks:
-        self.ax.axes.xaxis.set_visible(False)
-        self.ax.axes.yaxis.set_visible(False)
+        if not self.show_ticks:
+            self.ax.axes.xaxis.set_visible(False)
+            self.ax.axes.yaxis.set_visible(False)
 
 
 class MixedObstacleAnimator(BaseFastAnimator):

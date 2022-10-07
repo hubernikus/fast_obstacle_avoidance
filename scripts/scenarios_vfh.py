@@ -95,6 +95,7 @@ def execute_avoidance_with_single_obstacle(save_figure=False, create_animation=F
             plot_lidarlines=True,
             show_reference=False,
             show_lidarweight=False,
+            show_ticks=True,
         )
 
         my_animator.run(save_animation=save_figure)
@@ -245,6 +246,7 @@ if (__name__) == "__main__":
         import matlab.engine
 
         matlab_eng = matlab.engine.start_matlab()
+        matlab_eng.addpath("src/fast_obstacle_avoidance/comparison")
 
     plt.ion()
     plt.close("all")
