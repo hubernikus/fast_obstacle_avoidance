@@ -50,7 +50,7 @@ class VFH_Avoider_Matlab:
 
             matlab_engine = matlab.engine.start_matlab()
             # Add local helper-files to path
-            matlab_engine.addpath("src/fast_obstacle_avoidance/comparison")
+            matlab_engine.addpath("src/fast_obstacle_avoidance/comparison/matlab")
 
         # VFH properties
         self.histogram_thresholds = None
@@ -61,28 +61,38 @@ class VFH_Avoider_Matlab:
     def update_reference_direction(self, *args, **kwargs):
         warnings.warn("Not performing anything.")
 
-    def compute_histogram_props(self, angles):
-        n_angles = angles.shape[1]
-        d_angle = angles[1:] - angles[:1]
+    def compute_histogram_props(self, angles) -> None:
+        n_angles = angles.shape[0]
+        d_angles = angles[1:] - angles[:-1]
+        ind_negative = d_angles < 0
+        d_angles[ind_negative] = 2 * math.pi - d_angles[ind_negative]
 
-        breakpoint()  # Assuming that a third of the angles is close (!)
-        d_angles = np.sort(d_angle)[: int(n_angles / 3.0)]
-
+        d_angles = np.sort(d_angles)[: int(n_angles / 3.0)]
         n_max_sections = 2 * math.pi / np.mean(d_angles)
 
-        # If very few sections -> 
+        # If very few sections ->
         if n_max_sections < 20:
-            self.histogram_thresholds = []1, 1]
-            self.num_angular_sectors = n_max_sections
-            return 
-        elif n_max_sections > 360:
-            self.histogram_thresholds =
+            self.histogram_thresholds = [1, 1]
+            self.num_angular_sectors = n_max_sections / 2
+            return
+
+        elif n_max_sections < 360:
+            self.histogram_thresholds = [1, 2]
+            self.num_angular_sectors = int(n_max_sections / 2)
 
         else:
-            
-            
-            
-            
+            self.num_angular_sectors = 180
+            max_thresh = n_max_sections / self.num_angular_sectors
+
+            self.histogram_thresholds = [0.1 * max_thresh, 0.9 * max_thresh]
+
+            self.histogram_thresholds[0] = int(max(self.histogram_thresholds[0], 1))
+            self.histogram_thresholds[1] = round(self.histogram_thresholds[1])
+
+        print(
+            f"Threshold: {self.histogram_thresholds} \n"  #
+            + f"Sectors: {self.num_angular_sectors}."
+        )
 
     def avoid(self, initial_velocity, in_global_frame=True):
         if not LA.norm(initial_velocity):
@@ -101,16 +111,17 @@ class VFH_Avoider_Matlab:
         if self.histogram_thresholds is None:
             self.compute_histogram_props(self.angles)
 
-        breakpoint()
+        vfh_options = {
+            "RobotRadius": self.robot.control_radius,
+            "HistogramThresholds": matlab.double(self.histogram_thresholds),
+            "NumAngularSectors": matlab.double(self.num_angular_sectors),
+        }
+
         steering_dir = self.matlab_engine.vfh_func(
             matlab.double(self.ranges),
             matlab.double(self.angles),
             target_dir,
-            {
-                "RobotRadius": self.robot.control_radius,
-                "HistogramThresholds": matlab.double(self.histogram_thresholds),
-                "NumAngularSectors": self.num_angular_sectors,
-            },
+            vfh_options,
         )
 
         output_velocity = np.array(
@@ -122,7 +133,6 @@ class VFH_Avoider_Matlab:
                 output_velocity
             )
 
-        breakpoint()
         return output_velocity
 
     def update_laserscan(self, points, in_robot_frame=False):

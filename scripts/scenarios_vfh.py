@@ -4,8 +4,8 @@
 # Email: lukas.huber@epfl.ch
 
 import copy
-
 from timeit import default_timer as timer
+from pathlib import Path
 
 import numpy as np
 from numpy import linalg as LA
@@ -246,7 +246,8 @@ if (__name__) == "__main__":
         import matlab.engine
 
         matlab_eng = matlab.engine.start_matlab()
-        matlab_eng.addpath("src/fast_obstacle_avoidance/comparison")
+        matlab_eng.addpath("src/fast_obstacle_avoidance/comparison/matlab")
+        # str(Path("src") / "fast_obstacle_avoidance" / "comparison" / "matlab")
 
     plt.ion()
     plt.close("all")
