@@ -18,13 +18,13 @@ import matlab
 from fast_obstacle_avoidance.obstacle_avoider.lidar_avoider import SampledAvoider
 
 # from ._base import SingleModulationAvoider
-# from fast_obstacle_avoidance.comparison.vfh_python.lib.robot import Robot as VFH_Robot
-# from fast_obstacle_avoidance.comparison.vfh_python.lib.polar_histogram import (
-#     PolarHistogram,
-# )
-# from fast_obstacle_avoidance.comparison.vfh_python.lib.path_planner import (
-#     PathPlanner as VFH_Planner,
-# )
+from fast_obstacle_avoidance.comparison.vfh_python.lib.robot import Robot as VFH_Robot
+from fast_obstacle_avoidance.comparison.vfh_python.lib.polar_histogram import (
+    PolarHistogram,
+)
+from fast_obstacle_avoidance.comparison.vfh_python.lib.path_planner import (
+    PathPlanner as VFH_Planner,
+)
 
 
 class VFH_Avoider_Matlab:
@@ -150,14 +150,14 @@ class VFH_Avoider_Matlab:
 class VectorFieldHistogramAvoider(SampledAvoider):
     def __init__(
         self,
-        num_angular_sectors: int = 180,
+        num_angular_sectors: int = 36,
         distance_limits: float = (0.05, 2),
         robot_radius: float = 0.1,
         min_turning_radius: float = 0.1,
         safety_distance: float = 0.1,
         attractor_position: np.ndarray = None,
+        robot=None,
     ):
-
         self.num_angular_sectors = num_angular_sectors
         # num_angular_sectors:int = 180,
         # distance_limits: float = (0.05, 2),
@@ -165,17 +165,28 @@ class VectorFieldHistogramAvoider(SampledAvoider):
         # min_turning_radius: float = 0.1,
         # safety_distance: float = 0.1,
 
+        self.robot = robot
+
         if attractor_position is None:
             # Assuming 2D
-            attractor_position = np.zeros([0, 0])
+            self.attractor_position = np.zeros([0, 0])
+        else:
+            self.attractor_position = attractor_position
 
-        breakpoint()
-        new_grid = HistogramGrid()
+        self.vfh_histogram = PolarHistogram(num_bins=self.num_angular_sectors)
 
-        self.vfh_histogram = PolarHistogram(num_bins=num_angular_sectors)
-        self.vfh_robot = VFH_Robot(
-            target_location=attractor_position,
-            init_speed=np.zeros(attractor_position.shape),
+        # self.vfh_robot = VFH_Robot(
+        #     target_location=attractor_position,
+        #     init_speed=np.zeros(attractor_position.shape),
+        #     init_location=self.robot.pose.position,
+        #     histogram_grid=self.histogram_grid,
+        #     polar_histogram=self.vfh_histogram,
+        # )
+        self.vfh_planner = VFH_Planner(
+            # histogram_grid=self.vfh_histogram_grid,
+            polar_histogram=self.vfh_histogram,
+            robot_location=self.robot.pose.position,
+            target_location=self.attractor_position,
         )
 
     @property
@@ -184,21 +195,50 @@ class VectorFieldHistogramAvoider(SampledAvoider):
 
     @attractor_position.setter
     def attractor_position(self, value) -> None:
-        breakpoint()
-        self.vfh_robot.set_target_discrete_location(value)
-        self._attractor_position = vaue
+        # self.vfh_robot.set_target_discrete_location(value)
+        self._attractor_position = value
 
-    def update_laserscan(self):
-        self.vfh_robot.histogram
+    def update_laserscan(self, points, in_robot_frame=False):
+        if in_robot_frame:
+            self.datapoints = self.robot.pose.transform_position_from_relative(points)
+        else:
+            self.datapoints = points
+            points = self.robot.pose.transform_positions_to_relative(points)
 
-    def avoid(self, position, velocity):
-        self.vfh_robot.update_location(position)
+        # Angle and range
+        self.angles = np.arctan2(points[1, :], points[0, :])
+        self.ranges = LA.norm(points, axis=0)
+
+        self.vfh_planner.generate_histogram_from_angle_range(self.angles, self.ranges)
+
+    def avoid(self, initial_velocity, in_global_frame=True):
+        if not LA.norm(initial_velocity):
+            return initial_velocity
+
+        initial_dir = math.atan2(initial_velocity[1], initial_velocity[0])
+
+        ### START VFH-python method
+        # self.vfh_robot.update_location(self.robot.pose.position)
 
         # Make a step
-        self.vfh_robot.bupdate_angle()  # angle: Null (or optionally, t-1) => t
+        # self.vfh_robot.update_angle()  # angle: Null (or optionally, t-1) => t
         # self.set_speed() # speed: Null (or optionally, t-1) => t
 
-        self.vfh_robot.update_velocity()
-        self.vfh_robot.update_location()  # position: t => t+1
+        # self.vfh_robot.update_velocity()
+        steering_dir = self.vfh_planner.get_best_angle(initial_dir)
 
-        return self.vfh_robot.velocity
+        # self.vfh_robot.update_location()  # position: t => t+1
+
+        ### END VFH-python method
+
+        # output_velocity = self.vfh_robot.velocity
+        output_velocity = np.array(
+            [math.cos(steering_dir), math.sin(steering_dir)]
+        ) * LA.norm(initial_velocity)
+
+        if in_global_frame:
+            output_velocity = self.robot.pose.transform_direction_from_relative(
+                output_velocity
+            )
+
+        return output_velocity
