@@ -5,7 +5,7 @@ Comparsion simple / setup.
 import math
 import numpy as np
 
-from fast_obstacle_avoidance.comparison.vfh_avoider_m import controllerVFH
+from fast_obstacle_avoidance.comparison.m_controller_vfh import controllerVFH
 
 
 def test_simple_setup():

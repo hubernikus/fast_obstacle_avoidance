@@ -1,7 +1,7 @@
 import math
 import numpy as np
 
-from fast_obstacle_avoidance.comparison.histogram_base import HistogramBase
+from fast_obstacle_avoidance.comparison.m_histogram_base import HistogramBase
 
 
 class controllerVFH(HistogramBase):

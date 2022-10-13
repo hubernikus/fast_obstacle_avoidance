@@ -402,7 +402,7 @@ class HistogramBase:
 
         return steeringDir
 
-    def buildPolarObstacleDensity(self, scan, classRanges=None):
+    def buildPolarObstacleDensity(self, scan: Scan):
         # buildPolarObstacleDensity Create polar obstacle density
         #   This function creates a polar obstacle density histogram
         #   from the range readings taking into account the vehicle
@@ -418,7 +418,7 @@ class HistogramBase:
 
         # Weighted ranges
         weightedRanges = constA - constB * validScan.Ranges
-
+        breakpoint()
         # If empty space in front of the vehicle
         if validScan.num_scan == scan.num_scan:
             self.PolarObstacleDensity = np.zeros((1, self.NumAngularSectors))
