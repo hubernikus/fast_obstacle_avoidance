@@ -89,7 +89,7 @@ class SampledEllipse(SampledObstacle):
         axes_length=None,
         orientation_in_degree=0,
         obstacle=None,
-        **kwargs
+        **kwargs,
     ):
         if obstacle is not None:
             position = obstacle.center_position
@@ -116,7 +116,7 @@ class SampledCuboid(SampledObstacle):
         axes_length=None,
         orientation_in_degree=0,
         obstacle=None,
-        **kwargs
+        **kwargs,
     ):
         """Alternative Constructor using the Basic Obstacle Arguments."""
         if obstacle is not None:
@@ -239,6 +239,7 @@ class ShapelySamplingContainer:
     ):
         if not n_samples:
             n_samples = self.n_samples
+
         sample_points = np.zeros((self.dimension, n_samples))
         sample_dist = np.ones(n_samples) * (-1)
 

@@ -48,18 +48,15 @@ class VFH_Avoider_Matlab:
 
         self.use_matlab = use_matlab
         if use_matlab:
-            if matlab_engine is None:
-                import matlab
+            import matlab
 
+            if matlab_engine is None:
                 # Start engine if no engine past
                 import matlab.engine
 
                 matlab_engine = matlab.engine.start_matlab()
                 # Add local helper-files to path
                 matlab_engine.addpath("src/fast_obstacle_avoidance/comparison/matlab")
-
-            elif matlab_engine:
-                import matlab
 
             self.matlab_engine = matlab_engine
 
@@ -68,6 +65,7 @@ class VFH_Avoider_Matlab:
         self.num_angular_sectors = None
 
         self.vfh_functor = None
+        self.vfh_options = None
 
     def update_reference_direction(self, *args, **kwargs):
         warnings.warn("Not performing anything.")
@@ -122,17 +120,23 @@ class VFH_Avoider_Matlab:
             self.compute_histogram_props(self.angles)
 
         if self.use_matlab:
-            if self.vfh_functor is None:
-                self.vfh_functor = controllerVFH()
-                self.vfh_functor.RobotRadius = self.robot.control_radius
-                self.vfh_functor.HistogramThresholds = self.histogram_thresholds
-                self.vfh_functor.NumAngularSectors = self.num_angular_sectors
+            if self.vfh_options is None:
+                # self.vfh_functor = controllerVFH()
+                # self.vfh_functor.RobotRadius = self.robot.control_radius
+                # self.vfh_functor.HistogramThresholds = self.histogram_thresholds
+                # self.vfh_functor.NumAngularSectors = self.num_angular_sectors
+
+                self.vfh_options = {
+                    "RobotRadius": self.robot.control_radius,
+                    "HistogramThresholds": matlab.double(self.histogram_thresholds),
+                    "NumAngularSectors": self.num_angular_sectors,
+                }
 
             steering_dir = self.matlab_engine.vfh_func(
                 matlab.double(self.ranges),
                 matlab.double(self.angles),
                 target_dir,
-                vfh_options,
+                self.vfh_options,
             )
 
         else:
@@ -155,6 +159,13 @@ class VFH_Avoider_Matlab:
             )
 
         return output_velocity
+
+    def update_reference_direction(self, data_points, in_robot_frame=False) -> None:
+        # Do nothing but store point
+        self.update_laserscan(data_points, in_robot_frame)
+        self.reference_direction = np.zeros(data_points.shape[0])
+        self.ref_dirs = np.zeros((data_points.shape[0], 1))
+        self.normal_direction = np.zeros((data_points.shape[0]))
 
     def update_laserscan(self, points, in_robot_frame=False):
         if in_robot_frame:

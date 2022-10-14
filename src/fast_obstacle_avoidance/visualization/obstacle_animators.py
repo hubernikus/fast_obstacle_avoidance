@@ -293,6 +293,8 @@ class LaserscanAnimator(BaseFastAnimator):
         )
         self.robot.pose.position = self.positions[:, ii + 1]
 
+        print(f"Robot position {self.robot.pose.position}")
+
         if self.do_the_plotting:
             self.ax.clear()
 
@@ -339,7 +341,7 @@ class LaserscanAnimator(BaseFastAnimator):
             )
             drawn_arrow = True
 
-        if self.show_reference:
+        if self.show_reference and hasattr(self, "reference_direction"):
             self.ax.arrow(
                 self.robot.pose.position[0],
                 self.robot.pose.position[1],

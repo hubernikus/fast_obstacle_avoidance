@@ -627,8 +627,9 @@ class HistogramBase:
 
         # Skip everything if there are no open sectors
         if not np.sum(np.abs(changes)):
-            self.PreviousDirection = None
-            return
+            # Return default dir
+            self.PreviousDirection = targetDir
+            return targetDir
 
         foundSectors = np.argwhere(changes).flatten()
 
