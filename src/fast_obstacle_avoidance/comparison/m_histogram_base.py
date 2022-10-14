@@ -85,7 +85,14 @@ class HistogramBase:
 
     ##codegen
     def __init__(
-        self, NumAngularSectors=180, HistogramThresholds=(3, 10), RobotRadius=0.1
+        self,
+        NumAngularSectors=180,
+        HistogramThresholds=(3, 10),
+        RobotRadius=0.1,
+        NarrowOpeningThreshold=0.8,
+        DistanceLimits=(0.05, 2),
+        SafetyDistance=0.1,
+        MinTurningRadius=0.1,
     ):
         # properties (Nontunable)
         # NumAngularSectors Number of angular sectors
@@ -103,7 +110,7 @@ class HistogramBase:
         #   two candidate directions in each non-narrow region.
         #
         #   Default: 0.8
-        self.NarrowOpeningThreshold = 0.8
+        self.NarrowOpeningThreshold = NarrowOpeningThreshold
 
         # properties
         # DistanceLimits Range distance limits (m)
@@ -114,7 +121,7 @@ class HistogramBase:
         #   to ignore obstacles that are too far from the vehicle.
         #
         #   Default: [0.05 2]
-        self.DistanceLimits = [0.05, 2]
+        self.DistanceLimits = DistanceLimits
 
         # RobotRadius Vehicle radius (m)
         #   This is radius of the smallest circle that can circumscribe the
@@ -131,14 +138,14 @@ class HistogramBase:
         #   direction.
         #
         #   Default: 0.1
-        self.SafetyDistance = 0.1
+        self.SafetyDistance = SafetyDistance
 
         # MinTurningRadius Minimum turning radius (m)
         #   This is the minimum turning radius with which the vehicle can turn
         #   while moving at its current speed.
         #
         #   Default: 0.1
-        self.MinTurningRadius = 0.1
+        self.MinTurningRadius = MinTurningRadius
 
         # TargetDirectionWeight Target direction weight
         #   This is the cost function weight for moving towards the target
@@ -326,13 +333,14 @@ class HistogramBase:
 
         #     function val = get.NumAngularSectors(obj)
         #         val = obj.NumAngularSectors;
+        self.setup()
 
         # # Abstract methods that should be implemented by all derived
         # # classes.
         # methods (Abstract, Access = protected)
         #     [scan, target, classOfRanges] = parseAndValidateStepInputs(varargin);
 
-        # def setup(self):
+    def setup(self):
         # methods (Access = protected)
         #     function setupImpl(obj, varargin)
         #     #setupImpl Setup for the system object
