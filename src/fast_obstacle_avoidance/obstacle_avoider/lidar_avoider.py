@@ -3,6 +3,7 @@ Obstacle Avoider Dedicated to Lidar Data
 """
 
 import warnings
+from typing import Optional
 
 import numpy as np
 from numpy import linalg as LA
@@ -11,6 +12,8 @@ from vartools.linalg import get_orthogonal_basis
 
 from fast_obstacle_avoidance.control_robot import BaseRobot
 from ._base import SingleModulationAvoider
+
+from sklearn.cluster import DBSCAN
 
 
 class SampledAvoider(SingleModulationAvoider):
@@ -276,3 +279,109 @@ class SampledAvoider(SingleModulationAvoider):
 
 class FastLidarAvoider(SampledAvoider):
     pass
+
+
+class SampledAvoider(SingleModulationAvoider):
+    """
+    To proof:
+    -> reference direction becomes normal (!) when getting very close (!)
+    -> obstacle is being avoided when very close(!) [reference -> normal]
+    -> No local minima (and maybe even convergence to attractor)
+    -> add slight repulsion along the normal direction (when getting closer)
+
+    TODO:
+    > put into 'global' frame, robot updates faster than laserscan;
+    >>> hence global frame is needed
+    """
+
+    def __init__(
+        self,
+        robot: BaseRobot,
+        evaluate_normal: bool = False,
+        cluster_params: dict = None
+        # delta_sampling: float = delta_sampling
+        * args,
+        **kwargs
+    ) -> None:
+        self.robot = robot
+
+        self.evaluate_normal = evaluate_normal
+        self.max_angle_ref_norm = 80 * np.pi / 180
+
+        # For the moment, delta_sampling is not used
+        # self.delta_sampling = delta_sampling
+
+        super().__init__(*args, **kwargs)
+        self._laserscan_in_robot_frame = True
+
+        if cluster_params is None:
+            cluster_params = {"eps": 2 * self.robot.radius, "min_samples": 1}
+
+        self.clusterer = DBSCAN(**cluster_params)
+
+    @property
+    def datapoints(self):
+        # Property to make consistent with mixed avoider.
+        # But change this variable name in the future
+        return self._datapoints
+
+    @datapoints.setter
+    def datapoints(self, value: np.ndarray) -> None:
+        """Returns global datapoints"""
+        self._datapoints = value
+
+    def center_positions(self) -> np.ndarray:
+        return self._center_positions
+
+    def update_sample_points(self, datapoints: np.ndarray = None, in_robot_frame=True):
+        if in_robot_frame:
+            self._datapoints = self.robot.pose.transform_from_relative(datapoints)
+
+        self.clusterer.fit(self._datapoints)
+
+        self._cluster_centers = np.zeros((self.dimensions, self.n_features_in_))
+        breakpoint()
+        for ii in range(n_features_in_):
+            label = ii
+            self._cluster_centers[:, ii] = np.mean(
+                self._datapoints[:, ii == self.clusterer.labels_]
+            )
+
+    def _cluster_close_outliers(self, position) -> Optional(np.ndarray):
+        # TODO: check if there are outliers closer than the closest cluster
+        # TODO: should you ever redo the clustering (?)
+        dist_closest_cluster = np.min(
+            LA.norm(
+                self._center_positions
+                - np.tile(position, (self._cluster_centers.shape[1], 1)).T,
+                axis=0,
+            )
+        )
+
+        outliers = self._datapoints[:, ii == -1]
+        distances = LA.norm(
+            outliers - np.tile(position, (outliers.shape[1], 1).T), axis=0
+        )
+        ind_close = distances < dist_closest_cluster
+
+        if not np.sum(ind_close):
+            self._close_outliers = None
+
+        # TODO: if the outliers lie too badly and too close, they could be split (?)
+        self._close_outliers = outliers[:, distances < dist_closest_cluster]
+
+        center_dir = np.sum(self._close_outliers, axis=1)
+        if not LA.norm(center_dir):
+            # Zero
+            breakpoint()
+
+    def avoid(self, velocity, position=None):
+        if position is None:
+            position = self.robot.pose.position
+
+        self._cluster_close_outliers(position)
+
+        # For all cluster
+
+    def get_normal_directions(self):
+        pass
