@@ -15,6 +15,7 @@ from numpy import linalg as LA
 # from fast_obstacle_avoidance.obstacle_avoider._base import SampledAvoider
 from fast_obstacle_avoidance.obstacle_avoider.lidar_avoider import SampledAvoider
 
+
 # from ._base import SingleModulationAvoider
 from fast_obstacle_avoidance.comparison.vfh_python.lib.robot import Robot as VFH_Robot
 from fast_obstacle_avoidance.comparison.vfh_python.lib.polar_histogram import (
@@ -24,8 +25,10 @@ from fast_obstacle_avoidance.comparison.vfh_python.lib.path_planner import (
     PathPlanner as VFH_Planner,
 )
 
+from fast_obstacle_avoidance.comparison.m_controller_vfh import controllerVFH
 
-class VFH_Avoider:
+
+class VFH_Avoider_Matlab:
     def __init__(
         self,
         num_angular_sectors: int = 180,
@@ -35,6 +38,7 @@ class VFH_Avoider:
         min_turning_radius: float = 0.1,
         safety_distance: float = 0.1,
         matlab_engine=None,
+        use_matlab=False,
     ):
         self.robot = robot
 
@@ -42,23 +46,28 @@ class VFH_Avoider:
         self.ranges = None
         self.datapoints = None
 
-        if matlab_engine is None:
-            import matlab
+        self.use_matlab = use_matlab
+        if use_matlab:
+            if matlab_engine is None:
+                import matlab
 
-            # Start engine if no engine past
-            import matlab.engine
+                # Start engine if no engine past
+                import matlab.engine
 
-            matlab_engine = matlab.engine.start_matlab()
-            # Add local helper-files to path
-            matlab_engine.addpath("src/fast_obstacle_avoidance/comparison/matlab")
-        elif matlab_engine:
-            import matlab
+                matlab_engine = matlab.engine.start_matlab()
+                # Add local helper-files to path
+                matlab_engine.addpath("src/fast_obstacle_avoidance/comparison/matlab")
+
+            elif matlab_engine:
+                import matlab
+
+            self.matlab_engine = matlab_engine
 
         # VFH properties
         self.histogram_thresholds = None
         self.num_angular_sectors = None
 
-        self.matlab_engine = matlab_engine
+        self.vfh_functor = None
 
     def update_reference_direction(self, *args, **kwargs):
         warnings.warn("Not performing anything.")
@@ -109,25 +118,32 @@ class VFH_Avoider:
             )
 
         target_dir = np.arctan2(initial_velocity[1], initial_velocity[0])
-
         if self.histogram_thresholds is None:
             self.compute_histogram_props(self.angles)
 
-            self.vfh_functor = controllerVFH()
-            self.vfh_functor.RobotRadius = self.robot.control_radius
-            self.vfh_functor.HistogramThresholds = self.histogram_thresholds
-            self.vfh_functor.NumAngularSectors = self.num_angular_sectors
+        if self.use_matlab:
+            if self.vfh_functor is None:
+                self.vfh_functor = controllerVFH()
+                self.vfh_functor.RobotRadius = self.robot.control_radius
+                self.vfh_functor.HistogramThresholds = self.histogram_thresholds
+                self.vfh_functor.NumAngularSectors = self.num_angular_sectors
 
-        if matlab_engine is None:
-            self.vfh_functor(self.ranges, self.angles, target_dir)
-
-        else:
             steering_dir = self.matlab_engine.vfh_func(
                 matlab.double(self.ranges),
                 matlab.double(self.angles),
                 target_dir,
                 vfh_options,
             )
+
+        else:
+            if self.vfh_functor is None:
+                self.vfh_functor = controllerVFH(
+                    RobotRadius=self.robot.control_radius,
+                    HistogramThresholds=self.histogram_thresholds,
+                    NumAngularSectors=self.num_angular_sectors,
+                )
+
+            steering_dir = self.vfh_functor(self.ranges, self.angles, target_dir)
 
         output_velocity = np.array(
             [math.cos(steering_dir), math.sin(steering_dir)]

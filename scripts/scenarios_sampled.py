@@ -226,7 +226,7 @@ def execute_avoidance_with_single_obstacle(save_figure=False, create_animation=F
             it_max=400,
             dt_simulation=0.05,
             # dt_pause=0.1,
-            animation_name="single_obstacle_avoidance_sampled"
+            animation_name="single_obstacle_avoidance_sampled",
         )
 
         fast_avoider.robot = simu_bot
@@ -313,7 +313,7 @@ def vectorfield_with_many_obstacles(save_figure=False, create_animation=True):
     initial_dynamics = LinearSystem(
         attractor_position=np.array([3.5, 1.3]), maximum_velocity=1.0
     )
- 
+
     main_environment = ShapelySamplingContainer(n_samples=50)
 
     # Ellipse
@@ -358,7 +358,7 @@ def vectorfield_with_many_obstacles(save_figure=False, create_animation=True):
         my_animator = LaserscanAnimator(
             it_max=400,
             dt_simulation=0.05,
-            animation_name="multi_obstacle_avoidance_sampled"
+            animation_name="multi_obstacle_avoidance_sampled",
         )
 
         fast_avoider.robot = simu_bot
@@ -410,7 +410,6 @@ def vectorfield_with_many_obstacles(save_figure=False, create_animation=True):
     if save_figure:
         figure_name = "multiple_avoiding_obstacles"
         plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
-
 
 
 def multiple_random_circles():
@@ -477,14 +476,11 @@ if (__name__) == "__main__":
     plt.ion()
     plt.close("all")
 
-    # execute_avoidance_with_single_obstacle(
-        # save_figure=True, create_animation=True
-    # )
+    execute_avoidance_with_single_obstacle(save_figure=False, create_animation=True)
 
     # test_multi_obstacles()
     # vectorfield_with_many_obstacles(create_animation=True, save_figure=False)
-    vectorfield_with_many_obstacles(
-        create_animation=True, save_figure=False)
+    # vectorfield_with_many_obstacles(create_animation=True, save_figure=False)
     # vectorfield_with_many_obstacles(save_figure=False)
 
     # test_various_surface_points()

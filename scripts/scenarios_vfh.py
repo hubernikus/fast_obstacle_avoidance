@@ -30,8 +30,9 @@ from fast_obstacle_avoidance.visualization import (
     static_visualization_of_sample_avoidance,
 )
 
-# from fast_obstacle_avoidance.comparison.vfh_avoider import VFH_Avoider_Matlab
-from fast_obstacle_avoidance.comparison.vfh_avoider import VectorFieldHistogramAvoider
+from fast_obstacle_avoidance.comparison.vfh_avoider import VFH_Avoider_Matlab
+
+# from fast_obstacle_avoidance.comparison.vfh_avoider import VectorFieldHistogramAvoider
 
 
 def execute_avoidance_with_single_obstacle(save_figure=False, create_animation=False):
@@ -61,15 +62,15 @@ def execute_avoidance_with_single_obstacle(save_figure=False, create_animation=F
     robot.control_point = [0, 0]
     robot.control_radius = 0.6
 
-    # fast_avoider = VFH_Avoider_Matlab(
-    #     robot=robot,
-    #     matlab_engine=matlab_eng,
-    # )
-
-    fast_avoider = VectorFieldHistogramAvoider(
-        # attractor_position=
+    fast_avoider = VFH_Avoider_Matlab(
         robot=robot,
+        # matlab_engine=matlab_eng,
     )
+
+    # fast_avoider = VectorFieldHistogramAvoider(
+    #     # attractor_position=
+    #     robot=robot,
+    # )
 
     # Do the animation, only:
     if create_animation:

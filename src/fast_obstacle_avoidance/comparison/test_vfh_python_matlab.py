@@ -20,11 +20,10 @@ def test_simple_setup():
     # vfh.RobotRadius = vfh_options.RobotRadius;
 
     output_direction = vfh(ranges, angles, input_direction)
-
-    print(output_direction)
+    # print(output_direction)
 
     # Compare to real MATLAB output
-    assert np.isclose(2.1279, output_direction)
+    assert np.isclose(2.1279, round(output_direction, 4))
 
 
 if (__name__) == "__main__":

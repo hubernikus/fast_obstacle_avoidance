@@ -1,3 +1,8 @@
+"""
+Inspired by the Matlab class HistogramBase
+DISCLAIMER: we do not own the copyrights for this function (!)
+
+"""
 import copy
 from dataclasses import dataclass
 import math
@@ -14,29 +19,27 @@ class Scan:
     def num_scan(self):
         return self.Angles.shape[0]
 
+    def removeInvalidData(self, distance_limits):
+        scan = copy.deepcopy(self)
 
-def removeInvalidData(scan: Scan, distance_limits) -> Scan:
-    scan = copy.deepcopy(scan)
+        ind_valid = scan.Ranges > distance_limits[0]
+        scan.Ranges = scan.Ranges[ind_valid]
+        scan.Angles = scan.Angles[ind_valid]
 
-    ind_valid = scan.Ranges > distance_limits[0]
-    scan.Ranges = scan.Ranges[ind_valid]
-    scan.Angles = scan.Angles[ind_valid]
+        ind_valid = scan.Ranges < distance_limits[1]
+        scan.Ranges = scan.Ranges[ind_valid]
+        scan.Angles = scan.Angles[ind_valid]
 
-    ind_valid = scan.Ranges < distance_limits[1]
-    scan.Ranges = scan.Ranges[ind_valid]
-    scan.Angles = scan.Angles[ind_valid]
-
-    return scan
+        return scan
 
 
-def angle_pi_range(angle: [float, np.ndarray]) -> [float, np.ndarray]:
+def wrap_to_pi(angle: [float, np.ndarray]) -> [float, np.ndarray]:
     return (angle + math.pi) % (2 * math.pi) - math.pi
 
 
 def angle_difference(angle1, angle2):
-    breakpoint
     angle_diff = angle1 - angle2
-    return angle_pi_range(angle_diff)
+    return wrap_to_pi(angle_diff)
 
 
 def bisectAngles(theta1, theta2):
@@ -48,15 +51,15 @@ def bisectAngles(theta1, theta2):
     #   two angles THETA1 and THETA2 and returns the BISECT within the interval
     #   [-pi pi]. Positive, odd multiples of pi map to pi and negative, odd
     #   multiples of pi map to -pi.
-    theta1 = angle_pi_range(theta1)
-    theta2 = angle_pi_range(theta2)
+    theta1 = wrap_to_pi(theta1)
+    theta2 = wrap_to_pi(theta2)
 
     # Get angle bisection
     deltaAng = theta1 - theta2
     angle = theta1 - deltaAng / 2.0
 
     # Make sure the output is in the [-pi,pi) range
-    return angle_pi_range(angle)
+    return wrap_to_pi(angle)
 
 
 def angle_difference_abs(angle1, angle2):
@@ -81,7 +84,9 @@ class HistogramBase:
     """
 
     ##codegen
-    def __init__(self, NumAngularSectors=180, HistogramThresholds=(3, 10)):
+    def __init__(
+        self, NumAngularSectors=180, HistogramThresholds=(3, 10), RobotRadius=0.1
+    ):
         # properties (Nontunable)
         # NumAngularSectors Number of angular sectors
         #   The number of angular sectors are the number of bins used to
@@ -117,7 +122,7 @@ class HistogramBase:
         #   size in the computation of the obstacle-free direction.
         #
         #   Default: 0.1
-        self.RobotRadius = 0.1
+        self.RobotRadius = RobotRadius
 
         # SafetyDistance Safety distance (m)
         #   This is a safety distance to leave around the vehicle position in
@@ -365,7 +370,6 @@ class HistogramBase:
 
         # Pre-allocate the histogram
         self.BinaryHistogram = np.zeros(self.NumAngularSectors)
-        breakpoint()
 
     # def stepImpl(self, varargin):
     def __call__(self, ranges, angles, target_dir):
@@ -388,18 +392,14 @@ class HistogramBase:
 
         scan = Scan(Ranges=ranges, Angles=angles)
 
-        while abs(target_dir) > math.pi:
-            target_dir = target_dir - 2 * math.pi
-        while abs(target_dir) < math.pi:
-            target_dir = target_dir + 2 * math.pi
-        #     target = robotics.internal.wrapToPi(target)
+        target_dir = wrap_to_pi(target_dir)
 
         # Compute theta steer
         self.buildPolarObstacleDensity(scan)
-        self.buildBinaryHistogram
+        self.buildBinaryHistogram()
         self.buildMaskedPolarHistogram(scan)
-        steeringDir = self.selectHeadingDirection(target_dir)
 
+        steeringDir = self.selectHeadingDirection(target_dir)
         return steeringDir
 
     def buildPolarObstacleDensity(self, scan: Scan):
@@ -408,7 +408,7 @@ class HistogramBase:
         #   from the range readings taking into account the vehicle
         #   radius and safety distance.
 
-        validScan = removeInvalidData(scan, self.DistanceLimits)
+        validScan = scan.removeInvalidData(self.DistanceLimits)
 
         # Constants A and B used in Reference [1]
         # constB = cast(1, classRanges)
@@ -418,15 +418,16 @@ class HistogramBase:
 
         # Weighted ranges
         weightedRanges = constA - constB * validScan.Ranges
-        breakpoint()
-        # If empty space in front of the vehicle
-        if validScan.num_scan == scan.num_scan:
-            self.PolarObstacleDensity = np.zeros((1, self.NumAngularSectors))
-            return
+
+        # # If empty space in front of the vehicle
+        # -> deactivated as the sub-function is defined differently
+        # if validScan.num_scan == scan.num_scan:
+        #     self.PolarObstacleDensity = np.zeros((1, self.NumAngularSectors))
+        #     return
 
         # Special case of one sector
         if self.NumAngularSectors == 1:
-            validWeights = np.ones((1, numel(validScan.Ranges)))
+            validWeights = np.ones_like(validScan.Ranges)
             self.PolarObstacleDensity = (validWeights * weightedRanges).T
 
         # If vehicle radius and safety distance both are zero, then use
@@ -451,7 +452,7 @@ class HistogramBase:
         # this case is not handled.
         # sinOfEnlargement = cast(self.RobotRadius +
         #                         self.SafetyDistance, classRanges)./validScan.Ranges;
-        sinOfEnlargement = self.RobotRadius + self.SafetyDistance / validScan.Ranges
+        sinOfEnlargement = (self.RobotRadius + self.SafetyDistance) / validScan.Ranges
 
         # Using 1 - eps, which results in enlargement angles approximately
         # sqrt(eps) smaller than pi/2. This is required because floating point
@@ -472,37 +473,38 @@ class HistogramBase:
         # then vector N is in between vectors A and B.
 
         # Create vectors for cross product computation
-        lowerVec = [
-            np.cos(lowerAng),
-            np.sin(lowerAng),
-            np.zeros((lowerAng.shape[0], 1)),
-        ]
-        higherVec = [
-            np.cos(higherAng),
-            np.sin(higherAng),
-            np.zeros((higherAng.shape[0], 1)),
-        ]
+        lowerVec = np.vstack(
+            (np.cos(lowerAng), np.sin(lowerAng), np.zeros_like(lowerAng))
+        ).T
+
+        higherVec = np.vstack(
+            (np.cos(higherAng), np.sin(higherAng), np.zeros_like(higherAng))
+        ).T
 
         validWeights = np.ones((self.NumAngularSectors, lowerVec.shape[0]), dtype=bool)
         lh = np.cross(lowerVec, higherVec)
-        breakpoint()
         kalpha = np.vstack(
             (
                 np.cos(self.AngularSectorMidPoints),
                 np.sin(self.AngularSectorMidPoints),
-                np.zeros(self.NumAngularSectors, classRanges).T,
+                np.zeros(self.NumAngularSectors).T,
             )
-        )
+        ).T
 
         for i in range(self.NumAngularSectors):
-            kalphaVec = np.tile(kalpha[i, :], (lowerVec.shape[0], 1)).T
+            kalphaVec = np.tile(kalpha[i, :], (lowerVec.shape[0], 1))
             lk = np.cross(lowerVec, kalphaVec)
             kh = np.cross(kalphaVec, higherVec)
             validWeights[i, :] = (
-                abs(sign(lk[:, 2]) + sign(kh[:, 2]) + sign(lh[:, 2])) > 1
+                abs(
+                    np.copysign(1, lk[:, 2])
+                    + np.copysign(1, kh[:, 2])
+                    + np.copysign(1, lh[:, 2])
+                )
+                > 1
             )
 
-        self.PolarObstacleDensity = (validWeights * weightedRanges).T
+        self.PolarObstacleDensity = validWeights @ weightedRanges
 
     def buildBinaryHistogram(self):
         # buildBinaryHistogram Create binary histogram
@@ -516,10 +518,10 @@ class HistogramBase:
         # Equation (7) in Reference [1]
         # True means occupied sector
         self.BinaryHistogram[
-            self.PolarObstacleDensity > self.HistogramThresholds[0, 1]
+            self.PolarObstacleDensity > self.HistogramThresholds[1]
         ] = True
         self.BinaryHistogram[
-            self.PolarObstacleDensity < self.HistogramThresholds[0, 0]
+            self.PolarObstacleDensity < self.HistogramThresholds[0]
         ] = False
 
     def buildMaskedPolarHistogram(self, scan):
@@ -550,7 +552,7 @@ class HistogramBase:
         # validScan = removeInvalidData(
         #     scan, 'RangeLimits',
         #     cast([self.DistanceLimits(1) self.DistanceLimits(2)], 'like', scan.Ranges));
-        validScan = removeInvalidData(scan, self.DistanceLimits)
+        validScan = scan.removeInvalidData(self.DistanceLimits)
 
         # Equation (9) in Reference [1]
         DXj = (validScan.Ranges) * np.cos(validScan.Angles)
@@ -576,7 +578,7 @@ class HistogramBase:
 
         else:
             phiR = validScan.Angles[phiR_ind[-1]]
-            if phiR(1, 1) <= self.AngularSectorMidPoints[0]:
+            if phiR[0] <= self.AngularSectorMidPoints[0]:
                 # Account for point inside first sector
                 phiR = self.AngularSectorMidPoints[0]
 
@@ -611,51 +613,55 @@ class HistogramBase:
         #   directions for each sector.
 
         # Find open sectors
-        changes = np.diff(np.hstack([0, np.logical_not(self.MaskedHistogram), 0]))
+        changes = np.diff(
+            np.hstack((0, np.logical_not(self.MaskedHistogram), 0))
+        ).flatten()
 
         # Skip everything if there are no open sectors
         if not np.sum(np.abs(changes)):
             self.PreviousDirection = None
             return
 
-        foundSectors = np.argwhere(changes)
+        foundSectors = np.argwhere(changes).flatten()
 
         # Because masked histogram is binary, the foundSectors will
         # always have even elements.
-        sectors = np.reshape(foundSectors, (2, -1))
+        sectors = foundSectors.reshape((2, -1), order="F")
         sectors[1, :] = sectors[1, :] - np.ones(sectors.shape[1])
 
         # Get size of different sectors
-        angles = np.zeros_like(sectors)
+        angles = np.zeros(sectors.shape, dtype=float)
         angles[0, :] = self.AngularSectorMidPoints[sectors[0, :]]
         angles[1, :] = self.AngularSectorMidPoints[sectors[1, :]]
 
         sectorAngles = np.reshape(angles, (2, -1))
-        sectorSizes = self.AngularDifference * np.diff(sectors)
+        sectorSizes = self.AngularDifference * np.diff(sectors, axis=0).flatten()
 
         # Compute one candidate direction for each narrow sector
         # Equation (12) in Reference [1]
         narrowIdx = sectorSizes < self.NarrowOpeningThreshold * np.ones(
-            sectorSizes.shape
+            sectorSizes.shape[0]
         )
 
         narrowDirs = bisectAngles(
             sectorAngles[0, narrowIdx], sectorAngles[1, narrowIdx]
         )
 
-        ind_notidx = np.logicla_not(narrowIdx)
+        ind_notidx = np.logical_not(narrowIdx)
         # Compute two candidates for each non-narrow sector
         # Equation (13) in Reference [1]
-        nonNarrowDirs = [
-            sectorAngles[0, ind_notidx]
-            + np.ones(sectorAngles[0, ind_notidx].shape)
-            * self.NarrowOpeningThreshold
-            / 2,
-            sectorAngles[1, ind_notidx]
-            - np.ones((sectorAngles[1, ind_notidx].shape))
-            * self.NarrowOpeningThreshold
-            / 2,
-        ]
+        nonNarrowDirs = np.hstack(
+            (
+                sectorAngles[0, ind_notidx]
+                + np.ones(sectorAngles[0, ind_notidx].shape)
+                * self.NarrowOpeningThreshold
+                / 2,
+                sectorAngles[1, ind_notidx]
+                - np.ones((sectorAngles[1, ind_notidx].shape))
+                * self.NarrowOpeningThreshold
+                / 2,
+            )
+        )
 
         # Add target, current and previous directions as candidates
         self.TargetDirection = targetDir
@@ -665,30 +671,37 @@ class HistogramBase:
 
         # Final list of candidate directions
         # Equation (14) in Reference [1]
-        candidateDirs = [
-            nonNarrowDirs[0, :],
-            narrowDirs[0, :],
-            targetDir[0, 0],
-            currDir[0, 0],
-            self.PreviousDirection[0, 0],
-        ]
+        candidateDirs = np.hstack(
+            (
+                nonNarrowDirs,
+                narrowDirs,
+                targetDir,
+                currDir,
+                self.PreviousDirection,
+            )
+        )
 
         # Remove occupied directions
         # If the candidate direction falls at the center of two bins
         # then check both the bins for occupancy
-        # tolerance = np.sqrt(eps(class(targetDir)))
-        tolerance = np.finfo(np.float64).eps
-        # candToSectDiff = abs(bsxfun(@robotics.internal.angdiff,
-        #                             self.AngularSectorMidPoints,candidateDirs.T));
-        candToSectDiff = angle_difference(self.AngularSectorMidPoints, candidateDirs.T)
+        tolerance = math.sqrt(np.finfo(np.float64).eps)
+
+        candToSectDiff = np.abs(
+            angle_difference(
+                np.tile(self.AngularSectorMidPoints, (candidateDirs.shape[0], 1)),
+                np.tile(candidateDirs, (self.AngularSectorMidPoints.shape[0], 1)).T,
+            )
+        )
 
         # tempDiff = bsxfun(@minus, candToSectDiff, min(candToSectDiff,[],2));
-        tempDiff = candToSectDiff - np.min(candToSectDiff, axis=1)
+        tempDiff = (
+            candToSectDiff
+            - np.tile(np.min(candToSectDiff, axis=1), (candToSectDiff.shape[1], 1)).T
+        )
 
         nearIdx = tempDiff < tolerance
 
-        freeDirs = np.ones(nearIdx.shape[0])
-
+        freeDirs = np.ones(nearIdx.shape[0], dtype=bool)
         for i in range(len(freeDirs)):
             freeDirs[i] = not any(self.MaskedHistogram[nearIdx[i, :]])
 
@@ -708,11 +721,12 @@ class HistogramBase:
         cDiff = costValues - cVal
         minCostIdx = cDiff < tolerance
 
+        if not np.sum(minCostIdx):
+            # if not len(thetaSteer):
+            # thetaSteer = cast(nan, "like", targetDir)
+            return targetDir
+
         thetaSteer = np.min(candidateDirections[minCostIdx])
-
-        if isempty(thetaSteer):
-            thetaSteer = cast(nan, "like", targetDir)
-
         self.PreviousDirection = thetaSteer
 
         return thetaSteer
@@ -746,10 +760,8 @@ class HistogramBase:
         return cost
 
     def localCost(self, candidateDir, selectDir):
-        # localCost Compute cost for each cost component
-
-        # Cost computation for valid candidate indices
-        return abs(robotics.internal.angdiff(candidateDir, selectDir))
+        # localCost: Compute cost for each cost component (for valid candidate indices)
+        return np.abs(angle_difference(candidateDir, selectDir))
 
 
 def validateNonnegativeScalar(val, name):

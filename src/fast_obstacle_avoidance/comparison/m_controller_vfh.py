@@ -1,3 +1,7 @@
+"""
+Inspired by the Matlab class HistogramBase
+DISCLAIMER: we do not own the copyrights for this function (!)
+"""
 import math
 import numpy as np
 
