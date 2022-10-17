@@ -273,6 +273,7 @@ class LaserscanAnimator(BaseFastAnimator):
             null_direction=self.velocity_command,
         )
 
+        start = timer()
         self.avoider.update_laserscan(data_points, in_robot_frame=False)
 
         # Store all
@@ -294,7 +295,8 @@ class LaserscanAnimator(BaseFastAnimator):
         self.robot.pose.position = self.positions[:, ii + 1]
 
         print(f"Robot position {self.robot.pose.position}")
-
+        end = timer()
+        print(f"Time elpsed: {round(1000*(end - start), 2)} ms")
         if self.do_the_plotting:
             self.ax.clear()
 

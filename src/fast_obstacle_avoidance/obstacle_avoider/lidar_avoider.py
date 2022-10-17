@@ -7,6 +7,8 @@ from __future__ import annotations
 import warnings
 from typing import Optional
 
+from timeit import default_timer as timer
+
 import math
 
 import numpy as np
@@ -397,7 +399,10 @@ class SampledClusterAvoider:
         else:
             self._datapoints = datapoints
 
+        start = timer()
         self.clusterer.fit(self._datapoints.T)
+        end = timer()
+        print(f"Clustering time {round((end - start)*1000, 2)} ms.")
 
         self.unique_labels = np.unique(self.clusterer.labels_)
         self.unique_labels = np.delete(self.unique_labels, self.unique_labels == -1)

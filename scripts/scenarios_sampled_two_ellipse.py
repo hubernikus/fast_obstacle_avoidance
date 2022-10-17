@@ -254,8 +254,8 @@ def execute_avoidance_with_two_obstacles(save_figure=False, create_animation=Fal
     fast_avoider = SampledAvoider(
         robot=robot,
         weight_max_norm=1e8,
-        weight_factor=2 * np.pi / main_environment.n_samples * 2,
-        weight_power=1.5,
+        weight_factor=2 * np.pi / main_environment.n_samples * 1000,
+        weight_power=4.0,
     )
 
     # fast_avoider = VFH_Avoider_Matlab(
