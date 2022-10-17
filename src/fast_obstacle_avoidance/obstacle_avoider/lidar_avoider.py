@@ -13,7 +13,7 @@ from vartools.linalg import get_orthogonal_basis
 from fast_obstacle_avoidance.control_robot import BaseRobot
 from ._base import SingleModulationAvoider
 
-from sklearn.cluster import DBSCAN
+from sklearn.cluster import DBSCAN, KMeans
 
 
 class SampledAvoider(SingleModulationAvoider):
@@ -319,19 +319,37 @@ class SampledAvoider(SingleModulationAvoider):
 
         self.clusterer = DBSCAN(**cluster_params)
 
+    @classmethod
+    def from_kmeans(cls, *args, **kwargs) -> self:
+        instance = cls(*args, **kwargs)
+
+        # Overwrite clusterer
+        # Alternative way to do the avoidance
+        instance.clusterer = KMeans(n_clusters=self.dimensions**2)
+        return instance
+
     @property
-    def datapoints(self):
+    def control_radius(self) -> float:
+        """Assumption of a nonzero radius, to not fall into the measurement gaps."""
+        return self.robot.control_radius
+
+    @property
+    def datapoints(self) -> np.ndarray:
         # Property to make consistent with mixed avoider.
         # But change this variable name in the future
         return self._datapoints
 
     @datapoints.setter
-    def datapoints(self, value: np.ndarray) -> None:
+    def datapoints(self, value: np.ndarray):
         """Returns global datapoints"""
         self._datapoints = value
 
+    @property
+    def n_obstacles(self) -> int:
+        return self._center_positions.shape[1] + self._center_outliers.shape[1]
+
     def center_positions(self) -> np.ndarray:
-        return self._center_positions
+        return np.hstack((self._center_positions, self._center_outliers))
 
     def update_sample_points(self, datapoints: np.ndarray = None, in_robot_frame=True):
         if in_robot_frame:
@@ -350,10 +368,15 @@ class SampledAvoider(SingleModulationAvoider):
     def _cluster_close_outliers(self, position) -> Optional(np.ndarray):
         # TODO: check if there are outliers closer than the closest cluster
         # TODO: should you ever redo the clustering (?)
+
+        # Check if there are points really close...
+        # (just looking at centers is unfortunately not enough, since a cluster could go around the robot)
+        clsutered_points = self._datapoints[:, ii != -1]
         dist_closest_cluster = np.min(
             LA.norm(
-                self._center_positions
-                - np.tile(position, (self._cluster_centers.shape[1], 1)).T,
+                # self._center_positions
+                # - np.tile(position, (self._cluster_centers.shape[1], 1)).T,
+                clsutered_points - -np.tile(position, (clsutered_points, 1)).T,
                 axis=0,
             )
         )
@@ -369,19 +392,48 @@ class SampledAvoider(SingleModulationAvoider):
 
         # TODO: if the outliers lie too badly and too close, they could be split (?)
         self._close_outliers = outliers[:, distances < dist_closest_cluster]
+        self._center_outliers = np.array(np.mean(self._close_outliers, axis=1)).reshape(
+            self.dimensions, -1
+        )
 
         center_dir = np.sum(self._close_outliers, axis=1)
         if not LA.norm(center_dir):
-            # Zero
-            breakpoint()
+            warnings.warn("TODO: Investigate clustering of the close-outliers.")
+
+        if np.sum(center_dir.T @ self._close_outliers):
+            warnings.warn("TODO: Investigate clustering of the close-outliers.")
 
     def avoid(self, velocity, position=None):
         if position is None:
-            position = self.robot.pose.position
+            position = self.robot.pose.positiown
+
+        velocity_norm = LA.norm(velocity)
+        if not velocity_norm:
+            # Zero velocity -> no modulation needed
+            return velocity
+        velocity_direciton = velocity / velocity_norm
 
         self._cluster_close_outliers(position)
 
-        # For all cluster
+        (
+            laser_scan,
+            ref_dirs,
+            relative_distances,
+        ) = self.robot.get_relative_positions_and_dists(
+            self.datapoints, in_robot_frame=False
+        )
 
-    def get_normal_directions(self):
-        pass
+        # For all cluster
+        for ii in range(self.n_obstacles):
+            ind_cluster = ii == self.clusterer.labels_
+
+            weights = self.get_weight_from_distances(relative_distances[:, ind_cluster])
+
+            self.normal_direction = (-1) * np.sum(
+                ref_dirs * np.tile(weights, (ref_dirs.shape[0], 1)), axis=1
+            )
+
+            self.reference_direction
+
+            reference_direction = 0
+            pass
