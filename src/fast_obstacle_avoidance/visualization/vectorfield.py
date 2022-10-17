@@ -120,6 +120,7 @@ def static_visualization_of_sample_avoidance(
             continue
 
         robot.pose.position = positions[:, it]
+        # robot.pose.position = np.array([-2.5, 3])
 
         data_points = main_environment.get_surface_points(
             center_position=positions[:, it],
@@ -131,6 +132,7 @@ def static_visualization_of_sample_avoidance(
 
         if any(relative_distances < 0):
             continue
+
         # fast_avoider.update_reference_direction(data_points, in_robot_frame=False)
         fast_avoider.update_laserscan(data_points, in_robot_frame=False)
 
@@ -138,8 +140,11 @@ def static_visualization_of_sample_avoidance(
         velocities_mod[:, it] = fast_avoider.avoid(velocities_init[:, it])
 
         # Reference and normal dir
-        reference_dirs[:, it] = fast_avoider.reference_direction
-        norm_dirs[:, it] = fast_avoider.normal_direction
+        if hasattr(fast_avoider, "reference_direction"):
+            reference_dirs[:, it] = fast_avoider.reference_direction
+
+        if hasattr(fast_avoider, "normal_direction"):
+            norm_dirs[:, it] = fast_avoider.normal_direction
 
     plot_normals = False
     if plot_normals:

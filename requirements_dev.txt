@@ -7,6 +7,7 @@ ipython
 # Code testing
 pytest
 
+
 # Code check
 pre-commit
 black

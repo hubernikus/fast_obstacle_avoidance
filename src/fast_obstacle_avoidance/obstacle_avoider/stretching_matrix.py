@@ -64,6 +64,13 @@ class StretchingMatrixFunctor(ABC):
         normal_direction: np.ndarray = None,
         initial_velocity: np.ndarray = None,
     ) -> np.ndarray:
+        """Returns the (diagonal) stretching matrix
+
+        Arguments
+        ---------
+        importance_variable (float): A weight equivalent which gives information on how 'close' we
+            are to the obstacle
+        """
 
         if normal_direction is None:
             normal_direction = reference_direction

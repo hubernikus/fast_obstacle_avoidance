@@ -20,11 +20,12 @@ from vartools.dynamical_systems import plot_dynamical_system_streamplot
 from vartools.dynamical_systems import plot_dynamical_system_quiver
 
 from fast_obstacle_avoidance.obstacle_avoider import SampledAvoider
+from fast_obstacle_avoidance.obstacle_avoider import SampledClusterAvoider
 from fast_obstacle_avoidance.control_robot import QoloRobot
 
 from fast_obstacle_avoidance.sampling_container import visualize_obstacles
 from fast_obstacle_avoidance.sampling_container import ShapelySamplingContainer
-from fast_obstacle_avoidance.sampling_container import SampledEllipse
+from fast_obstacle_avoidance.sampling_container import SampledEllipse, SampledCuboid
 
 from fast_obstacle_avoidance.visualization import LaserscanAnimator
 from fast_obstacle_avoidance.visualization import (
@@ -74,31 +75,69 @@ def explore_specific_point(
         markersize=13,
     )
 
+    if hasattr(fast_avoider, "clusterer"):
+        ax.scatter(
+            fast_avoider._cluster_centers[0, :],
+            fast_avoider._cluster_centers[1, :],
+            s=120,
+            marker="o",
+        )
+
     arrow_width = 0.04
     arrow_head_width = 0.2
 
-    ax.arrow(
-        eval_pos[0],
-        eval_pos[1],
-        fast_avoider.reference_direction[0],
-        fast_avoider.reference_direction[1],
-        color="#9b1503",
-        width=arrow_width,
-        head_width=arrow_head_width,
-    )
+    if hasattr(fast_avoider, "reference_direction"):
+        reference_direction = fast_avoider.reference_direction.reshape(2, -1)
+        for ii in range(reference_direction.shape[1]):
+            ax.arrow(
+                eval_pos[0],
+                eval_pos[1],
+                reference_direction[0, ii],
+                reference_direction[1, ii],
+                color="#9b1503",
+                width=arrow_width,
+                head_width=arrow_head_width,
+            )
 
-    ax.quiver(
-        data_points[0, :],
-        data_points[1, :],
-        fast_avoider.ref_dirs[0, :],
-        fast_avoider.ref_dirs[1, :],
-        scale=10,
-        color="#9b1503",
-        # color="blue",
-        # width=arrow_width,
-        alpha=1.0,
-        label="Reference direction",
-    )
+    if hasattr(fast_avoider, "normal_directions"):
+        normal_directions = fast_avoider.normal_directions.reshape(2, -1)
+        for ii in range(normal_directions.shape[1]):
+            ax.arrow(
+                eval_pos[0],
+                eval_pos[1],
+                normal_directions[0, ii],
+                normal_directions[1, ii],
+                color="#66cc66",
+                width=arrow_width,
+                head_width=arrow_head_width,
+            )
+
+    if hasattr(fast_avoider, "reference_directions"):
+        reference_direction = fast_avoider.reference_directions.reshape(2, -1)
+        for ii in range(reference_direction.shape[1]):
+            ax.arrow(
+                eval_pos[0],
+                eval_pos[1],
+                reference_direction[0, ii],
+                reference_direction[1, ii],
+                color="#9b1503",
+                width=arrow_width,
+                head_width=arrow_head_width,
+            )
+
+    if hasattr(fast_avoider, "ref_dirs"):
+        ax.quiver(
+            data_points[0, :],
+            data_points[1, :],
+            fast_avoider.ref_dirs[0, :],
+            fast_avoider.ref_dirs[1, :],
+            scale=10,
+            color="#9b1503",
+            # color="blue",
+            # width=arrow_width,
+            alpha=1.0,
+            label="Reference direction",
+        )
 
     if draw_velocity:
         arrow_scale = 0.5
@@ -176,7 +215,11 @@ def execute_avoidance_with_two_obstacles(save_figure=False, create_animation=Fal
     (1) the repulsion from a specific point
     (2) the resulting vector-field."""
 
-    start_point = np.array([-2.5, 3])
+    # start_point = np.array([-2.5, 3])
+    # start_point = np.array([-2.0, 4.2])
+    # start_point = np.array([-2.0, 4.5])
+    # start_point = np.array([3.0, 4.0])
+    start_point = np.array([0.2, 2.5])
     x_lim = [-4, 4.5]
     y_lim = [-1.0, 5.6]
 
@@ -187,7 +230,8 @@ def execute_avoidance_with_two_obstacles(save_figure=False, create_animation=Fal
 
     main_environment = ShapelySamplingContainer(n_samples=100)
     main_environment.add_obstacle(
-        SampledEllipse.from_obstacle(
+        # SampledEllipse.from_obstacle(
+        SampledCuboid.from_obstacle(
             position=np.array([0.5, 0.0]),
             orientation_in_degree=90,
             axes_length=np.array([4.0, 3.0]),
@@ -195,7 +239,8 @@ def execute_avoidance_with_two_obstacles(save_figure=False, create_animation=Fal
     )
 
     main_environment.add_obstacle(
-        SampledEllipse.from_obstacle(
+        # SampledEllipse.from_obstacle(
+        SampledCuboid.from_obstacle(
             position=np.array([0.5, 5.0]),
             orientation_in_degree=90,
             axes_length=np.array([4.0, 3.0]),
@@ -218,6 +263,8 @@ def execute_avoidance_with_two_obstacles(save_figure=False, create_animation=Fal
     #     # use_matlab=True,
     #     # matlab_engine=matlab_eng,
     # )
+
+    fast_avoider = SampledClusterAvoider(robot=robot)
 
     # Do the animation, only:
     if create_animation:
@@ -258,7 +305,6 @@ def execute_avoidance_with_two_obstacles(save_figure=False, create_animation=Fal
 
     fig, ax = plt.subplots(1, 1, figsize=(7, 5))
 
-    # robot.pose.position = np.array([0.82473931, 2.36137852])
     explore_specific_point(
         robot=robot,
         dynamical_system=initial_dynamics,
@@ -303,6 +349,6 @@ if (__name__) == "__main__":
         matlab_eng.addpath("src/fast_obstacle_avoidance/comparison/matlab")
         # str(Path("src") / "fast_obstacle_avoidance" / "comparison" / "matlab")
 
-    execute_avoidance_with_two_obstacles(save_figure=False, create_animation=False)
+    execute_avoidance_with_two_obstacles(save_figure=False, create_animation=True)
 
     print("Done all.")
