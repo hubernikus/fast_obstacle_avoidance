@@ -161,7 +161,6 @@ class SampledAvoider(SingleModulationAvoider):
 
         num_points = distances.shape[0]
         weights = (1 / distances) ** self.weight_power * (self.weight_factor)
-
         self.distance_weight_sum = np.sum(weights)
 
         if (

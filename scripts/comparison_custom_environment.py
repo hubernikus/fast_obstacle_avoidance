@@ -43,6 +43,10 @@ from fast_obstacle_avoidance.visualization.integration_plot import (
     visualization_mixed_environment_with_multiple_integration,
 )
 
+from fast_obstacle_avoidance.visualization import (
+    static_visualization_of_sample_avoidance_mixed,
+)
+
 
 def get_random_position_orientation_and_axes(x_lim, y_lim, axes_range):
     dimension = 2
@@ -69,6 +73,58 @@ def get_random_position(x_lim, y_lim=None):
     pos[1] = pos[1] * (y_lim[1] - y_lim[0]) + y_lim[0]
 
     return pos
+
+
+def visualize_vectorfield_mixed():
+    """Visualize vectorfield of mixed environment."""
+    np.random.seed(1)
+
+    (
+        robot,
+        initial_dynamics,
+        main_environment,
+        obs_environment,
+    ) = create_custom_environment()
+
+    robot.pose.position = np.array([-3, 0.3])
+
+    # robot.pose.position = np.array([-3, 0.0])
+
+    # A random gamma-check
+    gammas = np.zeros(2)
+    for ii, obs in enumerate(robot.obstacle_environment):
+        gammas[ii] = obs.get_gamma(robot.pose.position, in_global_frame=True)
+    # breakpoint()
+
+    x_lim = [-11.0, 11.0]
+    y_lim = [-11.0, 11.0]
+
+    fig, ax = plt.subplots(1, 1, figsize=(9, 8))
+    mixed_avoider = MixedEnvironmentAvoider(
+        robot=robot,
+        weight_max_norm=1e9,
+        weight_factor=2,
+        weight_power=2.0,
+        scaling_laserscan_weight=0.8,
+        delta_sampling=2 * math.pi / main_environment.n_samples,
+    )
+
+    static_visualization_of_sample_avoidance_mixed(
+        robot=robot,
+        n_resolution=20,
+        dynamical_system=initial_dynamics,
+        fast_avoider=mixed_avoider,
+        plot_initial_robot=True,
+        plot_velocities=True,
+        plot_norm_dirs=True,
+        sample_environment=main_environment,
+        # show_ticks=False,
+        show_ticks=True,
+        x_lim=x_lim,
+        y_lim=y_lim,
+        ax=ax,
+        do_quiver=True,
+    )
 
 
 def create_custom_environment(control_radius=0.5):
@@ -365,16 +421,6 @@ def example_vectorfield(
         obs_environment,
     ) = create_custom_environment()
 
-    # del main_environment.environment[1]
-    # del main_environment.environment[1]
-
-    # point = np.array([3, 3])
-
-    # is_it = main_environment.is_inside(point)
-    # print(is_it)
-
-    # breakpoint()
-
     # Plot the vectorfield around the robot
     fig, ax = plt.subplots(1, 1, figsize=figisze)
 
@@ -470,7 +516,7 @@ def example_integrations(
         weight_factor=1,
         weight_power=1.0,
         # scaling_laserscan_weight=1.0,
-        delta_sampling=2 * np.pi / main_environment.n_samples * 15,
+        delta_sampling=2 * np.pi / (main_environment.n_samples),
     )
 
     visualization_mixed_environment_with_multiple_integration(
@@ -495,7 +541,7 @@ def example_integrations(
         robot=robot,
         weight_max_norm=1e9,
         weight_power=1.0,
-        weight_factor=2 * np.pi / main_environment.n_samples * 10,
+        weight_factor=2 * np.pi / (main_environment.n_samples),
     )
 
     visualization_mixed_environment_with_multiple_integration(
@@ -540,12 +586,17 @@ def evaluation_convergence(convergence_states):
 
 
 if (__name__) == "__main__":
-    plt.close("all")
+    # plt.close("all")
     plt.ion()
 
     # convergence_states = main_comparison(do_the_plotting=True, n_repetitions=1)
+    # convergence_states = main_comparison(do_the_plotting=False, n_repetitions=1)
     # convergence_states = main_comparison(do_the_plotting=False, n_repetitions=100)
     # evaluation_convergence(convergence_states)
 
     # example_vectorfield(n_resolution=100, save_figure=True)
-    example_integrations(save_figure=True)
+    # example_integrations(save_figure=False)
+
+    visualize_vectorfield_mixed()
+
+    print("Done")

@@ -40,7 +40,7 @@ class SingleModulationAvoider(ABC):
         # Parameters for the weight evaluation
         weight_max_norm: float = None,
         weight_factor: float = 1,
-        weight_power: float = 1,
+        weight_power: float = 2,
         margin_weight: float = 1e-3,
     ):
         if stretching_matrix is None:
@@ -84,9 +84,9 @@ class SingleModulationAvoider(ABC):
         # -> get distance (minus radius)
         # -> get closest points
         # -> get_weights => how?
+
         if self.relative_velocity is not None:
             initial_velocity = initial_velocity - self.relative_velocity
-            # breakpoint()
 
         if not LA.norm(initial_velocity):
             # Trivial velocity modulation
@@ -104,7 +104,7 @@ class SingleModulationAvoider(ABC):
             )
 
         ref_norm = LA.norm(self.reference_direction)
-
+        # breakpoint()
         if not ref_norm:
             # Not modulated when far away from everywhere / in between two obstacles
             return initial_velocity

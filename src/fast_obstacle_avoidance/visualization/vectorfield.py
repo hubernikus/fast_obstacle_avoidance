@@ -37,6 +37,18 @@ from fast_obstacle_avoidance.visualization import FastObstacleAnimator
 from fast_obstacle_avoidance.visualization import MixedObstacleAnimator
 
 
+def cleanup_datapoints(data_points, robot):
+    # Check that all are collision free
+    ind_collision_free = np.ones(data_points.shape[1], dtype=bool)
+    for pp in range(data_points.shape[1]):
+        for obs in robot.obstacle_environment:
+            if obs.get_gamma(data_points[:, pp], in_global_frame=True) <= 1:
+                ind_collision_free[pp] = False
+                break
+
+    return data_points[:, ind_collision_free]
+
+
 def static_visualization_of_sample_avoidance(
     main_environment,
     dynamical_system,
@@ -465,7 +477,6 @@ def static_visualization_of_sample_avoidance_mixed(
     """Visualization of mixed environment."""
 
     if plot_initial_robot:
-
         robot.plot2D(ax=ax)
 
         ax.plot(
@@ -480,6 +491,8 @@ def static_visualization_of_sample_avoidance_mixed(
         data_points = sample_environment.get_surface_points(
             center_position=robot.pose.position,
         )
+
+        data_points = cleanup_datapoints(data_points, robot=robot)
 
         # fast_avoider.update_laserscan(data_points)
         # fast_avoider.update_reference_direction(in_robot_frame=False)
@@ -542,6 +555,7 @@ def static_visualization_of_sample_avoidance_mixed(
             width=arrow_width,
             head_width=arrow_headwith,
             label="Reference [analytic]",
+            alpha=0.9,
         )
 
         ax.arrow(
@@ -553,7 +567,21 @@ def static_visualization_of_sample_avoidance_mixed(
             width=arrow_width,
             head_width=arrow_headwith,
             label="Reference [sampled]",
+            alpha=0.9,
         )
+
+        if plot_norm_dirs:
+            ax.arrow(
+                robot.pose.position[0],
+                robot.pose.position[1],
+                fast_avoider.normal_direction[0],
+                fast_avoider.normal_direction[1],
+                color="#702963",
+                width=arrow_width,
+                head_width=arrow_headwith,
+                label="Normal",
+                alpha=0.9,
+            )
 
         ax.legend(loc="upper left", fontsize=12)
 
@@ -593,6 +621,9 @@ def static_visualization_of_sample_avoidance_mixed(
             center_position=robot.pose.position,
         )
 
+        data_points = cleanup_datapoints(data_points=data_points, robot=robot)
+
+        # Update the obstacle environment
         fast_avoider.update_laserscan(data_points, in_robot_frame=False)
 
         velocities_init[:, it] = dynamical_system.evaluate(robot.pose.position)

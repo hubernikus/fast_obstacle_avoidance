@@ -264,6 +264,7 @@ class ShapelySamplingContainer:
                     # min_dist = min(dists)
                     # breakpoint()
                     # sample_list[:, ii] = min(sample_list[:, ii], min_dist)
+
                     if obs.is_boundary:
                         surface_point = np.array(intersection_line[1])
                     else:

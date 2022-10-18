@@ -3,14 +3,16 @@ Mixed Environments from Lidar & Obstacle Detection Data
 """
 import warnings
 
+import math
+
 import numpy as np
 from numpy import linalg as LA
 
 from dynamic_obstacle_avoidance.obstacles import CircularObstacle
 
 from ._base import SingleModulationAvoider
+from .lidar_avoider import SampledAvoider
 from .obstacle_avoider import FastObstacleAvoider
-from .lidar_avoider import FastLidarAvoider
 
 
 class MixedEnvironmentAvoider(SingleModulationAvoider):
@@ -21,8 +23,8 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
         robot,
         evaluate_normal=True,
         recompute_all=True,
-        delta_sampling=1.0,
-        scaling_laserscan_weight=1.0,
+        delta_sampling=2 * math.pi / 1000,
+        scaling_laserscan_weight=1000,
         scaling_obstacle_weight=1.0,
         *args,
         **kwargs,
@@ -40,7 +42,7 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
         self._robot = robot
 
         # One for obstacles one for environments
-        self.lidar_avoider = FastLidarAvoider(
+        self.lidar_avoider = SampledAvoider(
             self.robot, evaluate_normal=False, weight_factor=delta_sampling
         )
         self.obstacle_avoider = FastObstacleAvoider(
@@ -161,6 +163,7 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
             self.update_normal_direction(self.weights)
 
         # breakpoint()
+
         return self.reference_direction
 
     def update_normal_direction(self, weights):
@@ -175,6 +178,8 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
             return self.normal_direction
 
         normalized_reference = self.reference_direction / reference_norm
+
+        # breakpoint()
 
         if self.lidar_avoider.normal_direction is not None and LA.norm(
             self.lidar_avoider.normal_direction
@@ -202,6 +207,7 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
 
         # Normalize normal
         self.normal_direction = self.normal_direction / LA.norm(self.normal_direction)
+        # breakpoint()
         return self.normal_direction
 
     def get_scan_without_ocluded_points(self):
@@ -265,9 +271,9 @@ class MixedEnvironmentAvoider(SingleModulationAvoider):
 
         ind_max = weights >= 1
         if any(ind_max):
-            weights = np.zeros(ind_max.shape)
+            weights = np.zeros_like(weights)
             weights[ind_max] = max_weight
-            weights[~ind_max] = 1 / (1 - weights[~ind_max]) -1
+            weights[~ind_max] = 1 / (1 - weights[~ind_max]) - 1
 
         else:
             weights = 1 / (1 - weights) - 1

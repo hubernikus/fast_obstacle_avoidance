@@ -225,6 +225,8 @@ class FastObstacleAvoider(SingleModulationAvoider):
         )
         self.normal_direction = self.normal_direction / LA.norm(self.normal_direction)
 
+        # breakpoint()
+
         return self.normal_direction
 
     def update_normal_direction_with_relative_rotation(

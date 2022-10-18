@@ -4,8 +4,9 @@
 # Email: lukas.huber@epfl.ch
 
 import copy
-
 from timeit import default_timer as timer
+
+import math
 
 import numpy as np
 from numpy import linalg as LA
@@ -29,7 +30,10 @@ from fast_obstacle_avoidance.obstacle_avoider import MixedEnvironmentAvoider
 from fast_obstacle_avoidance.control_robot import QoloRobot
 
 from fast_obstacle_avoidance.sampling_container import ShapelySamplingContainer
+from fast_obstacle_avoidance.sampling_container import SampledEllipse
+from fast_obstacle_avoidance.sampling_container import SampledCuboid
 from fast_obstacle_avoidance.sampling_container import visualize_obstacles
+
 
 from fast_obstacle_avoidance.visualization import FastObstacleAnimator
 from fast_obstacle_avoidance.visualization import MixedObstacleAnimator
@@ -41,6 +45,7 @@ from fast_obstacle_avoidance.visualization import (
 def vectorfield_with_scenario_mixed(save_figure=False):
     # start_point = np.array([9, 6])
     start_point = np.array([13, 4])
+    # start_point = np.array([3.5, 2.5])
     x_lim = [0, 18]
     y_lim = [0, 8]
     # x_lim = [5, 7]
@@ -75,11 +80,24 @@ def vectorfield_with_scenario_mixed(save_figure=False):
     )
 
     sampled_environment = ShapelySamplingContainer(n_samples=50)
-    ellipse = shapely.affinity.scale(shapely.geometry.Point(14, 1).buffer(1), 2, 1)
-    ellipse = shapely.affinity.rotate(ellipse, 50)
-    sampled_environment.add_obstacle(ellipse)
+    # ellipse = shapely.affinity.scale(shapely.geometry.Point(14, 1).buffer(1), 2, 1)
+    # ellipse = shapely.affinity.rotate(ellipse, 50)
+    sampled_environment.add_obstacle(
+        SampledEllipse.from_obstacle(
+            position=np.array([14, 1]),
+            orientation_in_degree=50,
+            axes_length=np.array([2, 1]),
+        )
+    )
 
-    sampled_environment.add_obstacle(shapely.geometry.box(5, 4, 7, 8))
+    # sampled_environment.add_obstacle(shapely.geometry.box(5, 4, 7, 8))
+    sampled_environment.add_obstacle(
+        SampledCuboid.from_obstacle(
+            position=np.array([6, 6]),
+            orientation_in_degree=00,
+            axes_length=np.array([2, 4]),
+        )
+    )
 
     robot = QoloRobot(pose=ObjectPose(position=start_point, orientation=0))
     robot.control_point = [0, 0]
@@ -94,6 +112,7 @@ def vectorfield_with_scenario_mixed(save_figure=False):
         weight_factor=2,
         weight_power=4.0,
         scaling_laserscan_weight=1.1,
+        delta_sampling=2 * math.pi / sampled_environment.n_samples,
     )
 
     # Plot the vectorfield around the robot
@@ -101,7 +120,7 @@ def vectorfield_with_scenario_mixed(save_figure=False):
 
     static_visualization_of_sample_avoidance_mixed(
         robot=robot,
-        n_resolution=100,
+        n_resolution=40,
         dynamical_system=initial_dynamics,
         fast_avoider=mixed_avoider,
         plot_initial_robot=True,
@@ -157,11 +176,24 @@ def animation_with_mixed(save_animation):
 
     # Sample Environment
     sampled_environment = ShapelySamplingContainer(n_samples=50)
-    ellipse = shapely.affinity.scale(shapely.geometry.Point(14, 1).buffer(1), 2, 1)
-    ellipse = shapely.affinity.rotate(ellipse, 50)
-    sampled_environment.add_obstacle(ellipse)
+    # ellipse = shapely.affinity.scale(shapely.geometry.Point(14, 1).buffer(1), 2, 1)
+    # ellipse = shapely.affinity.rotate(ellipse, 50)
+    sampled_environment.add_obstacle(
+        SampledEllipse.from_obstacle(
+            position=np.array([14, 1]),
+            orientation_in_degree=50,
+            axes_length=np.array([2, 1]),
+        )
+    )
 
-    sampled_environment.add_obstacle(shapely.geometry.box(5, 4, 7, 8))
+    # sampled_environment.add_obstacle(shapely.geometry.box(5, 4, 7, 8))
+    sampled_environment.add_obstacle(
+        SampledCuboid.from_obstacle(
+            position=np.array([6, 6]),
+            orientation_in_degree=00,
+            axes_length=np.array([2, 4]),
+        )
+    )
 
     robot = QoloRobot(pose=ObjectPose(position=start_point, orientation=0))
     robot.control_point = [0, 0]
@@ -239,11 +271,25 @@ def scenario_mixed_analysis():
     )
 
     sampled_environment = ShapelySamplingContainer(n_samples=50)
-    sampled_environment.create_ellipse(
-        position=[10, 2.5], axes_length=[1.0, 0.7], orientation_in_degree=50
+    # sampled_environment.create_ellipse(
+    #     position=[10, 2.5], axes_length=[1.0, 0.7], orientation_in_degree=50
+    #     )
+    sampled_environment.add_obstacle(
+        SampledEllipse.from_obstacle(
+            position=np.array([10, 2.5]),
+            orientation_in_degree=50,
+            axes_length=np.array([1.0, 0.7]),
+        )
     )
 
-    sampled_environment.create_cuboid(position=[4, 8], axes_length=[1.5, 0.9])
+    # sampled_environment.create_cuboid(position=[4, 8], axes_length=[1.5, 0.9])
+    sampled_environment.add_obstacle(
+        SampledCuboid.from_obstacle(
+            position=np.array([4, 8]),
+            orientation_in_degree=0,
+            axes_length=np.array([1.5, 0.9]),
+        )
+    )
 
     robot = QoloRobot(pose=ObjectPose(position=np.zeros(2), orientation=0))
     robot.control_point = [0, 0]
@@ -267,7 +313,7 @@ def scenario_mixed_analysis():
 
     static_visualization_of_sample_avoidance_mixed(
         robot=robot,
-        n_resolution=40,
+        n_resolution=80,
         dynamical_system=initial_dynamics,
         fast_avoider=mixed_avoider,
         # plot_initial_robot=True,
@@ -277,7 +323,7 @@ def scenario_mixed_analysis():
         x_lim=x_lim,
         y_lim=y_lim,
         ax=axs[0],
-        do_quiver=True,
+        do_quiver=False,
         ax_ref=axs[1],
         plot_norm_dirs=True,
     )
@@ -288,8 +334,8 @@ if (__name__) == "__main__":
     plt.close("all")
 
     # The two main pretty scenarios:
-    # vectorfield_with_scenario_mixed(save_figure=False)
+    vectorfield_with_scenario_mixed(save_figure=False)
     # animation_with_mixed(save_animation=False)
 
     # And then the more down-to-earth
-    scenario_mixed_analysis()
+    # scenario_mixed_analysis()

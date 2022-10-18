@@ -112,7 +112,8 @@ class BaseFastAnimator(Animator):
         # Reference points of the 'analytical' obstacles
         self.show_reference_points = show_reference_points
 
-        self._restore_figsize()
+        if hasattr(self, "fig"):
+            self._restore_figsize()
 
     def has_converged(self, ii):
         """Return values:
@@ -294,9 +295,9 @@ class LaserscanAnimator(BaseFastAnimator):
         )
         self.robot.pose.position = self.positions[:, ii + 1]
 
-        print(f"Robot position {self.robot.pose.position}")
         end = timer()
-        print(f"Time elpsed: {round(1000*(end - start), 2)} ms")
+        # print(f"Time elpsed: {round(1000*(end - start), 2)} ms")
+
         if self.do_the_plotting:
             self.ax.clear()
 
