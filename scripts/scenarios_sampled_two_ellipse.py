@@ -33,7 +33,7 @@ from fast_obstacle_avoidance.visualization import (
 )
 
 # Comparison algorithm inspired on matlab
-from fast_obstacle_avoidance.comparison.vfh_avoider import VFH_Avoider_Matlab
+from fast_obstacle_avoidance.comparison.vfh_avoider import VFH_Avoider
 
 
 def explore_specific_point(
@@ -258,7 +258,7 @@ def execute_avoidance_with_two_obstacles(save_figure=False, create_animation=Fal
         weight_power=4.0,
     )
 
-    # fast_avoider = VFH_Avoider_Matlab(
+    # fast_avoider = VFH_Avoider(
     #     robot=robot,
     #     # use_matlab=True,
     #     # matlab_engine=matlab_eng,

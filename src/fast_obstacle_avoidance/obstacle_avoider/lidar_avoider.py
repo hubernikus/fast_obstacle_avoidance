@@ -128,7 +128,9 @@ class SampledAvoider(SingleModulationAvoider):
             laser_scan, in_robot_frame=self._laserscan_in_robot_frame
         )
 
-        self.weights = self.get_weight_from_distances(relative_distances)
+        self.weights = self.get_weight_from_distances(
+            relative_distances, ref_dirs, initial_velocity
+        )
 
         # (-1) or not ...
         self.reference_direction = (-1) * np.sum(
@@ -160,7 +162,7 @@ class SampledAvoider(SingleModulationAvoider):
             distances = distances - np.min(distances) + self.margin_weight
 
         num_points = distances.shape[0]
-        weights = (1 / distances) ** self.weight_power * (self.weight_factor)
+        weights = (self.weight_factor / distances) ** self.weight_power
         self.distance_weight_sum = np.sum(weights)
 
         if (

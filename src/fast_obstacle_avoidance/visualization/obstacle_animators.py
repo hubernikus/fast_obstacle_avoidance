@@ -85,6 +85,8 @@ class BaseFastAnimator(Animator):
         self.velocities_init = np.zeros((self.dimension, self.it_max))
         self.velocities_mod = np.zeros((self.dimension, self.it_max))
 
+        self.computation_times = np.zeros((self.it_max))
+
         self.do_the_plotting = do_the_plotting
         if self.do_the_plotting:
             # Create
@@ -258,6 +260,15 @@ class BaseFastAnimator(Animator):
     def _plot_analytic_environment(self, ii):
         pass
 
+    def get_total_distance(self):
+        return np.sum(
+            LA.norm(self.positions[:, 1 : self.ii + 1] - self.positions[:, : self.ii]),
+            axis=0,
+        )
+
+    def get_mean_coputation_time_ms(self):
+        return np.mean(self.computation_times[: self.ii]) * 1000
+
 
 class LaserscanAnimator(BaseFastAnimator):
     def update_step(self, ii):
@@ -280,6 +291,9 @@ class LaserscanAnimator(BaseFastAnimator):
         # Store all
         self.initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)
         self.modulated_velocity = self.avoider.avoid(self.initial_velocity)
+        end = timer()
+
+        self.computation_times[ii] = end - start
 
         if LA.norm(self.modulated_velocity) > self.velocity_normalization_margin:
             # Speed up simulation
@@ -295,7 +309,6 @@ class LaserscanAnimator(BaseFastAnimator):
         )
         self.robot.pose.position = self.positions[:, ii + 1]
 
-        end = timer()
         # print(f"Time elpsed: {round(1000*(end - start), 2)} ms")
 
         if self.do_the_plotting:
@@ -534,13 +547,16 @@ class MixedObstacleAnimator(BaseFastAnimator):
 
         self.positions[:, ii] = self.robot.pose.position
 
+        self.initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)
+
+        start = timer()
         self.avoider.update_laserscan(data_points, in_robot_frame=False)
         # self.avoider.update_reference_direction(in_robot_frame=False)
         # self.avoider.update_reference_direction(in_robot_frame=False)
-
-        # Store all
-        self.initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)
         self.modulated_velocity = self.avoider.avoid(self.initial_velocity)
+
+        end = timer()
+        self.computation_times[ii] = end - start
 
         if LA.norm(self.modulated_velocity) > self.velocity_normalization_margin:
             # Speed up simulation

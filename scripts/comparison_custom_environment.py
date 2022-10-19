@@ -4,8 +4,9 @@
 # Email: lukas.huber@epfl.ch
 
 import copy
-
 from timeit import default_timer as timer
+import math
+from enum import Enum, auto
 
 import numpy as np
 from numpy import linalg as LA
@@ -45,7 +46,12 @@ from fast_obstacle_avoidance.visualization.integration_plot import (
 
 from fast_obstacle_avoidance.visualization import (
     static_visualization_of_sample_avoidance_mixed,
+    static_visualization_of_sample_avoidance,
+    # static_visualization_of_sample_avoidance_obstacle,
 )
+
+# Comparison algorithm inspired on matlab
+from fast_obstacle_avoidance.comparison.vfh_avoider import VFH_Avoider
 
 
 def get_random_position_orientation_and_axes(x_lim, y_lim, axes_range):
@@ -77,7 +83,7 @@ def get_random_position(x_lim, y_lim=None):
 
 def visualize_vectorfield_mixed():
     """Visualize vectorfield of mixed environment."""
-    np.random.seed(1)
+    np.random.seed(2)
 
     (
         robot,
@@ -86,9 +92,8 @@ def visualize_vectorfield_mixed():
         obs_environment,
     ) = create_custom_environment()
 
-    robot.pose.position = np.array([-3, 0.3])
-
-    # robot.pose.position = np.array([-3, 0.0])
+    # robot.pose.position = np.array([-3, 0.3])
+    robot.pose.position = np.array([5, -5.5])
 
     # A random gamma-check
     gammas = np.zeros(2)
@@ -103,10 +108,10 @@ def visualize_vectorfield_mixed():
     mixed_avoider = MixedEnvironmentAvoider(
         robot=robot,
         weight_max_norm=1e9,
-        weight_factor=2,
-        weight_power=2.0,
-        scaling_laserscan_weight=0.8,
-        delta_sampling=2 * math.pi / main_environment.n_samples,
+        weight_factor=3.0,
+        weight_power=1.0,
+        scaling_laserscan_weight=1.5,
+        delta_sampling=2 * math.pi / (main_environment.n_samples),
     )
 
     static_visualization_of_sample_avoidance_mixed(
@@ -127,6 +132,56 @@ def visualize_vectorfield_mixed():
     )
 
 
+def visualize_vectorfield_sampled():
+    """Visualize vectorfield of mixed environment."""
+    np.random.seed(2)
+
+    (
+        robot,
+        initial_dynamics,
+        main_environment,
+        obs_environment,
+    ) = create_custom_environment()
+
+    # robot.pose.position = np.array([-3, 0.3])
+    robot.pose.position = np.array([5, -5.5])
+
+    # A random gamma-check
+    gammas = np.zeros(2)
+    for ii, obs in enumerate(robot.obstacle_environment):
+        gammas[ii] = obs.get_gamma(robot.pose.position, in_global_frame=True)
+    # breakpoint()
+
+    x_lim = [-11.0, 11.0]
+    y_lim = [-11.0, 11.0]
+
+    fig, ax = plt.subplots(1, 1, figsize=(9, 8))
+    fast_avoider = SampledAvoider(
+        robot=robot,
+        weight_max_norm=1e9,
+        weight_factor=2,
+        weight_power=4.0,
+        # scaling_laserscan_weight=0.1,
+    )
+
+    static_visualization_of_sample_avoidance(
+        robot=robot,
+        n_resolution=20,
+        dynamical_system=initial_dynamics,
+        fast_avoider=fast_avoider,
+        plot_initial_robot=True,
+        plot_velocities=True,
+        # plot_norm_dirs=True,
+        main_environment=main_environment,
+        # show_ticks=False,
+        show_ticks=True,
+        x_lim=x_lim,
+        y_lim=y_lim,
+        ax=ax,
+        plot_quiver=True,
+    )
+
+
 def create_custom_environment(control_radius=0.5):
     dimension = 2
 
@@ -136,7 +191,7 @@ def create_custom_environment(control_radius=0.5):
     # User defined values
     x_lim_pos = [-9, 9]
     y_start = -8.5
-    y_attractor = 8.5
+    y_attractor = 8.0
 
     pos_start = np.array([get_random_position(x_lim_pos), y_start])
     pos_attractor = np.array([get_random_position(x_lim_pos), y_attractor])
@@ -234,9 +289,17 @@ def create_custom_environment(control_radius=0.5):
     return robot, initial_dynamics, main_environment, obs_environment
 
 
+class AlgorithmType(Enum):
+    SAMPLED = 0
+    MIXED = 1
+    VFH = 2
+    OBSTACLE = auto()
+
+
 def animation_comparison(
     robot,
     initial_dynamics,
+    mode_type: AlgorithmType,
     main_environment=None,
     obstacle_environment=None,
     do_the_plotting=True,
@@ -249,24 +312,28 @@ def animation_comparison(
     weight_factor = 1.0
     weight_power = 1.0
 
-    if obstacle_environment is None:
-        mode_name = "sample"
+    if mode_type == AlgorithmType.SAMPLED:
+        # mode_name = "sample"
 
         # Sample scenario only
         fast_avoider = SampledAvoider(
             robot=robot,
-            weight_max_norm=weight_max_norm,
-            weight_factor=2 * np.pi / main_environment.n_samples * 10,
-            weight_power=weight_power,
-            reference_update_before_modulation=True,
+            weight_max_norm=1e9,
+            weight_factor=2,
+            weight_power=4.0,
+            #     robot=robot,
+            #     weight_max_norm=weight_max_norm,
+            #     weight_factor=2 * np.pi / main_environment.n_samples * 10,
+            #     weight_power=weight_power,
+            #     reference_update_before_modulation=True,
         )
 
         my_animator = LaserscanAnimator(
             it_max=it_max,
             dt_simulation=0.05,
         )
-    elif main_environment is None:
-        mode_name = "obstacle"
+    elif mode_type == AlgorithmType.OBSTACLE:
+        # mode_name = "obstacle"
 
         fast_avoider = FastObstacleAvoider(
             robot=robot,
@@ -283,22 +350,35 @@ def animation_comparison(
             dt_simulation=0.05,
         )
 
-    else:
-        mode_name = "mixed"
+    elif mode_type == AlgorithmType.VFH:
+        fast_avoider = VFH_Avoider(robot=robot)
 
+        my_animator = LaserscanAnimator(
+            it_max=it_max,
+            dt_simulation=0.05,
+        )
+
+    elif mode_type == AlgorithmType.MIXED:
         fast_avoider = MixedEnvironmentAvoider(
+            # robot=robot,
+            # weight_max_norm=weight_max_norm,
+            # weight_factor=weight_factor,
+            # weight_power=weight_power,
+            # reference_update_before_modulation=True,
+            # delta_sampling=2 * np.pi / main_environment.n_samples * 10,
             robot=robot,
-            weight_max_norm=weight_max_norm,
-            weight_factor=weight_factor,
-            weight_power=weight_power,
-            reference_update_before_modulation=True,
-            delta_sampling=2 * np.pi / main_environment.n_samples * 10,
+            weight_max_norm=1e9,
+            weight_factor=3.0,
+            weight_power=1.0,
+            scaling_laserscan_weight=1.5,
+            delta_sampling=2 * math.pi / (main_environment.n_samples),
         )
 
         my_animator = MixedObstacleAnimator(
             it_max=it_max,
             dt_simulation=0.05,
         )
+
     my_animator.setup(
         robot=robot,
         initial_dynamics=initial_dynamics,
@@ -310,6 +390,7 @@ def animation_comparison(
         show_reference=True,
         show_reference_points=True,
         do_the_plotting=do_the_plotting,
+        convergence_distance=5e-1,
     )
 
     # self = my_animator
@@ -333,10 +414,8 @@ def animation_comparison(
         # plt.close("all")
         my_animator.run_without_plotting()
 
-    print(f"Convergence state of {mode_name}: {my_animator.convergence_state}")
-    print()
-
-    return my_animator.convergence_state
+    print(f"Convergence state of {mode_type}: {my_animator.convergence_state}")
+    return my_animator
 
 
 def main_comparison(
@@ -344,13 +423,19 @@ def main_comparison(
     n_repetitions=10,
 ):
     # Do a random seed
-    np.random.seed(2)
+    np.random.seed(10)
 
     dimension = 2
 
-    n_modes = 2
+    # n_modes = 2
+    n_modes = 3
 
-    convergence_states = np.zeros((n_modes, n_repetitions))
+    # convergence_states = np.zeros((n_modes, n_repetitions))
+    convergence_counter = np.zeros(n_modes)
+    computation_times = np.zeros((n_modes, 0))
+    distances = np.zeros((n_modes, 0))
+
+    animators = [None for _ in range(n_modes)]
 
     for ii in range(n_repetitions):
         # (
@@ -374,16 +459,9 @@ def main_comparison(
             obs_environment,
         ) = create_custom_environment()
 
-        # Obstacle Environment
-        # animation_comparison(
-        # robot=robot,
-        # initial_dynamics=initial_dynamics,
-        # obstacle_environment=obs_environment,
-        # do_the_plotting=do_the_plotting,
-        # )
-
         # Sample Environment
-        convergence_states[0, ii] = animation_comparison(
+        animators[0] = animation_comparison(
+            mode_type=AlgorithmType.SAMPLED,
             robot=robot,
             initial_dynamics=initial_dynamics,
             main_environment=main_environment,
@@ -391,7 +469,8 @@ def main_comparison(
         )
 
         # Mixed Environment
-        convergence_states[1, ii] = animation_comparison(
+        animators[1] = animation_comparison(
+            mode_type=AlgorithmType.MIXED,
             robot=robot,
             initial_dynamics=initial_dynamics,
             main_environment=main_environment,
@@ -399,8 +478,39 @@ def main_comparison(
             do_the_plotting=do_the_plotting,
         )
 
-    print(convergence_states)
-    return convergence_states
+        # # VFH Environment
+        animators[2] = animation_comparison(
+            mode_type=AlgorithmType.VFH,
+            robot=robot,
+            initial_dynamics=initial_dynamics,
+            main_environment=main_environment,
+            obstacle_environment=obs_environment,
+            do_the_plotting=do_the_plotting,
+        )
+
+        conv_states = [(ani.convergence_state > 0) for ani in animators]
+        convergence_counter = convergence_counter + conv_states
+
+        # breakpoint()
+        if sum(conv_states) == n_modes:
+            distances = np.append(
+                distances,
+                np.array([ani.get_total_distance() for ani in animators]).reshape(
+                    -1, 1
+                ),
+                axis=1,
+            )
+
+            computation_times = np.append(
+                computation_times,
+                np.array(
+                    [ani.get_mean_coputation_time_ms() for ani in animators]
+                ).reshape(-1, 1),
+                axis=1,
+            )
+
+    # print(convergence_states)
+    return convergence_counter, distances, computation_times
 
 
 def example_vectorfield(
@@ -451,10 +561,7 @@ def example_vectorfield(
 
     if save_figure:
         figure_name = "custom_environment_for_comparison_mixed"
-        plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
-
-    # if True:
-    # return
+        fig.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
 
     fig, ax = plt.subplots(1, 1, figsize=figisze)
 
@@ -483,7 +590,7 @@ def example_vectorfield(
 
     if save_figure:
         figure_name = "custom_environment_for_comparison_sampled"
-        plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
+        fig.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
 
 
 def example_integrations(
@@ -509,6 +616,29 @@ def example_integrations(
 
     initial_positions = np.linspace([-8, -8], [8, -8], n_trajectories).T
 
+    # Do the VFH
+    fig, ax = plt.subplots(1, 1, figsize=figisze)
+    vfh_avoider = VFH_Avoider(
+        robot=robot,
+        # use_matlab=True,
+        # matlab_engine=matlab_eng,
+    )
+    visualization_mixed_environment_with_multiple_integration(
+        dynamical_system=initial_dynamics,
+        start_positions=initial_positions,
+        sample_environment=main_environment,
+        robot=robot,
+        fast_avoider=vfh_avoider,
+        max_it=max_it,
+        ax=ax,
+        x_lim=x_lim,
+        y_lim=y_lim,
+    )
+
+    if save_figure:
+        figure_name = "custom_environment_integration_for_comparison_vfh"
+        fig.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
+
     fig, ax = plt.subplots(1, 1, figsize=figisze)
     mixed_avoider = MixedEnvironmentAvoider(
         robot=robot,
@@ -532,7 +662,7 @@ def example_integrations(
     )
 
     if save_figure:
-        figure_name = "custom_environment_integration_for_comparison_sampled"
+        figure_name = "custom_environment_integration_for_comparison_mixed"
         plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
 
     fig, ax = plt.subplots(1, 1, figsize=figisze)
@@ -557,46 +687,66 @@ def example_integrations(
     )
 
     if save_figure:
-        figure_name = "custom_environment_integration_for_comparison_mixed"
+        figure_name = "custom_environment_integration_for_comparison_sampled"
         plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
 
 
-def evaluation_convergence(convergence_states):
-    sum_states = np.sum(convergence_states > 0, axis=1)
-    n_runs = convergence_states.shape[1]
+def evaluation_convergence(conv_counter, total_distances, computational_times, n_runs):
+    # sum_states = np.sum(convergence_states > 0, axis=1)
+    # n_runs = convergence_state
 
-    print(f"Run Evaluation with {n_runs} iterations.")
-    print()
-    print(f"Convergence")
+    newline = " \\\\"
+    print(f"Restuls of run Evaluation with {n_runs} iterations.")
+    print("")
+    print(" & Sampled & Disparate & Baseline" + newline)
+
+    pp_conv = np.round(conv_counter / n_runs * 100, 1)
     print(
-        f"Sampled : {round(sum_states[0]/n_runs*100, 1)}% "
-        + f"| Mixed : {round(sum_states[1]/n_runs*100, 1)}%"
+        f"Convergence Ratio & "
+        + f" & ".join([f"{pp_conv[ii]}\\%" for ii in range(pp_conv.shape[0])])
+        + newline
     )
-    print()
 
-    ind_succ = np.logical_and(
-        convergence_states[0, :] > 0, convergence_states[1, :] > 0
+    dd_mean = np.round(np.mean(total_distances, axis=1), 1)
+    dd_std = np.round(np.std(total_distances, axis=1), 1)
+    print(
+        f"Distance [m] & "
+        + " & ".join(
+            [f"{dd_mean[ii]} \pm {dd_std[ii]}" for ii in range(dd_mean.shape[0])]
+        )
+        + newline
     )
-    mean_time = np.mean(convergence_states[:, ind_succ], axis=0)
 
-    print(f"Mean Time")
-    print(f"Sampled : {mean_time[0]} | Mixed : {mean_time[1]}")
-    print()
-    print()
+    ct_mean = np.round(np.mean(10 * computational_times, axis=1), 1)
+    ct_std = np.round(np.std(10 * computational_times, axis=1), 1)
+    print(
+        f"Computational Time [1e-4 s] & "
+        + " & ".join(
+            [f"{ct_mean[ii]} \pm {ct_std[ii]}" for ii in range(ct_mean.shape[0])]
+        )
+        + newline
+    )
+
+    # breakpoint()
 
 
 if (__name__) == "__main__":
-    # plt.close("all")
+    plt.close("all")
     plt.ion()
 
+    n_runs = 100
+    # n_runs = 5
+
     # convergence_states = main_comparison(do_the_plotting=True, n_repetitions=1)
-    # convergence_states = main_comparison(do_the_plotting=False, n_repetitions=1)
-    # convergence_states = main_comparison(do_the_plotting=False, n_repetitions=100)
-    # evaluation_convergence(convergence_states)
+    # c_count, dist, t_comp = main_comparison(do_the_plotting=False, n_repetitions=n_runs)
+    c_count, dist, t_comp = main_comparison(do_the_plotting=False, n_repetitions=n_runs)
+    evaluation_convergence(c_count, dist, t_comp, n_runs)
 
     # example_vectorfield(n_resolution=100, save_figure=True)
     # example_integrations(save_figure=False)
 
-    visualize_vectorfield_mixed()
+    # visualize_vectorfield_mixed()
+    # visualize_vectorfield_sampled()
 
+    print("")
     print("Done")

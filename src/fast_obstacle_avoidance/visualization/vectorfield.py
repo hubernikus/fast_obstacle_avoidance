@@ -63,6 +63,7 @@ def static_visualization_of_sample_avoidance(
     plot_quiver=False,
     plot_ref_vectorfield=False,
     ax_ref=None,
+    plot_velocities=False,
 ):
     """Visualization of sampled environment."""
     # circle =   # type(circle)=polygon
@@ -85,6 +86,22 @@ def static_visualization_of_sample_avoidance(
 
     if plot_initial_robot:
         robot.plot2D(ax=ax)
+
+        data_points = main_environment.get_surface_points(
+            center_position=robot.pose.position,
+        )
+
+        fast_avoider.update_laserscan(data_points, in_robot_frame=False)
+
+        # Store all
+        initial_velocity = dynamical_system.evaluate(robot.pose.position)
+        modulated_velocity = fast_avoider.avoid(initial_velocity)
+
+        arrow_scale = 0.5
+        arrow_width = 0.07
+        arrow_headwith = 0.4
+        margin_velocity_plot = 1e-3
+
         ax.plot(
             robot.pose.position[0],
             robot.pose.position[1],
@@ -92,6 +109,43 @@ def static_visualization_of_sample_avoidance(
             color="black",
             markersize=13,
             zorder=5,
+        )
+
+        if plot_velocities:
+            ax.arrow(
+                robot.pose.position[0],
+                robot.pose.position[1],
+                arrow_scale * initial_velocity[0],
+                arrow_scale * initial_velocity[1],
+                width=arrow_width,
+                head_width=arrow_headwith,
+                # color="g",
+                color="#008080",
+                label="Initial velocity",
+            )
+
+            ax.arrow(
+                robot.pose.position[0],
+                robot.pose.position[1],
+                arrow_scale * modulated_velocity[0],
+                arrow_scale * modulated_velocity[1],
+                width=arrow_width,
+                head_width=arrow_headwith,
+                # color="b",
+                # color='#213970',
+                color="#000080",
+                label="Modulated velocity",
+            )
+
+        ax.arrow(
+            robot.pose.position[0],
+            robot.pose.position[1],
+            fast_avoider.reference_direction[0],
+            fast_avoider.reference_direction[1],
+            color="#9b1503",
+            width=arrow_width,
+            head_width=arrow_headwith,
+            label="Reference [summed]",
         )
 
     if fast_avoider is None:

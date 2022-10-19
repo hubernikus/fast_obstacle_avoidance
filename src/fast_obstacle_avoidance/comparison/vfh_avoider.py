@@ -28,7 +28,7 @@ from fast_obstacle_avoidance.comparison.vfh_python.lib.path_planner import (
 from fast_obstacle_avoidance.comparison.m_controller_vfh import controllerVFH
 
 
-class VFH_Avoider_Matlab:
+class VFH_Avoider:
     def __init__(
         self,
         num_angular_sectors: int = 180,
