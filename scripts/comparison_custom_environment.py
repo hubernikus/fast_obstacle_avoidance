@@ -294,6 +294,7 @@ class AlgorithmType(Enum):
     MIXED = 1
     VFH = 2
     OBSTACLE = auto()
+    MODULATED = auto()
 
 
 def animation_comparison(
@@ -403,10 +404,6 @@ def animation_comparison(
     # self.initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)
     # self.modulated_velocity = self.avoider.avoid(self.initial_velocity)
 
-    # if True:
-    # breakpoint()
-    # return
-
     if do_the_plotting:
         my_animator.run(save_animation=False)
 
@@ -416,6 +413,19 @@ def animation_comparison(
 
     print(f"Convergence state of {mode_type}: {my_animator.convergence_state}")
     return my_animator
+
+
+class Datahandler:
+    def __init__(self, n_modes, n_runs):
+        self.n_runs = n_runs
+
+        # Create buckets
+        self.convergence_counter = np.zeros(n_modes)
+        self.computation_times = np.zeros((n_modes, 0))
+        self.distances = np.zeros((n_modes, 0))
+        self.velocities_mean = np.zeros((n_modes, 0))
+        self.velocities_deviation = np.zeros((n_modes, 0))
+        self.animator_names = [None for _ in range(n_modes)]
 
 
 def main_comparison(
@@ -431,9 +441,8 @@ def main_comparison(
     n_modes = 3
 
     # convergence_states = np.zeros((n_modes, n_repetitions))
-    convergence_counter = np.zeros(n_modes)
-    computation_times = np.zeros((n_modes, 0))
-    distances = np.zeros((n_modes, 0))
+
+    dh = Datahandler(n_modes=n_modes, n_runs=n_repetitions)
 
     animators = [None for _ in range(n_modes)]
 
@@ -458,9 +467,12 @@ def main_comparison(
             main_environment,
             obs_environment,
         ) = create_custom_environment()
+        #
 
         # Sample Environment
-        animators[0] = animation_comparison(
+        ii = 0
+        dh.animator_names[ii] = "Sampled"
+        animators[ii] = animation_comparison(
             mode_type=AlgorithmType.SAMPLED,
             robot=robot,
             initial_dynamics=initial_dynamics,
@@ -469,7 +481,9 @@ def main_comparison(
         )
 
         # Mixed Environment
-        animators[1] = animation_comparison(
+        ii += 1
+        dh.animator_names[ii] = "Disparate"
+        animators[ii] = animation_comparison(
             mode_type=AlgorithmType.MIXED,
             robot=robot,
             initial_dynamics=initial_dynamics,
@@ -479,7 +493,9 @@ def main_comparison(
         )
 
         # # VFH Environment
-        animators[2] = animation_comparison(
+        ii += 1
+        dh.animator_names[ii] = "VFH"
+        animators[ii] = animation_comparison(
             mode_type=AlgorithmType.VFH,
             robot=robot,
             initial_dynamics=initial_dynamics,
@@ -488,29 +504,33 @@ def main_comparison(
             do_the_plotting=do_the_plotting,
         )
 
+        # TODO: add additional velocities [Modulated / Baseline]
+
         conv_states = [(ani.convergence_state > 0) for ani in animators]
-        convergence_counter = convergence_counter + conv_states
+        dh.convergence_counter = dh.convergence_counter + conv_states
 
         # breakpoint()
         if sum(conv_states) == n_modes:
-            distances = np.append(
-                distances,
+            dh.distances = np.append(
+                dh.distances,
                 np.array([ani.get_total_distance() for ani in animators]).reshape(
                     -1, 1
                 ),
                 axis=1,
             )
 
-            computation_times = np.append(
-                computation_times,
+            dh.computation_times = np.append(
+                dh.computation_times,
                 np.array(
                     [ani.get_mean_coputation_time_ms() for ani in animators]
                 ).reshape(-1, 1),
                 axis=1,
             )
 
+        # TODO: add additional velocities []
+
     # print(convergence_states)
-    return convergence_counter, distances, computation_times
+    return dh
 
 
 def example_vectorfield(
@@ -691,24 +711,28 @@ def example_integrations(
         plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
 
 
-def evaluation_convergence(conv_counter, total_distances, computational_times, n_runs):
+def evaluation_convergence(dh: Datahandler):
     # sum_states = np.sum(convergence_states > 0, axis=1)
     # n_runs = convergence_state
 
     newline = " \\\\"
-    print(f"Restuls of run Evaluation with {n_runs} iterations.")
+    print(f"Restuls of run Evaluation with {dh.n_runs} iterations.")
     print("")
-    print(" & Sampled & Disparate & Baseline" + newline)
+    print(" & " + " & ".join(dh.animator_names) + newline)
 
-    pp_conv = np.round(conv_counter / n_runs * 100, 1)
+    if dh.n_runs:
+        pp_conv = np.round(dh.convergence_counter / n_runs * 100, 1)
+    else:
+        pp_conv = np.zeros_like(dh.convergence_counter)
+
     print(
         f"Convergence Ratio & "
         + f" & ".join([f"{pp_conv[ii]}\\%" for ii in range(pp_conv.shape[0])])
         + newline
     )
 
-    dd_mean = np.round(np.mean(total_distances, axis=1), 1)
-    dd_std = np.round(np.std(total_distances, axis=1), 1)
+    dd_mean = np.round(np.mean(dh.distances, axis=1), 2)
+    dd_std = np.round(np.std(dh.distances, axis=1), 2)
     print(
         f"Distance [m] & "
         + " & ".join(
@@ -717,10 +741,10 @@ def evaluation_convergence(conv_counter, total_distances, computational_times, n
         + newline
     )
 
-    ct_mean = np.round(np.mean(10 * computational_times, axis=1), 1)
-    ct_std = np.round(np.std(10 * computational_times, axis=1), 1)
+    ct_mean = np.round(np.mean(10 * dh.computation_times, axis=1), 1)
+    ct_std = np.round(np.std(10 * dh.computation_times, axis=1), 1)
     print(
-        f"Computational Time [1e-4 s] & "
+        f"Comp. Time [1e-4 s] & "
         + " & ".join(
             [f"{ct_mean[ii]} \pm {ct_std[ii]}" for ii in range(ct_mean.shape[0])]
         )
@@ -734,13 +758,13 @@ if (__name__) == "__main__":
     plt.close("all")
     plt.ion()
 
-    n_runs = 100
-    # n_runs = 5
+    # n_runs = 100
+    n_runs = 5
 
     # convergence_states = main_comparison(do_the_plotting=True, n_repetitions=1)
     # c_count, dist, t_comp = main_comparison(do_the_plotting=False, n_repetitions=n_runs)
-    c_count, dist, t_comp = main_comparison(do_the_plotting=False, n_repetitions=n_runs)
-    evaluation_convergence(c_count, dist, t_comp, n_runs)
+    # datahandler = main_comparison(do_the_plotting=False, n_repetitions=n_runs)
+    evaluation_convergence(datahandler)
 
     # example_vectorfield(n_resolution=100, save_figure=True)
     # example_integrations(save_figure=False)
