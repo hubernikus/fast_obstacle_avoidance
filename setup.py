@@ -13,6 +13,7 @@ setup(
     description="Fast Obstacle Avoidance",
     license="TODO",
     # package_dir={"": "src"},
+    # package_dir={""},
     tests_require=["pytest"],
     # entry_points={
     # 'console_scripts': ['simulation_loader = pybullet_ros2.simulation_loader:main',

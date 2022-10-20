@@ -16,14 +16,13 @@ from numpy import linalg as LA
 from fast_obstacle_avoidance.obstacle_avoider.lidar_avoider import SampledAvoider
 
 
-# from ._base import SingleModulationAvoider
-from fast_obstacle_avoidance.comparison.vfh_python.lib.robot import Robot as VFH_Robot
-from fast_obstacle_avoidance.comparison.vfh_python.lib.polar_histogram import (
-    PolarHistogram,
-)
-from fast_obstacle_avoidance.comparison.vfh_python.lib.path_planner import (
-    PathPlanner as VFH_Planner,
-)
+# from fast_obstacle_avoidance.comparison.vfh_python.lib.robot import Robot as VFH_Robot
+# from fast_obstacle_avoidance.comparison.vfh_python.lib.polar_histogram import (
+#     PolarHistogram,
+# )
+# from fast_obstacle_avoidance.comparison.vfh_python.lib.path_planner import (
+#     PathPlanner as VFH_Planner,
+# )
 
 from fast_obstacle_avoidance.comparison.m_controller_vfh import controllerVFH
 
