@@ -21,18 +21,21 @@ from vartools.states import ObjectPose
 from vartools.dynamical_systems import LinearSystem
 
 # from dynamic_obstacle_avoidance.obstacles import Ellipse, Cuboid
-from dynamic_obstacle_avoidance.obstacles.ellipse_xd import EllipseWithAxes
-from dynamic_obstacle_avoidance.obstacles.cuboid_xd import CuboidXd
+from dynamic_obstacle_avoidance.obstacles.ellipse_xd import EllipseWithAxes as Ellipse
+from dynamic_obstacle_avoidance.obstacles.cuboid_xd import CuboidXd as Cuboid
 
 from dynamic_obstacle_avoidance.obstacles import CircularObstacle
 
 # from dynamic_obstacle_avoidance.containers import SphereContainer
 from dynamic_obstacle_avoidance.containers import ObstacleContainer
+
+# from dynamic_obstacle_avoidance.avoidance import ModulationAvoider
 from fast_obstacle_avoidance.sampling_container import ShapelySamplingContainer
 
 from fast_obstacle_avoidance.obstacle_avoider import SampledAvoider
 from fast_obstacle_avoidance.obstacle_avoider import FastObstacleAvoider
 from fast_obstacle_avoidance.obstacle_avoider import MixedEnvironmentAvoider
+from fast_obstacle_avoidance.obstacle_avoider import ModulationAvoider
 
 from fast_obstacle_avoidance.control_robot import QoloRobot
 
@@ -54,6 +57,14 @@ from fast_obstacle_avoidance.visualization import (
 from fast_obstacle_avoidance.comparison.vfh_avoider import VFH_Avoider
 
 
+class AlgorithmType(Enum):
+    SAMPLED = 0
+    MIXED = 1
+    VFH = 2
+    OBSTACLE = auto()
+    MODULATED = auto()
+
+
 def get_random_position_orientation_and_axes(x_lim, y_lim, axes_range):
     dimension = 2
 
@@ -61,11 +72,12 @@ def get_random_position_orientation_and_axes(x_lim, y_lim, axes_range):
     position[0] = position[0] * (x_lim[1] - x_lim[0]) + x_lim[0]
     position[1] = position[1] * (y_lim[1] - y_lim[0]) + y_lim[0]
 
-    orientation_deg = np.random.rand(1) * 360
+    # orientation_deg = np.random.rand(1) * 360
+    orientation = np.random.rand(1)[0] * math.pi
 
     axes_length = np.random.rand(2) * (axes_range[1] - axes_range[0]) + axes_range[0]
 
-    return position, orientation_deg, axes_length
+    return position, orientation, axes_length
 
 
 def get_random_position(x_lim, y_lim=None):
@@ -83,13 +95,14 @@ def get_random_position(x_lim, y_lim=None):
 
 def visualize_vectorfield_mixed():
     """Visualize vectorfield of mixed environment."""
-    np.random.seed(2)
 
+    np.random.seed(2)
     (
         robot,
         initial_dynamics,
         main_environment,
         obs_environment,
+        _,
     ) = create_custom_environment()
 
     # robot.pose.position = np.array([-3, 0.3])
@@ -141,6 +154,7 @@ def visualize_vectorfield_sampled():
         initial_dynamics,
         main_environment,
         obs_environment,
+        _,
     ) = create_custom_environment()
 
     # robot.pose.position = np.array([-3, 0.3])
@@ -182,7 +196,65 @@ def visualize_vectorfield_sampled():
     )
 
 
-def create_custom_environment(control_radius=0.5):
+def visualize_vectorfield_full():
+    """Visualize vectorfield of mixed environment."""
+    np.random.seed(2)
+
+    (
+        robot,
+        initial_dynamics,
+        main_environment,
+        partial_environment,
+        full_environment,
+    ) = create_custom_environment()
+
+    # robot.pose.position = np.array([-3, 0.3])
+    robot.pose.position = np.array([5, -5.5])
+
+    # A random gamma-check
+    gammas = np.zeros(2)
+    for ii, obs in enumerate(robot.obstacle_environment):
+        gammas[ii] = obs.get_gamma(robot.pose.position, in_global_frame=True)
+    # breakpoint()
+
+    x_lim = [-11.0, 11.0]
+    y_lim = [-11.0, 11.0]
+
+    fig, ax = plt.subplots(1, 1, figsize=(9, 8))
+    fast_avoider = FastObstacleAvoider(
+        obstacle_environment=full_environment,
+        robot=robot,
+        weight_max_norm=1e5,
+        weight_factor=5,
+        weight_power=2.5,
+        # scaling_laserscan_weight=0.1,
+    )
+
+    fast_avoider = ModulationAvoider()
+
+    breakpoint()
+
+    static_visualization_of_sample_avoidance(
+        robot=robot,
+        n_resolution=20,
+        dynamical_system=initial_dynamics,
+        fast_avoider=fast_avoider,
+        plot_initial_robot=True,
+        plot_velocities=True,
+        # plot_norm_dirs=True,
+        main_environment=main_environment,
+        # show_ticks=False,
+        show_ticks=True,
+        x_lim=x_lim,
+        y_lim=y_lim,
+        ax=ax,
+        plot_quiver=True,
+    )
+
+
+def create_custom_environment(
+    control_radius=0.5,
+):
     dimension = 2
 
     x_lim = [-11.0, 11.0]
@@ -217,37 +289,47 @@ def create_custom_environment(control_radius=0.5):
 
     main_environment = ShapelySamplingContainer(n_samples=50)
     obs_environment = ObstacleContainer()
+    full_environment = ObstacleContainer()
 
     # Boundary cuboid [could be a door]
+    full_environment.append(
+        Cuboid(
+            center_position=np.array([0, 0]),
+            axes_length=np.array([19, 19]),
+            margin_absolut=robot.control_radius,
+            is_boundary=True,
+        )
+    )
     main_environment.create_cuboid(
         position=np.array([0, 0]), axes_length=np.array([19, 19]), is_boundary=True
     )
+    # main_environment.create_cuboid(full_environment.append[-1])
 
-    # Edge obstacle
-
+    # Edge obstacle #1
     width_edge = 8.0
     edge_shape = np.array([width_edge + 0.2, 2.5])
     center_x = 10 - width_edge / 2.0
 
     obs_environment.append(
-        CuboidXd(
+        Cuboid(
             center_position=np.array([center_x, -3]),
             axes_length=edge_shape,
             margin_absolut=robot.control_radius,
             is_boundary=False,
         )
     )
-
     obs_environment[-1].set_reference_point(
         np.array([9.55, -3]),
         in_obstacle_frame=False,
     )
 
+    # Copy the elements
+    full_environment.append(obs_environment[-1])
     main_environment.create_cuboid(obstacle=obs_environment[-1])
 
-    # Edge obstacle
+    # Edge obstacle #2
     obs_environment.append(
-        CuboidXd(
+        Cuboid(
             center_position=np.array([(-1) * center_x, 3]),
             axes_length=edge_shape,
             margin_absolut=robot.control_radius,
@@ -260,41 +342,57 @@ def create_custom_environment(control_radius=0.5):
         in_obstacle_frame=False,
     )
 
+    # Copy the elements
+    full_environment.append(obs_environment[-1])
     main_environment.create_cuboid(obstacle=obs_environment[-1])
 
-    # 2x Random ellipses
+    # 2x Random ellipses [# 1]
     axes_min = 1.5
     axes_max = 4.0
 
-    position, orientation_deg, axes_length = get_random_position_orientation_and_axes(
+    position, orientation, axes_length = get_random_position_orientation_and_axes(
         x_lim=[-10, 0], y_lim=[-7.5, 2.5], axes_range=[axes_min, axes_max]
     )
+
+    full_environment.append(
+        Ellipse(
+            center_position=position,
+            orientation=orientation,
+            axes_length=axes_length,
+        )
+    )
     main_environment.create_ellipse(
-        position=position,
-        orientation_in_degree=orientation_deg,
-        axes_length=axes_length,
+        obstacle=full_environment[-1]
+        # position=position,
+        # orientation=orientation,
+        # axes_length=axes_length,
     )
 
+    # 2x Random ellipses [# 1]
     position, orientation_deg, axes_length = get_random_position_orientation_and_axes(
         x_lim=[0, 10], y_lim=[-2.5, 7.5], axes_range=[axes_min, axes_max]
     )
+
+    full_environment.append(
+        Ellipse(
+            center_position=position,
+            orientation=orientation,
+            # orientation_in_degree=orientation_deg,
+            axes_length=axes_length,
+        )
+    )
+
     main_environment.create_ellipse(
-        position=position,
-        orientation_in_degree=orientation_deg,
-        axes_length=axes_length,
+        obstacle=full_environment[-1]
+        # position=position,
+        # orientation=orientation,
+        # orientation_in_degree=orientation_deg,
+        # axes_length=axes_length,
     )
 
     robot.obstacle_environment = obs_environment
 
-    return robot, initial_dynamics, main_environment, obs_environment
-
-
-class AlgorithmType(Enum):
-    SAMPLED = 0
-    MIXED = 1
-    VFH = 2
-    OBSTACLE = auto()
-    MODULATED = auto()
+    return robot, initial_dynamics, main_environment, obs_environment, full_environment
 
 
 def animation_comparison(
@@ -466,6 +564,7 @@ def main_comparison(
             initial_dynamics,
             main_environment,
             obs_environment,
+            _,
         ) = create_custom_environment()
         #
 
@@ -549,6 +648,7 @@ def example_vectorfield(
         initial_dynamics,
         main_environment,
         obs_environment,
+        _,
     ) = create_custom_environment()
 
     # Plot the vectorfield around the robot
@@ -632,6 +732,7 @@ def example_integrations(
         initial_dynamics,
         main_environment,
         obs_environment,
+        _,
     ) = create_custom_environment()
 
     initial_positions = np.linspace([-8, -8], [8, -8], n_trajectories).T
@@ -763,14 +864,16 @@ if (__name__) == "__main__":
 
     # convergence_states = main_comparison(do_the_plotting=True, n_repetitions=1)
     # c_count, dist, t_comp = main_comparison(do_the_plotting=False, n_repetitions=n_runs)
+
     # datahandler = main_comparison(do_the_plotting=False, n_repetitions=n_runs)
-    evaluation_convergence(datahandler)
+    # evaluation_convergence(datahandler)
 
     # example_vectorfield(n_resolution=100, save_figure=True)
     # example_integrations(save_figure=False)
 
     # visualize_vectorfield_mixed()
     # visualize_vectorfield_sampled()
+    visualize_vectorfield_full()
 
     print("")
     print("Done")

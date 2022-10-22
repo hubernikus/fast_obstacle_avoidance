@@ -9,6 +9,9 @@ from .lidar_avoider import SampledAvoider, FastLidarAvoider
 from .sampled_cluster_avoider import SampledClusterAvoider
 from .mixed_avoider import MixedEnvironmentAvoider
 
+from .modulation_avoider import ModulationAvoider
+
+
 __all__ = [
     "SingleModulationAvoider",
     "FastObstacleAvoider",
@@ -16,4 +19,5 @@ __all__ = [
     "FastLidarAvoider",
     "MixedEnvironmentAvoider",
     "SampledClusterAvoider",
+    "ModulationAvoider",
 ]

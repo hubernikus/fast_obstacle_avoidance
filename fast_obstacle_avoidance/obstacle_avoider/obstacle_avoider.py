@@ -48,6 +48,11 @@ class FastObstacleAvoider(SingleModulationAvoider):
         # Simulation paramteres
         self.consider_relative_velocity = consider_relative_velocity
 
+    def update_laserscan(self, *args, **kwargs):
+        warnings.warn(
+            "No action taken on update, we're waiting for the analytic description."
+        )
+
     @property
     def dimension(self):
         return self.obstacle_environment.dimension

@@ -3,10 +3,12 @@
 # Created: 2021-12-14
 # Email: lukas.huber@epfl.ch
 
+from abc import ABC, abstractmethod
+
+import math
+
 import numpy as np
 from numpy import linalg as LA
-
-from abc import ABC, abstractmethod
 
 import shapely
 
@@ -88,6 +90,7 @@ class SampledEllipse(SampledObstacle):
         position=None,
         axes_length=None,
         orientation_in_degree=0,
+        orientation=None,
         obstacle=None,
         **kwargs,
     ):
@@ -104,7 +107,11 @@ class SampledEllipse(SampledObstacle):
         ellipse = shapely.affinity.scale(
             ellipse, axes_length[0] * 0.5, axes_length[1] * 0.5
         )
+        if orientation is not None:
+            orientation_in_degree = orientation * 180 / math.pi
+
         ellipse = shapely.affinity.rotate(ellipse, orientation_in_degree)
+
         return cls(geometry=ellipse, **kwargs)
 
 
@@ -115,6 +122,7 @@ class SampledCuboid(SampledObstacle):
         position=None,
         axes_length=None,
         orientation_in_degree=0,
+        orientation=None,
         obstacle=None,
         **kwargs,
     ):
@@ -134,6 +142,10 @@ class SampledCuboid(SampledObstacle):
             position[0] + semiaxes[0],
             position[1] + semiaxes[1],
         )
+
+        if orientation is not None:
+            orientation_in_degree = orientation * 180 / math.pi
+
         cuboid = shapely.affinity.rotate(cuboid, orientation_in_degree)
         return cls(geometry=cuboid, **kwargs)
 
