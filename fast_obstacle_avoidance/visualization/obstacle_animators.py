@@ -416,7 +416,6 @@ class FastObstacleAnimator(BaseFastAnimator):
         self.ax.clear()
 
         # self.ax.plot(data_points[0, :], data_points[1, :], "o", color="k")
-
         self.ax.plot(
             self.robot.pose.position[0], self.robot.pose.position[1], "o", color="b"
         )

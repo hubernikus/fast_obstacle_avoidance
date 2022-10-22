@@ -17,11 +17,18 @@ from numpy import linalg as LA
 
 
 class StretchingMatrixFunctor(ABC):
-    def __init__(self, free_tail_flow=True, power_weights=0.2):
+    """
+    Attributes
+    ----------
+    free_tail_flow (bool): Indicates if the modulation is active, when pointing away from the surface
+    power_weights (float):
+    """
+
+    def __init__(self, free_tail_flow: bool = True, power_weights: float = 0.2) -> None:
         self.free_tail_flow = free_tail_flow
         self.power_weights = power_weights
 
-    def get_weight_vel(self, reference_dir, velocity):
+    def get_weight_vel(self, reference_dir: np.ndarray, velocity: np.ndarray) -> float:
         """Returns velocity weight weight(<reference_dir, velocity>) [-1, 1] -> [0, 1]"""
         if not LA.norm(reference_dir) or not LA.norm(velocity):
             return 0

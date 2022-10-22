@@ -49,7 +49,7 @@ from fast_obstacle_avoidance.visualization.integration_plot import (
 
 from fast_obstacle_avoidance.visualization import (
     static_visualization_of_sample_avoidance_mixed,
-    static_visualization_of_sample_avoidance,
+    # static_visualization_of_sample_avoidance,
     # static_visualization_of_sample_avoidance_obstacle,
 )
 
@@ -225,30 +225,31 @@ def visualize_vectorfield_full():
         obstacle_environment=full_environment,
         robot=robot,
         weight_max_norm=1e5,
-        weight_factor=5,
-        weight_power=2.5,
+        weight_factor=2,
+        weight_power=2.0,
         # scaling_laserscan_weight=0.1,
     )
 
-    fast_avoider = ModulationAvoider()
+    # fast_avoider = ModulationAvoider(obstacle_environment=full_environment, robot=robot)
+    # breakpoint()
 
-    breakpoint()
-
-    static_visualization_of_sample_avoidance(
+    static_visualization_of_sample_avoidance_mixed(
+        # static_visualization_of_sample_avoidance_obstacle(
         robot=robot,
+        fast_avoider=fast_avoider,
+        # main_environment=full_environment,
         n_resolution=20,
         dynamical_system=initial_dynamics,
-        fast_avoider=fast_avoider,
         plot_initial_robot=True,
-        plot_velocities=True,
+        # plot_velocities=True,
         # plot_norm_dirs=True,
-        main_environment=main_environment,
+        sample_environment=None,
         # show_ticks=False,
         show_ticks=True,
         x_lim=x_lim,
         y_lim=y_lim,
         ax=ax,
-        plot_quiver=True,
+        do_quiver=True,
     )
 
 
@@ -359,6 +360,7 @@ def create_custom_environment(
             center_position=position,
             orientation=orientation,
             axes_length=axes_length,
+            margin_absolut=robot.control_radius,
         )
     )
     main_environment.create_ellipse(
@@ -379,6 +381,7 @@ def create_custom_environment(
             orientation=orientation,
             # orientation_in_degree=orientation_deg,
             axes_length=axes_length,
+            margin_absolut=robot.control_radius,
         )
     )
 
@@ -389,6 +392,9 @@ def create_custom_environment(
         # orientation_in_degree=orientation_deg,
         # axes_length=axes_length,
     )
+
+    for obs in full_environment:
+        obs.tail_effect = False
 
     robot.obstacle_environment = obs_environment
 
@@ -401,6 +407,7 @@ def animation_comparison(
     mode_type: AlgorithmType,
     main_environment=None,
     obstacle_environment=None,
+    full_environment=None,
     do_the_plotting=True,
     it_max=500,
 ):
@@ -432,8 +439,6 @@ def animation_comparison(
             dt_simulation=0.05,
         )
     elif mode_type == AlgorithmType.OBSTACLE:
-        # mode_name = "obstacle"
-
         fast_avoider = FastObstacleAvoider(
             robot=robot,
             obstacle_environment=robot.obstacle_environment,
@@ -478,6 +483,29 @@ def animation_comparison(
             dt_simulation=0.05,
         )
 
+    elif mode_type == AlgorithmType.OBSTACLE:
+        fast_avoider = FastObstacleAvoider(
+            robot=robot, obstacle_environment=full_environment
+        )
+
+        my_animator = MixedObstacleAnimator(
+            it_max=it_max,
+            dt_simulation=0.05,
+        )
+
+    elif mode_type == AlgorithmType.MODULATED:
+        fast_avoider = ModulationAvoider(
+            robot=robot, obstacle_environment=full_environment
+        )
+
+        my_animator = MixedObstacleAnimator(
+            it_max=it_max,
+            dt_simulation=0.05,
+        )
+
+    else:
+        raise NotImplementedError()
+
     my_animator.setup(
         robot=robot,
         initial_dynamics=initial_dynamics,
@@ -502,6 +530,7 @@ def animation_comparison(
     # self.initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)
     # self.modulated_velocity = self.avoider.avoid(self.initial_velocity)
 
+    print(f"Doing {mode_type}: {my_animator.convergence_state}")
     if do_the_plotting:
         my_animator.run(save_animation=False)
 
@@ -536,7 +565,8 @@ def main_comparison(
     dimension = 2
 
     # n_modes = 2
-    n_modes = 3
+    # n_modes = 3
+    n_modes = 5
 
     # convergence_states = np.zeros((n_modes, n_repetitions))
 
@@ -581,7 +611,7 @@ def main_comparison(
 
         # Mixed Environment
         ii += 1
-        dh.animator_names[ii] = "Disparate"
+        dh.animator_names[ii] = "Partial"
         animators[ii] = animation_comparison(
             mode_type=AlgorithmType.MIXED,
             robot=robot,
@@ -600,6 +630,31 @@ def main_comparison(
             initial_dynamics=initial_dynamics,
             main_environment=main_environment,
             obstacle_environment=obs_environment,
+            do_the_plotting=do_the_plotting,
+        )
+
+        # VFH Environment
+        ii += 1
+        dh.animator_names[ii] = "Full"
+        animators[ii] = animation_comparison(
+            mode_type=AlgorithmType.OBSTACLE,
+            robot=robot,
+            initial_dynamics=initial_dynamics,
+            main_environment=main_environment,
+            obstacle_environment=obs_environment,
+            full_environment=full_environment,
+            do_the_plotting=do_the_plotting,
+        )
+
+        ii += 1
+        dh.animator_names[ii] = "Modulated"
+        animators[ii] = animation_comparison(
+            mode_type=AlgorithmType.MODULATED,
+            robot=robot,
+            initial_dynamics=initial_dynamics,
+            main_environment=main_environment,
+            obstacle_environment=obs_environment,
+            full_environment=full_environment,
             do_the_plotting=do_the_plotting,
         )
 
@@ -683,35 +738,6 @@ def example_vectorfield(
         figure_name = "custom_environment_for_comparison_mixed"
         fig.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
 
-    fig, ax = plt.subplots(1, 1, figsize=figisze)
-
-    sampled_avoider = SampledAvoider(
-        robot=robot,
-        weight_max_norm=1e9,
-        weight_power=1.0,
-        weight_factor=2 * np.pi / main_environment.n_samples * 10,
-    )
-
-    static_visualization_of_sample_avoidance(
-        robot=robot,
-        n_resolution=n_resolution,
-        dynamical_system=initial_dynamics,
-        fast_avoider=sampled_avoider,
-        plot_initial_robot=False,
-        main_environment=main_environment,
-        show_ticks=False,
-        # show_ticks=True,
-        # do_quiver=False,
-        # do_quiver=True,
-        x_lim=x_lim,
-        y_lim=y_lim,
-        ax=ax,
-    )
-
-    if save_figure:
-        figure_name = "custom_environment_for_comparison_sampled"
-        fig.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
-
 
 def example_integrations(
     save_figure=False,
@@ -732,10 +758,55 @@ def example_integrations(
         initial_dynamics,
         main_environment,
         obs_environment,
-        _,
+        full_environment,
     ) = create_custom_environment()
 
     initial_positions = np.linspace([-8, -8], [8, -8], n_trajectories).T
+
+    # Full Obstacle
+    sampled_avoider = FastObstacleAvoider(
+        robot=robot, obstacle_environment=full_environment
+    )
+    fig, ax = plt.subplots(1, 1, figsize=figisze)
+    visualization_mixed_environment_with_multiple_integration(
+        dynamical_system=initial_dynamics,
+        start_positions=initial_positions,
+        sample_environment=main_environment,
+        robot=robot,
+        fast_avoider=sampled_avoider,
+        max_it=max_it,
+        ax=ax,
+        x_lim=x_lim,
+        y_lim=y_lim,
+    )
+
+    if save_figure:
+        figure_name = "custom_environment_integration_for_comparison_full"
+        plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
+
+    # if True:
+    # return
+
+    # Modulation
+    sampled_avoider = ModulationAvoider(
+        robot=robot, obstacle_environment=full_environment
+    )
+    fig, ax = plt.subplots(1, 1, figsize=figisze)
+    visualization_mixed_environment_with_multiple_integration(
+        dynamical_system=initial_dynamics,
+        start_positions=initial_positions,
+        sample_environment=main_environment,
+        robot=robot,
+        fast_avoider=sampled_avoider,
+        max_it=max_it,
+        ax=ax,
+        x_lim=x_lim,
+        y_lim=y_lim,
+    )
+
+    if save_figure:
+        figure_name = "custom_environment_integration_for_comparison_modulated"
+        plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
 
     # Do the VFH
     fig, ax = plt.subplots(1, 1, figsize=figisze)
@@ -760,6 +831,7 @@ def example_integrations(
         figure_name = "custom_environment_integration_for_comparison_vfh"
         fig.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
 
+    # Mixed Environment
     fig, ax = plt.subplots(1, 1, figsize=figisze)
     mixed_avoider = MixedEnvironmentAvoider(
         robot=robot,
@@ -786,15 +858,14 @@ def example_integrations(
         figure_name = "custom_environment_integration_for_comparison_mixed"
         plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
 
-    fig, ax = plt.subplots(1, 1, figsize=figisze)
-
+    # Sampled avoidance
     sampled_avoider = SampledAvoider(
         robot=robot,
         weight_max_norm=1e9,
         weight_power=1.0,
         weight_factor=2 * np.pi / (main_environment.n_samples),
     )
-
+    fig, ax = plt.subplots(1, 1, figsize=figisze)
     visualization_mixed_environment_with_multiple_integration(
         dynamical_system=initial_dynamics,
         start_positions=initial_positions,
@@ -863,17 +934,17 @@ if (__name__) == "__main__":
     n_runs = 5
 
     # convergence_states = main_comparison(do_the_plotting=True, n_repetitions=1)
-    # c_count, dist, t_comp = main_comparison(do_the_plotting=False, n_repetitions=n_runs)
+    c_count, dist, t_comp = main_comparison(do_the_plotting=False, n_repetitions=n_runs)
 
     # datahandler = main_comparison(do_the_plotting=False, n_repetitions=n_runs)
     # evaluation_convergence(datahandler)
 
     # example_vectorfield(n_resolution=100, save_figure=True)
-    # example_integrations(save_figure=False)
+    # example_integrations(save_figure=True)
 
     # visualize_vectorfield_mixed()
     # visualize_vectorfield_sampled()
-    visualize_vectorfield_full()
+    # visualize_vectorfield_full()
 
     print("")
     print("Done")

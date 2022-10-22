@@ -135,6 +135,11 @@ class FastObstacleAvoider(SingleModulationAvoider):
                 position, in_global_frame=True
             )
 
+            if obs.is_boundary:
+                # Invert boundary-directions, as 'flowing' away from boundary is in the other direction
+                ref_dirs[:, it] = (-1) * ref_dirs[:, it]
+                norm_dirs[:, it] = (-1) * norm_dirs[:, it]
+
             gammas[it] = obs.get_gamma(position, in_global_frame=True)
 
         weights = self.get_weights_from_gamma(
