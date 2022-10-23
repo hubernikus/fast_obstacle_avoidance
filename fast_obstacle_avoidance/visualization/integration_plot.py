@@ -135,6 +135,7 @@ def visualization_mixed_environment_with_multiple_integration(
 
             mod_velocity_norm = LA.norm(velocities_mod[-1][:, ii])
             if mod_velocity_norm < convergence_vel:
+                breakpoint()
                 print(f"Local minima at it={ii}")
                 break
 

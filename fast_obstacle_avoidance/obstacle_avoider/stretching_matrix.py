@@ -106,6 +106,7 @@ class StretchingMatrixFunctor(ABC):
             (lambda_ref, lambda_tang * np.ones(reference_direction.shape[0] - 1))
         )
 
+        # breakpoint()
         return np.diag(stretching_vector)
 
     @abstractmethod

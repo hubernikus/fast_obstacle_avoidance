@@ -104,7 +104,6 @@ class SingleModulationAvoider(ABC):
             )
 
         ref_norm = LA.norm(self.reference_direction)
-        # breakpoint()
         if not ref_norm:
             # Not modulated when far away from everywhere / in between two obstacles
             return initial_velocity
@@ -130,7 +129,6 @@ class SingleModulationAvoider(ABC):
         modulated_velocity = inv_decomposition @ initial_velocity
         modulated_velocity = stretching_matrix @ modulated_velocity
         modulated_velocity = decomposition_matrix @ modulated_velocity
-        # breakpoint()
 
         # TODO: limit velocity with respect to maximum velocity
         if self.relative_velocity is not None:
@@ -148,7 +146,7 @@ class SingleModulationAvoider(ABC):
                 if mod_norm > 1e-1:
                     # Speed up simulation
                     modulated_velocity = modulated_velocity / mod_norm * init_norm
-
+        # breakpoint()
         return modulated_velocity
 
     def reduce_wake_effect(self, weights, initial_velocity, directions):

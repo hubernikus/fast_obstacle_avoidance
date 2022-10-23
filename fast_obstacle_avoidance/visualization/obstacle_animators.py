@@ -40,7 +40,7 @@ class BaseFastAnimator(Animator):
             self.update_step(self.ii)
 
             if self.has_converged(self.ii):
-                # print(f"Convergence status {self.convergence_state}")
+                print(f"Convergence status {self.convergence_state}")
                 break
 
     def setup(
@@ -266,8 +266,47 @@ class BaseFastAnimator(Animator):
             axis=0,
         )
 
-    def get_mean_coputation_time_ms(self):
-        return np.mean(self.computation_times[: self.ii]) * 1000
+    def get_mean_computation_time(self):
+        return np.mean(self.computation_times[: self.ii])
+
+    def get_mean_velocity(self):
+        return np.mean(
+            LA.norm(
+                self.velocities_mod[:, : self.ii],
+                axis=0,
+            )
+        )
+
+    def get_velocity_deviation(self):
+        if self.ii == 0:
+            raise NotImplementedError()
+            # return np.zeros(self.dimension)
+
+        return (
+            np.mean(
+                LA.norm(
+                    self.velocities_mod[:, 1 : self.ii]
+                    - self.velocities_mod[:, : self.ii - 1],
+                    axis=0,
+                ),
+            )
+        ) / self.dt_simulation
+
+    @property
+    def initial_velocity(self):
+        return self.velocities_init[:, self.ii]
+
+    @initial_velocity.setter
+    def initial_velocity(self, value):
+        self.velocities_init[:, self.ii] = value
+
+    @property
+    def modulated_velocity(self):
+        return self.velocities_mod[:, self.ii]
+
+    @modulated_velocity.setter
+    def modulated_velocity(self, value):
+        self.velocities_mod[:, self.ii] = value
 
 
 class LaserscanAnimator(BaseFastAnimator):
@@ -291,6 +330,7 @@ class LaserscanAnimator(BaseFastAnimator):
         # Store all
         self.initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)
         self.modulated_velocity = self.avoider.avoid(self.initial_velocity)
+
         end = timer()
 
         self.computation_times[ii] = end - start
@@ -308,7 +348,6 @@ class LaserscanAnimator(BaseFastAnimator):
             self.positions[:, ii] + self.modulated_velocity * self.dt_simulation
         )
         self.robot.pose.position = self.positions[:, ii + 1]
-
         # print(f"Time elpsed: {round(1000*(end - start), 2)} ms")
 
         if self.do_the_plotting:
@@ -392,7 +431,11 @@ class FastObstacleAnimator(BaseFastAnimator):
 
         # Store all
         self.initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)
+
+        start = timer()
         self.modulated_velocity = self.avoider.avoid(self.initial_velocity)
+        end = timer()
+        self.computation_times[ii] = end - start
 
         # if LA.norm(self.modulated_velocity) > self.velocity_normalization_margin:
         # Speed up simulation
@@ -539,13 +582,15 @@ class MixedObstacleAnimator(BaseFastAnimator):
         for obs in self.robot.obstacle_environment:
             obs.do_velocity_step(delta_time=self.dt_simulation)
 
-        data_points = self.environment.get_surface_points(
-            center_position=self.robot.pose.position,
-            null_direction=self.velocity_command,
-        )
+        if self.environment is not None:
+            data_points = self.environment.get_surface_points(
+                center_position=self.robot.pose.position,
+                null_direction=self.velocity_command,
+            )
+        else:
+            data_points = None
 
         self.positions[:, ii] = self.robot.pose.position
-
         self.initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)
 
         start = timer()
@@ -577,22 +622,26 @@ class MixedObstacleAnimator(BaseFastAnimator):
         # Restart plotting
         self.ax.clear()
 
-        data_points = self.avoider.lidar_avoider.datapoints
-        self.ax.plot(data_points[0, :], data_points[1, :], "o", color="k")
+        if hasattr(self.avoider, "lidar_avoider.datapoint"):
+            data_points = self.avoider.lidar_avoider.datapoints
+            self.ax.plot(data_points[0, :], data_points[1, :], "o", color="k")
 
         self.ax.plot(
             self.robot.pose.position[0], self.robot.pose.position[1], "o", color="b"
         )
 
         # visualize_obstacles(self.environment, ax=self.ax)
-        visualize_obstacles(self.environment, ax=self.ax)
-        plot_obstacles(
-            obstacle_container=self.robot.obstacle_environment,
-            ax=self.ax,
-            x_lim=self.x_lim,
-            y_lim=self.y_lim,
-            draw_reference=self.show_reference_points,
-        )
+        if self.environment is not None:
+            visualize_obstacles(self.environment, ax=self.ax)
+
+        if hasattr(self.robot, "obstacle_environment"):
+            plot_obstacles(
+                obstacle_container=self.robot.obstacle_environment,
+                ax=self.ax,
+                x_lim=self.x_lim,
+                y_lim=self.y_lim,
+                draw_reference=self.show_reference_points,
+            )
 
         self.ax.plot(self.positions[0, :ii], self.positions[1, :ii], "--", color="b")
 
@@ -637,27 +686,29 @@ class MixedObstacleAnimator(BaseFastAnimator):
                 label="Reference [summed]",
             )
 
-            self.ax.arrow(
-                self.robot.pose.position[0],
-                self.robot.pose.position[1],
-                self.avoider.obstacle_avoider.reference_direction[0],
-                self.avoider.obstacle_avoider.reference_direction[1],
-                color="#CD7F32",
-                width=arrow_width,
-                head_width=arrow_headwith,
-                label="Reference [obstacle]",
-            )
+            if hasattr(self.avoider, "obstacle_avoider"):
+                self.ax.arrow(
+                    self.robot.pose.position[0],
+                    self.robot.pose.position[1],
+                    self.avoider.obstacle_avoider.reference_direction[0],
+                    self.avoider.obstacle_avoider.reference_direction[1],
+                    color="#CD7F32",
+                    width=arrow_width,
+                    head_width=arrow_headwith,
+                    label="Reference [obstacle]",
+                )
 
-            self.ax.arrow(
-                self.robot.pose.position[0],
-                self.robot.pose.position[1],
-                self.avoider.lidar_avoider.reference_direction[0],
-                self.avoider.lidar_avoider.reference_direction[1],
-                color="#3d3635",
-                width=arrow_width,
-                head_width=arrow_headwith,
-                label="Reference [sampled]",
-            )
+            if hasattr(self.avoider, "lidar_avoider"):
+                self.ax.arrow(
+                    self.robot.pose.position[0],
+                    self.robot.pose.position[1],
+                    self.avoider.lidar_avoider.reference_direction[0],
+                    self.avoider.lidar_avoider.reference_direction[1],
+                    color="#3d3635",
+                    width=arrow_width,
+                    head_width=arrow_headwith,
+                    label="Reference [sampled]",
+                )
             drawn_arrow = True
 
         if self.show_velocity:

@@ -198,7 +198,8 @@ def visualize_vectorfield_sampled():
 
 def visualize_vectorfield_full():
     """Visualize vectorfield of mixed environment."""
-    np.random.seed(2)
+    np.random.seed(12)
+    # np.random.seed(2)
 
     (
         robot,
@@ -208,14 +209,12 @@ def visualize_vectorfield_full():
         full_environment,
     ) = create_custom_environment()
 
-    # robot.pose.position = np.array([-3, 0.3])
-    robot.pose.position = np.array([5, -5.5])
+    # full_environment = partial_environment
 
-    # A random gamma-check
-    gammas = np.zeros(2)
-    for ii, obs in enumerate(robot.obstacle_environment):
-        gammas[ii] = obs.get_gamma(robot.pose.position, in_global_frame=True)
-    # breakpoint()
+    # robot.pose.position = np.array([-3, 0.3])
+    # robot.pose.position = np.array([5, -5.5])
+    robot.pose.position = np.array([-2.83302145, 6.11596968])
+    robot.obstacle_environment = full_environment
 
     x_lim = [-11.0, 11.0]
     y_lim = [-11.0, 11.0]
@@ -230,7 +229,7 @@ def visualize_vectorfield_full():
         # scaling_laserscan_weight=0.1,
     )
 
-    # fast_avoider = ModulationAvoider(obstacle_environment=full_environment, robot=robot)
+    fast_avoider = ModulationAvoider(obstacle_environment=full_environment, robot=robot)
     # breakpoint()
 
     static_visualization_of_sample_avoidance_mixed(
@@ -262,7 +261,7 @@ def create_custom_environment(
     y_lim = [-11.0, 11.0]
 
     # User defined values
-    x_lim_pos = [-9, 9]
+    x_lim_pos = [-8.0, 8.0]
     y_start = -8.5
     y_attractor = 8.0
 
@@ -438,21 +437,6 @@ def animation_comparison(
             it_max=it_max,
             dt_simulation=0.05,
         )
-    elif mode_type == AlgorithmType.OBSTACLE:
-        fast_avoider = FastObstacleAvoider(
-            robot=robot,
-            obstacle_environment=robot.obstacle_environment,
-            # weight_max_norm=weight_max_norm,
-            # weight_factor=weight_factor,
-            # weight_power=weight_power,
-            reference_update_before_modulation=True,
-            evaluate_velocity_weight=True,
-        )
-
-        my_animator = FastObstacleAnimator(
-            it_max=it_max,
-            dt_simulation=0.05,
-        )
 
     elif mode_type == AlgorithmType.VFH:
         fast_avoider = VFH_Avoider(robot=robot)
@@ -485,18 +469,25 @@ def animation_comparison(
 
     elif mode_type == AlgorithmType.OBSTACLE:
         fast_avoider = FastObstacleAvoider(
-            robot=robot, obstacle_environment=full_environment
+            robot=robot,
+            obstacle_environment=full_environment,
+            reference_update_before_modulation=True,
+            evaluate_velocity_weight=True,
         )
 
+        # print("Don thaaaaaaaT!(!)")
         my_animator = MixedObstacleAnimator(
             it_max=it_max,
             dt_simulation=0.05,
         )
 
     elif mode_type == AlgorithmType.MODULATED:
+
         fast_avoider = ModulationAvoider(
-            robot=robot, obstacle_environment=full_environment
+            robot=robot,
+            obstacle_environment=full_environment,
         )
+        main_environment = None
 
         my_animator = MixedObstacleAnimator(
             it_max=it_max,
@@ -504,6 +495,7 @@ def animation_comparison(
         )
 
     else:
+        breakpoint()
         raise NotImplementedError()
 
     my_animator.setup(
@@ -530,6 +522,7 @@ def animation_comparison(
     # self.initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)
     # self.modulated_velocity = self.avoider.avoid(self.initial_velocity)
 
+    print("")
     print(f"Doing {mode_type}: {my_animator.convergence_state}")
     if do_the_plotting:
         my_animator.run(save_animation=False)
@@ -560,106 +553,55 @@ def main_comparison(
     n_repetitions=10,
 ):
     # Do a random seed
-    np.random.seed(10)
+    np.random.seed(12)
 
     dimension = 2
+    evaluation_dict = {
+        "Raw": AlgorithmType.SAMPLED,
+        "VFH": AlgorithmType.VFH,
+        "Partial": AlgorithmType.MIXED,
+        "Full": AlgorithmType.OBSTACLE,
+        "Modulated": AlgorithmType.MODULATED,
+    }
 
-    # n_modes = 2
-    # n_modes = 3
-    n_modes = 5
-
-    # convergence_states = np.zeros((n_modes, n_repetitions))
-
+    n_modes = len(evaluation_dict)
     dh = Datahandler(n_modes=n_modes, n_runs=n_repetitions)
+    dh.animator_names = evaluation_dict.keys()
 
     animators = [None for _ in range(n_modes)]
-
     for ii in range(n_repetitions):
-        # (
-        # robot,
-        # initial_dynamics,
-        # main_environment,
-        # obs_environment,
-        # ) = create_new_environment()
-
-        # (
-        # robot,
-        # initial_dynamics,
-        # main_environment,
-        # obs_environment,
-        # ) = create_fourobstacle_environment()
-
         (
             robot,
             initial_dynamics,
             main_environment,
             obs_environment,
-            _,
+            full_environment,
         ) = create_custom_environment()
-        #
 
-        # Sample Environment
-        ii = 0
-        dh.animator_names[ii] = "Sampled"
-        animators[ii] = animation_comparison(
-            mode_type=AlgorithmType.SAMPLED,
-            robot=robot,
-            initial_dynamics=initial_dynamics,
-            main_environment=main_environment,
-            do_the_plotting=do_the_plotting,
-        )
+        # breakpoint()
 
-        # Mixed Environment
-        ii += 1
-        dh.animator_names[ii] = "Partial"
-        animators[ii] = animation_comparison(
-            mode_type=AlgorithmType.MIXED,
-            robot=robot,
-            initial_dynamics=initial_dynamics,
-            main_environment=main_environment,
-            obstacle_environment=obs_environment,
-            do_the_plotting=do_the_plotting,
-        )
+        for it_name, eval_type in enumerate(evaluation_dict.values()):
 
-        # # VFH Environment
-        ii += 1
-        dh.animator_names[ii] = "VFH"
-        animators[ii] = animation_comparison(
-            mode_type=AlgorithmType.VFH,
-            robot=robot,
-            initial_dynamics=initial_dynamics,
-            main_environment=main_environment,
-            obstacle_environment=obs_environment,
-            do_the_plotting=do_the_plotting,
-        )
+            if (
+                eval_type == AlgorithmType.MODULATED
+                or eval_type == AlgorithmType.OBSTACLE
+            ):
+                tmp_robot = copy.deepcopy(robot)
+                tmp_robot.obstacle_environment = full_environment
+            else:
+                tmp_robot = robot
 
-        # VFH Environment
-        ii += 1
-        dh.animator_names[ii] = "Full"
-        animators[ii] = animation_comparison(
-            mode_type=AlgorithmType.OBSTACLE,
-            robot=robot,
-            initial_dynamics=initial_dynamics,
-            main_environment=main_environment,
-            obstacle_environment=obs_environment,
-            full_environment=full_environment,
-            do_the_plotting=do_the_plotting,
-        )
-
-        ii += 1
-        dh.animator_names[ii] = "Modulated"
-        animators[ii] = animation_comparison(
-            mode_type=AlgorithmType.MODULATED,
-            robot=robot,
-            initial_dynamics=initial_dynamics,
-            main_environment=main_environment,
-            obstacle_environment=obs_environment,
-            full_environment=full_environment,
-            do_the_plotting=do_the_plotting,
-        )
+            animators[it_name] = animation_comparison(
+                mode_type=eval_type,
+                robot=tmp_robot,
+                initial_dynamics=initial_dynamics,
+                main_environment=main_environment,
+                obstacle_environment=obs_environment,
+                full_environment=full_environment,
+                do_the_plotting=do_the_plotting,
+            )
 
         # TODO: add additional velocities [Modulated / Baseline]
-
         conv_states = [(ani.convergence_state > 0) for ani in animators]
         dh.convergence_counter = dh.convergence_counter + conv_states
 
@@ -676,8 +618,22 @@ def main_comparison(
             dh.computation_times = np.append(
                 dh.computation_times,
                 np.array(
-                    [ani.get_mean_coputation_time_ms() for ani in animators]
+                    [ani.get_mean_computation_time() for ani in animators]
                 ).reshape(-1, 1),
+                axis=1,
+            )
+
+            dh.velocities_mean = np.append(
+                dh.velocities_mean,
+                np.array([ani.get_mean_velocity() for ani in animators]).reshape(-1, 1),
+                axis=1,
+            )
+
+            dh.velocities_deviation = np.append(
+                dh.velocities_deviation,
+                np.array([ani.get_velocity_deviation() for ani in animators]).reshape(
+                    -1, 1
+                ),
                 axis=1,
             )
 
@@ -748,7 +704,7 @@ def example_integrations(
     dt=0.1,
     # figisze=(9.0, 8),
 ):
-    np.random.seed(4)
+    np.random.seed(1)
 
     x_lim = [-11, 11]
     y_lim = [-11, 11]
@@ -762,6 +718,27 @@ def example_integrations(
     ) = create_custom_environment()
 
     initial_positions = np.linspace([-8, -8], [8, -8], n_trajectories).T
+
+    # Modulation
+    sampled_avoider = ModulationAvoider(
+        robot=robot, obstacle_environment=full_environment
+    )
+    fig, ax = plt.subplots(1, 1, figsize=figisze)
+    visualization_mixed_environment_with_multiple_integration(
+        dynamical_system=initial_dynamics,
+        start_positions=initial_positions,
+        sample_environment=main_environment,
+        robot=robot,
+        fast_avoider=sampled_avoider,
+        max_it=max_it,
+        ax=ax,
+        x_lim=x_lim,
+        y_lim=y_lim,
+    )
+
+    if save_figure:
+        figure_name = "custom_environment_integration_for_comparison_modulated"
+        plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
 
     # Full Obstacle
     sampled_avoider = FastObstacleAvoider(
@@ -786,27 +763,6 @@ def example_integrations(
 
     # if True:
     # return
-
-    # Modulation
-    sampled_avoider = ModulationAvoider(
-        robot=robot, obstacle_environment=full_environment
-    )
-    fig, ax = plt.subplots(1, 1, figsize=figisze)
-    visualization_mixed_environment_with_multiple_integration(
-        dynamical_system=initial_dynamics,
-        start_positions=initial_positions,
-        sample_environment=main_environment,
-        robot=robot,
-        fast_avoider=sampled_avoider,
-        max_it=max_it,
-        ax=ax,
-        x_lim=x_lim,
-        y_lim=y_lim,
-    )
-
-    if save_figure:
-        figure_name = "custom_environment_integration_for_comparison_modulated"
-        plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
 
     # Do the VFH
     fig, ax = plt.subplots(1, 1, figsize=figisze)
@@ -883,7 +839,7 @@ def example_integrations(
         plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
 
 
-def evaluation_convergence(dh: Datahandler):
+def evaulate_handler_to_table(dh: Datahandler):
     # sum_states = np.sum(convergence_states > 0, axis=1)
     # n_runs = convergence_state
 
@@ -893,58 +849,93 @@ def evaluation_convergence(dh: Datahandler):
     print(" & " + " & ".join(dh.animator_names) + newline)
 
     if dh.n_runs:
-        pp_conv = np.round(dh.convergence_counter / n_runs * 100, 1)
+        pp_conv = np.round(dh.convergence_counter / n_runs * 100)
     else:
         pp_conv = np.zeros_like(dh.convergence_counter)
 
     print(
-        f"Convergence Ratio & "
-        + f" & ".join([f"{pp_conv[ii]}\\%" for ii in range(pp_conv.shape[0])])
+        f"$R$ & "
+        + f" & ".join([f"{round(pp_conv[ii])}\\%" for ii in range(pp_conv.shape[0])])
         + newline
     )
 
-    dd_mean = np.round(np.mean(dh.distances, axis=1), 2)
-    dd_std = np.round(np.std(dh.distances, axis=1), 2)
+    ct_factor = 1e3
+    ct_mean = np.round(np.mean(ct_factor * dh.computation_times, axis=1), 1)
+    ct_std = np.round(np.std(ct_factor * dh.computation_times, axis=1), 1)
     print(
-        f"Distance [m] & "
+        f"$T$ & "
         + " & ".join(
-            [f"{dd_mean[ii]} \pm {dd_std[ii]}" for ii in range(dd_mean.shape[0])]
+            [f"{ct_mean[ii]} $\pm$ {ct_std[ii]}" for ii in range(ct_mean.shape[0])]
+        )
+        + newline
+        + " \hline \hline"
+    )
+
+    dd_mean = np.round(np.mean(dh.distances, axis=1), 1)
+    dd_std = np.round(np.std(dh.distances, axis=1), 1)
+    print(
+        f"$D$& "
+        + " & ".join(
+            [f"{dd_mean[ii]} $\pm$ {dd_std[ii]}" for ii in range(dd_mean.shape[0])]
         )
         + newline
     )
 
-    ct_mean = np.round(np.mean(10 * dh.computation_times, axis=1), 1)
-    ct_std = np.round(np.std(10 * dh.computation_times, axis=1), 1)
+    vt_mean = np.round(np.mean(10 * dh.velocities_mean, axis=1), 1)
+    vt_std = np.round(np.std(10 * dh.velocities_mean, axis=1), 1)
     print(
-        f"Comp. Time [1e-4 s] & "
+        f"$ \\bar {{\\vect v}} $ & "
         + " & ".join(
-            [f"{ct_mean[ii]} \pm {ct_std[ii]}" for ii in range(ct_mean.shape[0])]
+            [f"{vt_mean[ii]} $\pm$ {vt_std[ii]}" for ii in range(vt_mean.shape[0])]
         )
         + newline
     )
 
-    # breakpoint()
+    vd_mean = np.round(np.mean(10 * dh.velocities_deviation, axis=1), 1)
+    vd_std = np.round(np.std(10 * dh.velocities_deviation, axis=1), 1)
+    print(
+        f"$\Delta \\vect v$& "
+        + " & ".join(
+            [f"{vd_mean[ii]} $\pm$ {vd_std[ii]}" for ii in range(vd_mean.shape[0])]
+        )
+        + newline
+    )
+
+    breakpoint()
+
+
+def tmp_excahnge_script(dh: Datahandler):
+    keys = [
+        "convergence_counter",
+        "computation_times",
+        "distances",
+        "velocities_mean",
+        "velocities_deviation",
+        "animator_names",
+    ]
+    for kk in keys:
+        dh.__dict__[kk][1], dh.__dict__[kk][2] = dh.__dict__[kk][2], dh.__dict__[kk][1]
 
 
 if (__name__) == "__main__":
     plt.close("all")
     plt.ion()
 
-    # n_runs = 100
-    n_runs = 5
+    n_runs = 100
+    # n_runs = 20
 
-    # convergence_states = main_comparison(do_the_plotting=True, n_repetitions=1)
-    c_count, dist, t_comp = main_comparison(do_the_plotting=False, n_repetitions=n_runs)
+    # main_comparison(do_the_plotting=True, n_repetitions=1)
+    datahandler = main_comparison(do_the_plotting=False, n_repetitions=n_runs)
 
     # datahandler = main_comparison(do_the_plotting=False, n_repetitions=n_runs)
-    # evaluation_convergence(datahandler)
+    evaulate_handler_to_table(datahandler)
 
     # example_vectorfield(n_resolution=100, save_figure=True)
     # example_integrations(save_figure=True)
 
     # visualize_vectorfield_mixed()
     # visualize_vectorfield_sampled()
-    # visualize_vectorfield_full()
+    visualize_vectorfield_full()
 
     print("")
     print("Done")
