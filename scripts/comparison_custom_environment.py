@@ -229,7 +229,7 @@ def visualize_vectorfield_full():
         # scaling_laserscan_weight=0.1,
     )
 
-    fast_avoider = ModulationAvoider(obstacle_environment=full_environment, robot=robot)
+    # fast_avoider = ModulationAvoider(obstacle_environment=full_environment, robot=robot)
     # breakpoint()
 
     static_visualization_of_sample_avoidance_mixed(
@@ -310,7 +310,7 @@ def create_custom_environment(
     edge_shape = np.array([width_edge + 0.2, 2.5])
     center_x = 10 - width_edge / 2.0
 
-    obs_environment.append(
+    full_environment.append(
         Cuboid(
             center_position=np.array([center_x, -3]),
             axes_length=edge_shape,
@@ -318,17 +318,20 @@ def create_custom_environment(
             is_boundary=False,
         )
     )
-    obs_environment[-1].set_reference_point(
+
+    # Copy before assigning reference
+    obs_environment.append(copy.deepcopy(full_environment[-1]))
+
+    full_environment[-1].set_reference_point(
         np.array([9.55, -3]),
         in_obstacle_frame=False,
     )
 
     # Copy the elements
-    full_environment.append(obs_environment[-1])
-    main_environment.create_cuboid(obstacle=obs_environment[-1])
+    main_environment.create_cuboid(obstacle=full_environment[-1])
 
     # Edge obstacle #2
-    obs_environment.append(
+    full_environment.append(
         Cuboid(
             center_position=np.array([(-1) * center_x, 3]),
             axes_length=edge_shape,
@@ -337,14 +340,15 @@ def create_custom_environment(
         )
     )
 
-    obs_environment[-1].set_reference_point(
+    obs_environment.append(copy.deepcopy(full_environment[-1]))
+
+    full_environment[-1].set_reference_point(
         np.array([-9.55, 3]),
         in_obstacle_frame=False,
     )
 
     # Copy the elements
-    full_environment.append(obs_environment[-1])
-    main_environment.create_cuboid(obstacle=obs_environment[-1])
+    main_environment.create_cuboid(obstacle=full_environment[-1])
 
     # 2x Random ellipses [# 1]
     axes_min = 1.5
@@ -925,9 +929,9 @@ if (__name__) == "__main__":
     # n_runs = 20
 
     # main_comparison(do_the_plotting=True, n_repetitions=1)
-    datahandler = main_comparison(do_the_plotting=False, n_repetitions=n_runs)
-
     # datahandler = main_comparison(do_the_plotting=False, n_repetitions=n_runs)
+
+    datahandler = main_comparison(do_the_plotting=False, n_repetitions=n_runs)
     evaulate_handler_to_table(datahandler)
 
     # example_vectorfield(n_resolution=100, save_figure=True)
@@ -935,7 +939,7 @@ if (__name__) == "__main__":
 
     # visualize_vectorfield_mixed()
     # visualize_vectorfield_sampled()
-    visualize_vectorfield_full()
+    # visualize_vectorfield_full()
 
     print("")
     print("Done")

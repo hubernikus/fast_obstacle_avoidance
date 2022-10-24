@@ -262,8 +262,10 @@ class BaseFastAnimator(Animator):
 
     def get_total_distance(self):
         return np.sum(
-            LA.norm(self.positions[:, 1 : self.ii + 1] - self.positions[:, : self.ii]),
-            axis=0,
+            LA.norm(
+                self.positions[:, 1 : self.ii + 1] - self.positions[:, : self.ii],
+                axis=0,
+            ),
         )
 
     def get_mean_computation_time(self):
