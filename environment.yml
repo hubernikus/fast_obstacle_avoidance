@@ -1,0 +1,5 @@
+name: fast_obstacle_avoidance
+channels:
+  - defaults
+dependencies:
+  - python=3.9
