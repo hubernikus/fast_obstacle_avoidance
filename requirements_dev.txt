@@ -1,6 +1,9 @@
 # Install the basic requirements
 # .requirements.txt
 
+# For pretty plotting
+seaborn
+
 # Plus the additional libraries
 ipython
 

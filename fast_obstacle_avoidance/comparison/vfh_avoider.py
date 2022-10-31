@@ -28,6 +28,8 @@ from fast_obstacle_avoidance.comparison.m_controller_vfh import controllerVFH
 
 
 class VFH_Avoider:
+    """Matlab inspired VFH-avoider."""
+
     def __init__(
         self,
         num_angular_sectors: int = 180,
@@ -61,7 +63,7 @@ class VFH_Avoider:
 
         # VFH properties
         self.histogram_thresholds = None
-        self.num_angular_sectors = None
+        self.num_angular_sectors = num_angular_sectors
 
         self.vfh_functor = None
         self.vfh_options = None
@@ -69,20 +71,24 @@ class VFH_Avoider:
     def update_reference_direction(self, *args, **kwargs):
         warnings.warn("Not performing anything.")
 
-    def compute_histogram_props(self, angles) -> None:
-        n_angles = angles.shape[0]
-        d_angles = angles[1:] - angles[:-1]
-        ind_negative = d_angles < 0
-        d_angles[ind_negative] = 2 * math.pi - d_angles[ind_negative]
+    def compute_histogram_props(
+        self, angles: float = None, n_max_sections: int = None
+    ) -> None:
+        if n_max_sections is None:
+            n_angles = angles.shape[0]
+            d_angles = angles[1:] - angles[:-1]
+            ind_negative = d_angles < 0
+            d_angles[ind_negative] = 2 * math.pi - d_angles[ind_negative]
 
-        d_angles = np.sort(d_angles)[: int(n_angles / 3.0)]
-        n_max_sections = 2 * math.pi / np.mean(d_angles)
+            d_angles = np.sort(d_angles)[: int(n_angles / 3.0)]
+            n_max_sections = 2 * math.pi / np.mean(d_angles)
 
         # If very few sections ->
         if n_max_sections < 20:
             self.histogram_thresholds = [1, 1]
-            self.num_angular_sectors = n_max_sections / 2
-            return
+            self.num_angular_sectors = int(n_max_sections / 2)
+            # breakpoint()
+            # return
 
         elif n_max_sections < 360:
             self.histogram_thresholds = [1, 2]
@@ -97,10 +103,14 @@ class VFH_Avoider:
             self.histogram_thresholds[0] = int(max(self.histogram_thresholds[0], 1))
             self.histogram_thresholds[1] = round(self.histogram_thresholds[1])
 
+        self.num_angular_sectors = max(self.num_angular_sectors, 8)
+
         print(
             f"Threshold: {self.histogram_thresholds} \n"  #
             + f"Sectors: {self.num_angular_sectors}."
         )
+
+        # breakpoint()
 
     def avoid(self, initial_velocity, in_global_frame=True):
         if not LA.norm(initial_velocity):
