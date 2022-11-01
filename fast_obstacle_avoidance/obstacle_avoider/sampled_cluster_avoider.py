@@ -23,8 +23,9 @@ from dynamic_obstacle_avoidance.rotational.vector_rotation import VectorRotation
 
 from fast_obstacle_avoidance.control_robot import BaseRobot
 
-from ._base import SingleModulationAvoider
 from .stretching_matrix import StretchingMatrixTrigonometric
+from ._base import SingleModulationAvoider
+from .lidar_avoider import SampledAvoider
 
 
 class SampledClusterAvoider:

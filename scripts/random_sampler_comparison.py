@@ -79,7 +79,7 @@ def single_sample_run(
     return t_stop - t_start
 
 
-def comparison_dimensions_sampler(num_runs=100, n_repeat=40):
+def comparison_dimensions_sampler(num_runs=100, n_repeat=30):
     dh = DataHandler(n_repeat=n_repeat)
     dh.dimensions = np.array([2, 3, 6, 7, 10, 16, 32]).astype(int)
 
@@ -151,9 +151,9 @@ def comparison_baseline(dh, dim=2):
 
 def plot_sampled_comparison(dh, save_figure=False):
     # Transform to [ms]
-    dh.experiment_duration_grid = dh.experiment_duration_grid * 1000
-    dh.experiment_duration_baseline = dh.experiment_duration_baseline * 1000
-    dh.samples_number = dh.samples_number / 1000
+    experiment_duration_grid = dh.experiment_duration_grid * 1000
+    experiment_duration_baseline = dh.experiment_duration_baseline * 1000
+    samples_number = dh.samples_number / 1000
 
     # Setup
     sns.set_style("darkgrid")
@@ -180,26 +180,26 @@ def plot_sampled_comparison(dh, save_figure=False):
 
     for ii, dim in enumerate(dh.dimensions):
         ax.plot(
-            dh.samples_number,
-            dh.experiment_duration_grid[ii, :],
+            samples_number,
+            experiment_duration_grid[ii, :],
             label=f"d={dim}",
             color=colors[ii],
         )
 
-    ax.set_xlabel("Number of datapoints [1000]")
+    ax.set_xlabel("Number of datapoints in 1000")
     ax.set_ylabel("Time [ms]")
 
-    ax.set_xlim([dh.samples_number[0], dh.samples_number[-1]])
+    ax.set_xlim([samples_number[0], samples_number[-1]])
     # ax.set_ylim([0, 7.2])
     ax.set_ylim([0, 10])
 
     # ax.set_xscale("log")
     # ax.set_yscale("log")
 
-    if dh.experiment_duration_baseline is not None:
+    if experiment_duration_baseline is not None:
         ax.plot(
-            dh.samples_number,
-            dh.experiment_duration_baseline,
+            samples_number,
+            experiment_duration_baseline,
             "--",
             label=f"VFH",
             color=colors[0],
@@ -211,19 +211,24 @@ def plot_sampled_comparison(dh, save_figure=False):
     if save_figure:
         figure_name = "comparison_sampling_dimensions_nolog"
         plt.savefig(
-            "figures/" + figure_name + figureformat, bbox_inches="tight", dpi=1200
+            "figures/" + figure_name + figureformat, bbox_inches="tight", dpi=300
         )
 
     return fig, ax
 
 
+def quick_fix(dh):
+    dh.experiment_duration_grid = dh.experiment_duration_grid / 1000
+    dh.experiment_duration_baseline = dh.experiment_duration_baseline / 1000
+    dh.samples_number = dh.samples_number * 1000
+
+
 if (__name__) == "__main__":
     plt.ion()
     # data = comparison_dimensions_sampler(save_figure=True)
-    dh = comparison_dimensions_sampler(num_runs=3, n_repeat=10)
+    # dh = comparison_dimensions_sampler(num_runs=3, n_repeat=10)
 
     # TODO - rerun when nothing is going on...
     # dh = comparison_dimensions_sampler()
-    dh = comparison_baseline(dh)
-
+    # dh = comparison_baseline(dh)
     plot_sampled_comparison(dh, save_figure=True)

@@ -4,6 +4,7 @@
 # Email: lukas.huber@epfl.ch
 
 import copy
+from enum import Enum, auto
 
 from timeit import default_timer as timer
 
@@ -19,7 +20,7 @@ from vartools.dynamical_systems import ConstantValue, LinearSystem
 from vartools.dynamical_systems import plot_dynamical_system_streamplot
 from vartools.dynamical_systems import plot_dynamical_system_quiver
 
-from fast_obstacle_avoidance.obstacle_avoider import SampledAvoider
+
 from fast_obstacle_avoidance.obstacle_avoider import SampledClusterAvoider
 from fast_obstacle_avoidance.control_robot import QoloRobot
 
@@ -34,6 +35,15 @@ from fast_obstacle_avoidance.visualization import (
 
 # Comparison algorithm inspired on matlab
 from fast_obstacle_avoidance.comparison.vfh_avoider import VFH_Avoider
+
+
+class AlgorithmType(Enum):
+    SAMPLED = 0
+    MIXED = 1
+    VFH = 2
+    OBSTACLE = auto()
+    MODULATED = auto()
+    CLUSTERSAMPLED = auto()
 
 
 def explore_specific_point(
@@ -210,7 +220,11 @@ def explore_specific_point(
     return ax
 
 
-def execute_avoidance_with_two_obstacles(save_figure=False, create_animation=False):
+def execute_avoidance_with_two_obstacles(
+    save_figure=False,
+    create_animation=False,
+    algorithmtype: AlgorithmType = AlgorithmType.SAMPLED,
+):
     """Visualizes
     (1) the repulsion from a specific point
     (2) the resulting vector-field."""
@@ -251,20 +265,35 @@ def execute_avoidance_with_two_obstacles(save_figure=False, create_animation=Fal
     robot.control_point = [0, 0]
     robot.control_radius = 0.4
 
-    fast_avoider = SampledAvoider(
-        robot=robot,
-        weight_max_norm=1e8,
-        weight_factor=2 * np.pi / main_environment.n_samples * 1000,
-        weight_power=4.0,
-    )
+    if algorithmtype == AlgorithmType.SAMPLED:
+        fast_avoider = SampledAvoider(
+            robot=robot,
+            weight_max_norm=1e6,
+            weight_factor=2 * np.pi / main_environment.n_samples * 10,
+            weight_power=2.0,
+        )
+        fast_avoider.weight_factor = 2 * np.pi / main_environment.n_samples * 10
+        fast_avoider.weight_power = 2.0
+        algoname = "sampled"
 
-    # fast_avoider = VFH_Avoider(
-    #     robot=robot,
-    #     # use_matlab=True,
-    #     # matlab_engine=matlab_eng,
-    # )
+    elif algorithmtype == AlgorithmType.CLUSTERSAMPLED:
+        fast_avoider = SampledClusterAvoider(robot=robot)
+        fast_avoider.weight_factor = 2 * np.pi / main_environment.n_samples * 1
+        fast_avoider.weight_power = 0.5
 
-    fast_avoider = SampledClusterAvoider(robot=robot)
+        fast_avoider.weight_max_norm = 1e7
+        algoname = "clustersampled"
+
+    elif algorithmtype == AlgorithmType.VFH:
+        fast_avoider = VFH_Avoider(
+            robot=robot,
+            # use_matlab=True,
+            # matlab_engine=matlab_eng,
+        )
+        algoname = "vfh"
+    else:
+        warnings.warn(f"No matching algorithm found of type {algorithmtype}")
+        return
 
     # Do the animation, only:
     if create_animation:
@@ -278,13 +307,10 @@ def execute_avoidance_with_two_obstacles(save_figure=False, create_animation=Fal
             it_max=400,
             dt_simulation=0.05,
             # dt_pause=0.1,
-            animation_name="single_obstacle_avoidance_sampled",
+            animation_name="two_obstacle_avoidance" + "_" + algoname,
         )
 
         fast_avoider.robot = simu_bot
-        fast_avoider.weight_factor = 2 * np.pi / main_environment.n_samples * 1
-        fast_avoider.weight_power = 0.5
-        fast_avoider.weight_max_norm = 1e7
 
         my_animator.setup(
             robot=simu_bot,
@@ -349,6 +375,12 @@ if (__name__) == "__main__":
         matlab_eng.addpath("src/fast_obstacle_avoidance/comparison/matlab")
         # str(Path("src") / "fast_obstacle_avoidance" / "comparison" / "matlab")
 
-    execute_avoidance_with_two_obstacles(save_figure=False, create_animation=True)
+    execute_avoidance_with_two_obstacles(
+        save_figure=True,
+        create_animation=True,
+        algorithmtype=AlgorithmType.SAMPLED,
+        # algorithmtype=AlgorithmType.CLUSTERSAMPLED,
+        # algorithmtype=AlgorithmType.VFH,
+    )
 
     print("Done all.")
