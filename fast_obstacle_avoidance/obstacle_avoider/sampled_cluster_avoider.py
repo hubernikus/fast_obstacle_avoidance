@@ -351,7 +351,7 @@ class SampledClusterAvoider:
         )
 
     def limit_reference_from_offset(self, normal_direction, reference_direction):
-        """Get reference room."""
+        """The offset of the reference direction is limited to ensure convergence."""
         # reference_direction = position - self._cluster_centers[:, ii]
 
         if not (ref_norm := LA.norm(reference_direction)):
@@ -366,9 +366,11 @@ class SampledClusterAvoider:
             normal_direction, reference_direction
         )
 
-        max_ang = 0.45 * np.pi
-        if vector_rot.rotation_angle > max_ang:
-            vector_rot.rotation_angle = np.pi - vector_rot.rotation_angle
+        max_angle = 0.45 * np.pi
+        if vector_rot.rotation_angle > max_angle:
+            vector_rot.rotation_angle = (
+                (np.pi - vector_rot.rotation_angle) / (math.pi - max_angle) * max_angle
+            )
 
         # vector_rot.rotation_angle = vector_rot.rotation_angle * weight
         return vector_rot.rotate(normal_direction, weight)
