@@ -2,6 +2,7 @@
 Various Robot models
 """
 import os
+import math
 
 from dataclasses import dataclass, field
 
@@ -119,7 +120,13 @@ class BaseRobot:
 
         return rel_pos, rel_dir, rel_dist
 
-    def plot2D(self, ax, num_points: int = 30) -> None:
+    def plot2D(
+        self,
+        ax,
+        num_points: int = 30,
+        show_heading: bool = False,
+        in_relative_frame: bool = False,
+    ) -> None:
         if self.robot_image is not None:
             raise NotImplementedError("Nothing is being done so far with robot images.")
 
@@ -127,9 +134,12 @@ class BaseRobot:
         unit_circle = np.vstack((np.cos(angles), np.sin(angles)))
 
         for ii in range(self.control_radiuses.shape[0]):
-            ctrl_point = self.pose.transform_position_from_relative(
-                self.control_points[:, ii]
-            )
+            if in_relative_frame:
+                ctrl_point = self.control_points[:, ii]
+            else:
+                ctrl_point = self.pose.transform_position_from_relative(
+                    self.control_points[:, ii]
+                )
 
             temp_cicle = (
                 unit_circle * self.control_radiuses[ii]
@@ -138,7 +148,10 @@ class BaseRobot:
 
             ax.plot(ctrl_point[0], ctrl_point[1], ".", color="k")
 
-            ax.plot(self.pose.position[0], self.pose.position[1], "H", color="k")
+            if in_relative_frame:
+                ax.plot(0, 0, "H", color="k")
+            else:
+                ax.plot(self.pose.position[0], self.pose.position[1], "H", color="k")
 
             circle = plt.Circle(
                 # self.pose.position,
@@ -151,6 +164,32 @@ class BaseRobot:
             ax.add_patch(circle)
 
             ax.plot(temp_cicle[0, :], temp_cicle[1, :], "--", color="k", zorder=-1)
+
+        if show_heading:
+            # Create a heading triangle
+            d_angle = 30 / 180.0 * math.pi
+            pos_head = np.zeros((2, 3))
+            pos_head[0, 0] = math.cos(d_angle) * self.control_radius
+            pos_head[1, 0] = math.sin(d_angle) * self.control_radius
+
+            pos_head[0, 1] = self.control_radius / math.cos(d_angle)
+
+            pos_head[0, 2] = pos_head[0, 0]
+            pos_head[1, 2] = (-1) * pos_head[1, 0]
+
+            pos_head = (
+                pos_head + np.tile(self.control_points[:, ii], (pos_head.shape[1], 1)).T
+            )
+
+            if not in_relative_frame:
+                #     for ii in range(pos_head.shape[1]):
+                #         pos_head[:, ii] = self.pose.transform_position_from_relative(
+                #             pos_head[:, ii]
+                #         )
+
+                pos_head = self.pose.transform_positions_from_relative(pos_head)
+
+            ax.plot(pos_head[0, :], pos_head[1, :], color="k", linewidth=3, zorder=-1)
 
 
 # @dataclass
