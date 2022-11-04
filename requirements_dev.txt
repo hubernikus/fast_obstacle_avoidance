@@ -20,3 +20,6 @@ black
 # First run
 # $ cd "matlabroot\extern\engines\python"
 # $ python -m pip install .
+
+# Rosbage evalution
+bagpy

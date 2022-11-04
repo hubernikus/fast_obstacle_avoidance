@@ -258,8 +258,8 @@ class ReplayQoloCording(Animator):
 
         else:
             plot_obstacles(
-                self.ax,
                 self.robot.obstacle_environment,
+                ax=self.ax,
                 showLabel=False,
                 draw_reference=True,
                 velocity_arrow_factor=1.0,
@@ -522,7 +522,7 @@ if (__name__) == "__main__":
 
     evaluate_single_bag = True
     if evaluate_single_bag:
-        reimport_bag = True
+        reimport_bag = False
 
         if (
             reimport_bag
@@ -560,9 +560,20 @@ if (__name__) == "__main__":
                 "show_grid": True,
             }
 
+            doorpass_setup = {
+                "plot_width_x": 10,
+                "plot_width_y": 9,
+                "bag_dir": "/home/lukas/Recordings/fast_avoidance/door_foa/",
+                "bag_name": "2022-11-04-12-41-12.bag",
+                "figsize": (12, 10),
+                "display_time": True,
+                "show_grid": True,
+            }
+
             # Choose the one!
             # my_setup = indoor_setup
-            my_setup = outdoor_setup
+            # my_setup = outdoor_setup
+            my_setup = doorpass_setup
 
             my_bag = rosbag.Bag(my_setup["bag_dir"] + my_setup["bag_name"])
 
