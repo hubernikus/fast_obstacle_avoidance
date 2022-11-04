@@ -104,6 +104,7 @@ class ReplayQoloCording(Animator):
         figsize=(16, 10),
         display_time=True,
         show_grid=False,
+        animation_name="",
     ):
         self.robot = robot
 
@@ -182,14 +183,15 @@ class ReplayQoloCording(Animator):
         # color='k')
         # TODO: fading line
 
-        plt.scatter(
-            self.position_list[0, :],
-            self.position_list[1, :],
-            c=np.arange(self.position_list.shape[1]),
-            marker=".",
-            s=30,
-            alpha=0.6,
-        )
+        # Scatter can me misleading when there is bad tracking...
+        # plt.scatter(
+        #     self.position_list[0, :],
+        #     self.position_list[1, :],
+        #     c=np.arange(self.position_list.shape[1]),
+        #     marker=".",
+        #     s=30,
+        #     alpha=0.6,
+        # )
 
         laserscan = self.robot.get_allscan(in_robot_frame=False)
 
@@ -347,22 +349,7 @@ class ReplayQoloCording(Animator):
         pass
 
 
-def evaluate_bag(
-    my_bag,
-    x_lim=None,
-    y_lim=None,
-    t_max=10,
-    dt_simulation=0.1,
-    animation_name=None,
-    save_animation=False,
-    bag_name=None,
-    bag_dir=None,
-    plot_width_x=None,
-    plot_width_y=None,
-    **kwargs,
-):
-    bag_path = bag_dir + bag_name
-
+def get_duration_using_rosbag_bash(bag_path):
     # Get duration
     stream = os.popen(f"rosbag info {bag_path} | grep duration")
     output = stream.read()
@@ -381,9 +368,32 @@ def evaluate_bag(
                 continue
 
             duration_str = duration_str + m
-    duration = duration + float(duration_str)
 
-    it_max = int(duration / dt_simulation)
+    duration = duration + float(duration_str)
+    return duration
+
+
+def evaluate_bag(
+    my_bag,
+    x_lim=None,
+    y_lim=None,
+    t_max=10,
+    dt_simulation=0.1,
+    animation_name=None,
+    save_animation=False,
+    bag_name=None,
+    bag_dir=None,
+    plot_width_x=None,
+    plot_width_y=None,
+    **kwargs,
+):
+    bag_path = bag_dir + bag_name
+
+    try:
+        duration = get_duration_using_rosbag_bash(bag_path)
+        it_max = int(duration / dt_simulation)
+    except ValueError:
+        it_max = 1000
 
     qolo = QoloRobot(
         pose=ObjectPose(position=np.array([0, 0]), orientation=0 * np.pi / 180)
@@ -522,7 +532,7 @@ if (__name__) == "__main__":
 
     evaluate_single_bag = True
     if evaluate_single_bag:
-        reimport_bag = False
+        reimport_bag = True
 
         if (
             reimport_bag
@@ -560,7 +570,7 @@ if (__name__) == "__main__":
                 "show_grid": True,
             }
 
-            doorpass_setup = {
+            doorpass_foa = {
                 "plot_width_x": 10,
                 "plot_width_y": 9,
                 "bag_dir": "/home/lukas/Recordings/fast_avoidance/door_foa/",
@@ -568,12 +578,25 @@ if (__name__) == "__main__":
                 "figsize": (12, 10),
                 "display_time": True,
                 "show_grid": True,
+                "animation_name": "door_foa",
+            }
+
+            doorpass_vfh = {
+                "plot_width_x": 10,
+                "plot_width_y": 9,
+                "bag_dir": "/home/lukas/Recordings/fast_avoidance/door_vfh/",
+                "bag_name": "2022-11-04-12-33-36.bag",
+                "figsize": (12, 10),
+                "display_time": True,
+                "show_grid": True,
+                "animation_name": "door_vfh",
             }
 
             # Choose the one!
             # my_setup = indoor_setup
             # my_setup = outdoor_setup
-            my_setup = doorpass_setup
+            # my_setup = doorpass_setup
+            my_setup = doorpass_vfh
 
             my_bag = rosbag.Bag(my_setup["bag_dir"] + my_setup["bag_name"])
 

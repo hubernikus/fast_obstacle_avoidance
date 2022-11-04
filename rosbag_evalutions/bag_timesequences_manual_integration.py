@@ -321,7 +321,8 @@ if (__name__) == "__main__":
     plt.close("all")
     plt.ion()
 
-    multi_plot_static_data_narrow_doorway(save_plot=True)
+    # multi_plot_static_data_narrow_doorway(save_plot=True)
+    multi_plot_static_data_narrow_doorway_comparison(save_plot=True)
     multiplo_lab_enviornment_nice_qolo(save_plot=True)
 
     pass
