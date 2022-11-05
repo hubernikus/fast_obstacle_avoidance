@@ -351,7 +351,7 @@ def multi_plot_static_data_narrow_doorway_comparison(save_plot=False):
         trajectory_label="FOA",
         label_velocity=False,
     )
-    main_plotter.run(basecolor="#7b1fa2")
+    main_plotter.run(basecolor="#AFB42B")
 
     from fast_obstacle_avoidance.comparison.vfh_avoider import VFH_Avoider
 
@@ -377,14 +377,14 @@ def multi_plot_static_data_narrow_doorway_comparison(save_plot=False):
         fig_ax_tuple=(fig, ax),
         trajectory_label="VFH",
     )
-    vfh_plotter.run(basecolor="#AFB42B")
+    vfh_plotter.run(basecolor="#7b1fa2")
 
     # Plot final robot
     qolo.plot_robot(ax, length_x=1.0)
 
     if save_plot:
         figure_name = "multi_plot_comparison"
-        plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight", dpi=300)
+        plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight", dpi=450)
 
 
 if (__name__) == "__main__":
