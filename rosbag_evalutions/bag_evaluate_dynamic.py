@@ -27,7 +27,12 @@ from fast_obstacle_avoidance.laserscan_utils import import_first_scans, reset_la
 
 class LaserScanAnimator(Animator):
     def setup(
-        self, static_laserscan, initial_dynamics, robot, x_lim=[-3, 4], y_lim=[-3, 3],
+        self,
+        static_laserscan,
+        initial_dynamics,
+        robot,
+        x_lim=[-3, 4],
+        y_lim=[-3, 3],
         colorbar_pos=None,
     ):
         self.robot = robot
@@ -42,7 +47,7 @@ class LaserScanAnimator(Animator):
             evaluate_velocity_weight=False,
             weight_power=2.0,
         )
-        
+
         self.static_laserscan = static_laserscan
 
         self.fig, self.ax = plt.subplots(figsize=(12, 8))
@@ -60,7 +65,6 @@ class LaserScanAnimator(Animator):
 
         self._restore_figsize()
 
-
     def update_step(self, ii):
         """Update robot and position."""
         initial_velocity = self.initial_dynamics.evaluate(self.robot.pose.position)
@@ -77,7 +81,7 @@ class LaserScanAnimator(Animator):
         # print('init vel', initial_velocity)
         # print('mod vel', modulated_velocity)
 
-        if not (ii % 10): 
+        if not (ii % 10):
             print(
                 "Time for modulation {}ms at it={}".format(
                     np.round((t_end - t_start) * 1000, 3), ii
@@ -117,7 +121,8 @@ class LaserScanAnimator(Animator):
                 vmax=colorbar_ticks[-1],
                 # extend='max',
                 alpha=1.0,
-                zorder=-1)
+                zorder=-1,
+            )
             # self.ax.colobar(sc)
 
             if self.cax is None:
@@ -127,15 +132,18 @@ class LaserScanAnimator(Animator):
                     # self.colorbar_pos = [0.67, 0.80, 0.11, 0.02]
                     self.colorbar_pos = [0.25, 0.16, 0.17, 0.025]
                     self.cax = self.fig.add_axes(self.colorbar_pos)
-                    cbar = self.fig.colorbar(sc, cax=self.cax, orientation='horizontal',
-                                      extend='max',
-                                      ticks=colorbar_ticks,
-                                      )
-                    cbar.ax.set_xticklabels(
-                       # [f"{round(lbl*1000)}e-3" for lbl in colorbar_ticks]
-                       ["0", "0.5e-3", "1e-3"]
+                    cbar = self.fig.colorbar(
+                        sc,
+                        cax=self.cax,
+                        orientation="horizontal",
+                        extend="max",
+                        ticks=colorbar_ticks,
                     )
-                    
+                    cbar.ax.set_xticklabels(
+                        # [f"{round(lbl*1000)}e-3" for lbl in colorbar_ticks]
+                        ["0", "0.5e-3", "1e-3"]
+                    )
+
                     self.cax.set_title("Importance weight", fontsize=16)
 
         else:
@@ -154,7 +162,6 @@ class LaserScanAnimator(Animator):
                 alpha=0.8,
                 zorder=-1,
             )
-        
 
         self.ax.set_xlim(self.x_lim)
         self.ax.set_ylim(self.y_lim)
@@ -202,6 +209,7 @@ class LaserScanAnimator(Animator):
             label="Reference direction",
         )
 
+        breakpoint()
         self.robot.plot2D(self.ax)
 
         self.ax.plot(
@@ -325,7 +333,7 @@ def main_animator(
         # animation_name="indoor_scattered"
         animation_name=animation_name,
     )
-    
+
     main_animator.setup(
         static_laserscan=qolo.get_allscan(),
         initial_dynamics=dynamical_system,
@@ -372,9 +380,9 @@ if (__name__) == "__main__":
 
     # main_animator()
     # animator_office_room()
-    
+
     animator_doorpassing(save_animation=False)
-    
+
     # Evaluation_shared_control()
 
     pass

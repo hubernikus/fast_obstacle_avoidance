@@ -41,6 +41,7 @@ def import_first_scans(
     bag_dir="/home/lukas/Code/data_qolo/",
     start_time=None,
     save_intensity=False,
+    relative_eval_time=None,
 ):
 
     # bag_name = '2021-12-13-18-32-13.bag'
@@ -57,12 +58,20 @@ def import_first_scans(
     frontscan = None
     rearscan = None
 
+    bag_counter_time = -1
+
     # for tt in my_bag.topics:
     for topic, msg, t in my_bag.read_messages(
         topics=["/front_lidar/scan", "/rear_lidar/scan"]
     ):
+        ros_time = t.to_sec()
 
-        if start_time is not None and t.to_sec() < start_time:
+        if bag_counter_time < 0:
+            bag_counter_time = ros_time
+            if relative_eval_time is not None:
+                start_time = relative_eval_time + bag_counter_time
+
+        if start_time is not None and ros_time < start_time:
             continue
 
         if topic == "/front_lidar/scan" or topic == "/rear_lidar/scan":
