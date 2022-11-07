@@ -85,7 +85,7 @@ class ReplayQoloCording(Animator):
                 )
 
             if topic == "/rwth_tracker/tracked_persons":
-                breakpoint()
+                # breakpoint()
                 self.robot.set_crowdtracker(msg)
 
         # All done - no iteration possible anymore
@@ -105,6 +105,7 @@ class ReplayQoloCording(Animator):
         display_time=True,
         show_grid=False,
         animation_name="",
+        show_legend=True,
     ):
         self.robot = robot
 
@@ -112,6 +113,7 @@ class ReplayQoloCording(Animator):
 
         self.static_laserscan = None
         self.display_time = display_time
+        self.show_legend = show_legend
 
         if topic_names is None:
             self.topic_names = [
@@ -335,7 +337,7 @@ class ReplayQoloCording(Animator):
             )
             drawn_arrow = True
 
-        if drawn_arrow:
+        if drawn_arrow and self.show_legend:
             self.ax.legend(loc="upper left", fontsize=18)
 
         if self.show_grid:
@@ -377,7 +379,7 @@ def evaluate_bag(
     my_bag,
     x_lim=None,
     y_lim=None,
-    t_max=10,
+    t_max=60,
     dt_simulation=0.1,
     animation_name=None,
     save_animation=False,
@@ -393,7 +395,7 @@ def evaluate_bag(
         duration = get_duration_using_rosbag_bash(bag_path)
         it_max = int(duration / dt_simulation)
     except ValueError:
-        it_max = 1000
+        it_max = int(t_max / dt_simulation)
 
     qolo = QoloRobot(
         pose=ObjectPose(position=np.array([0, 0]), orientation=0 * np.pi / 180)
@@ -567,18 +569,8 @@ if (__name__) == "__main__":
                 "bag_name": "2022-01-28-14-03-04.bag",
                 "figsize": (17, 10),
                 "display_time": False,
-                "show_grid": True,
-            }
-
-            doorpass_foa = {
-                "plot_width_x": 10,
-                "plot_width_y": 9,
-                "bag_dir": "/home/lukas/Recordings/fast_avoidance/door_foa/",
-                "bag_name": "2022-11-04-12-41-12.bag",
-                "figsize": (12, 10),
-                "display_time": True,
-                "show_grid": True,
-                "animation_name": "door_foa",
+                "show_grid": False,
+                "t_max": 60,
             }
 
             doorpass_vfh = {
@@ -587,16 +579,61 @@ if (__name__) == "__main__":
                 "bag_dir": "/home/lukas/Recordings/fast_avoidance/door_vfh/",
                 "bag_name": "2022-11-04-12-33-36.bag",
                 "figsize": (12, 10),
-                "display_time": True,
-                "show_grid": True,
+                "display_time": False,
+                "show_grid": False,
+                "show_legend": False,
+                "t_max": 60,
                 "animation_name": "door_vfh",
+            }
+
+            doorpass_foa = {
+                "plot_width_x": 10,
+                "plot_width_y": 9,
+                "bag_dir": "/home/lukas/Recordings/fast_avoidance/door_foa/",
+                "bag_name": "2022-11-04-12-41-12.bag",
+                "figsize": (12, 10),
+                "display_time": False,
+                "show_grid": False,
+                "show_legend": False,
+                "t_max": 60,
+                "animation_name": "door_foa",
+            }
+
+            dynamic_foa = {
+                "plot_width_x": 10,
+                "plot_width_y": 9,
+                "bag_dir": "/home/lukas/Recordings/fast_avoidance/dynamic_foa/",
+                "figsize": (12, 10),
+                "display_time": False,
+                "show_grid": False,
+                "show_legend": False,
+                # "bag_name": "2022-11-04-11-34-42.bag",
+                # "animation_name": "dynamic_foa",
+                "bag_name": "2022-11-04-11-29-21.bag",
+                "animation_name": "dynamic_foa_2",
+            }
+
+            dynamic_mumo = {
+                "plot_width_x": 10,
+                "plot_width_y": 9,
+                "bag_dir": "/home/lukas/Recordings/fast_avoidance/dynamic_mumo/",
+                # "bag_name": "2022-11-04-11-56-29.bag",
+                # "bag_name": "2022-11-04-11-56-16.bag",
+                "bag_name": "2022-11-04-11-54-23.bag",
+                "figsize": (12, 10),
+                "display_time": False,
+                "show_grid": False,
+                "animation_name": "dynamic_mumo",
             }
 
             # Choose the one!
             # my_setup = indoor_setup
             # my_setup = outdoor_setup
             # my_setup = doorpass_setup
+            # my_setup = doorpass_foa
             my_setup = doorpass_vfh
+            # my_setup = dynamic_foa
+            # my_setup = dynamic_mumo
 
             my_bag = rosbag.Bag(my_setup["bag_dir"] + my_setup["bag_name"])
 

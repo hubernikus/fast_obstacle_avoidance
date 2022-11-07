@@ -325,11 +325,11 @@ class QoloRobot(BaseRobot):
             ).as_euler("zyx")
 
             human_obs = Sphere(
-                center_position=self.pose.transform_position_from_reference_to_local(
+                center_position=self.pose.transform_position_to_relative(
                     np.array([person.pose.pose.position.x, person.pose.pose.position.y])
                 ),
                 orientation=(euler[0] - self.pose.orientation),
-                linear_velocity=self.pose.transform_direction_from_reference_to_local(
+                linear_velocity=self.pose.transform_direction_to_relative(
                     np.array([person.twist.twist.linear.x, person.twist.twist.linear.y])
                 ),
                 angular_velocity=0,
