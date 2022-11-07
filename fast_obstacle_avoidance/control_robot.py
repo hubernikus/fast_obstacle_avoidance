@@ -126,6 +126,7 @@ class BaseRobot:
         num_points: int = 30,
         show_heading: bool = False,
         in_relative_frame: bool = False,
+        patch_color="#add8e6",
     ) -> None:
         if self.robot_image is not None:
             raise NotImplementedError("Nothing is being done so far with robot images.")
@@ -157,7 +158,7 @@ class BaseRobot:
                 # self.pose.position,
                 ctrl_point,
                 self.control_radius,
-                color="#add8e6",
+                color=patch_color,
                 zorder=-1,
                 alpha=0.5,
             )
@@ -189,7 +190,7 @@ class BaseRobot:
 
                 pos_head = self.pose.transform_positions_from_relative(pos_head)
 
-            ax.plot(pos_head[0, :], pos_head[1, :], color="k", linewidth=3, zorder=-1)
+            ax.plot(pos_head[0, :], pos_head[1, :], color="k", linewidth=2, zorder=-1)
 
 
 # @dataclass
