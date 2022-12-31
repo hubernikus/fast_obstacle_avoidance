@@ -1,6 +1,7 @@
 # Fast Obstacle Avoidance for Dynamic Environments
 
-A video describing the algorithm can be found here:
+A video describing the algorithm can be found here:   
+
 [![Alt text](https://img.youtube.com/vi/WKso-wu68v8/0.jpg)](https://youtu.be/kr7R_cJoaYI)
 
 # Create Custom Python Environment
