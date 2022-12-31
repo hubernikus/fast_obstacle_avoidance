@@ -1,5 +1,5 @@
-# fast_obstacle_avoidance
-Dynamic but Fast Obstacle Avoidance
+# Fast Obstacle Avoidance for Dynamic Environments
+
 
 # Create Custom Python Environment
 
