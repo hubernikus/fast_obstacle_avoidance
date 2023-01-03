@@ -2,7 +2,7 @@
 
 A video describing the algorithm can be found here:   
 
-[![Alt text](https://img.youtube.com/vi/WKso-wu68v8/0.jpg)](https://youtu.be/kr7R_cJoaYI)
+[![Alt text](https://img.youtube.com/vi/kr7R_cJoaYI/0.jpg)](https://youtu.be/kr7R_cJoaYI)
 
 # Create Custom Python Environment
 
