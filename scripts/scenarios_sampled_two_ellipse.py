@@ -376,10 +376,10 @@ if (__name__) == "__main__":
         # str(Path("src") / "fast_obstacle_avoidance" / "comparison" / "matlab")
 
     execute_avoidance_with_two_obstacles(
-        save_figure=True,
+        save_figure=False,
         create_animation=True,
-        algorithmtype=AlgorithmType.SAMPLED,
-        # algorithmtype=AlgorithmType.CLUSTERSAMPLED,
+        # algorithmtype=AlgorithmType.SAMPLED,
+        algorithmtype=AlgorithmType.CLUSTERSAMPLED,
         # algorithmtype=AlgorithmType.VFH,
     )
 
