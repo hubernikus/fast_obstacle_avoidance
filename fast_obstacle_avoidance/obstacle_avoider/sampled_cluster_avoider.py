@@ -18,8 +18,7 @@ from sklearn.cluster import DBSCAN, KMeans
 
 from vartools.linalg import get_orthogonal_basis
 from vartools.directional_space import get_directional_weighted_sum
-
-from dynamic_obstacle_avoidance.rotational.vector_rotation import VectorRotationXd
+from vartools.vector_rotation import VectorRotationXd
 
 from fast_obstacle_avoidance.control_robot import BaseRobot
 
