@@ -1,10 +1,10 @@
 # Fast Obstacle Avoidance for Dynamic Environments
 ---
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: Unlicense](https://img.shields.io/badge/license-Unlicense-blue.svg)](http://unlicense.org/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 ---
 
-A video describing the algorithm can be found here:   
+A video describing the algorithm can be found here:     
 
 [![Alt text](https://img.youtube.com/vi/kr7R_cJoaYI/0.jpg)](https://youtu.be/kr7R_cJoaYI)
 
