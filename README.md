@@ -24,7 +24,7 @@ A video describing the algorithm in depth can be found under:
 
 # Create Custom Python Environment
 
-## Setup
+## Installation / Setup
 To setup got to your install/code directory, and type:
 ```sh
 git clone --recurse-submodules https://github.com/hubernikus/fast_obstacle_avoidance.git
@@ -50,7 +50,7 @@ Activate your environment
 source .venv/bin/activate
 ```
 
-# Setup Dependencies
+### Setup Dependencies
 Install all requirements:
 ``` bash
 pip install -r requirements.txt && python setup.py develop
@@ -61,6 +61,9 @@ Install submodules:
 cd src/various_tools && pip install -r requirements.txt && python setup.py develop && cd ../..
 cd src/dynamic_obstacle_avoidance && pip install -r requirements.txt && python setup.py develop && cd ../..
 ```
+
+## Get Started
+To get started, try to run the files in the 'examples' folder.
 
 # Evaluation of ROS-bags
 Install ROS-bag evaluation.
