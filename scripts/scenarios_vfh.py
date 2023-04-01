@@ -30,8 +30,6 @@ from fast_obstacle_avoidance.visualization import (
     static_visualization_of_sample_avoidance,
 )
 
-from fast_obstacle_avoidance.comparison.vfh_avoider import VFH_Avoider_Matlab
-
 # from fast_obstacle_avoidance.comparison.vfh_avoider import VectorFieldHistogramAvoider
 
 
@@ -125,7 +123,7 @@ def execute_avoidance_through_gap(save_figure=False, create_animation=False):
         attractor_position=np.array([3.5, 1.3]), maximum_velocity=1.0
     )
 
-    main_environment = ShapelySamplingContainer(n_samples=200)
+    main_environment = ShapelySamplingContainer(n_samples=100)
     main_environment.add_obstacle(
         SampledCuboid.from_obstacle(
             position=np.array([0.5, 0.2]),
@@ -159,9 +157,9 @@ def execute_avoidance_through_gap(save_figure=False, create_animation=False):
     )
 
     fast_avoider.robot = robot
-    fast_avoider.weight_factor = 2.0 * 2 * np.pi / main_environment.n_samples * 1
+    fast_avoider.weight_factor = 2 * np.pi / main_environment.n_samples * 1
     fast_avoider.weight_power = 1.5
-    fast_avoider.weight_max_norm = 1e8
+    fast_avoider.weight_max_norm = 1e6
     # weight_max_norm=1e8,
     #  weight_factor=2 * np.pi / main_environment.n_samples * 2,
     #  weight_power=1.5,
@@ -210,12 +208,16 @@ if (__name__) == "__main__":
 
         matlab_eng = matlab.engine.start_matlab()
         matlab_eng.addpath("src/fast_obstacle_avoidance/comparison/matlab")
+
+        # if do_matlab:
+        #    from fast_obstacle_avoidance.comparison.vfh_avoider import VFH_Avoider_Matlab
+
         # str(Path("src") / "fast_obstacle_avoidance" / "comparison" / "matlab")
 
     plt.ion()
     plt.close("all")
 
-    # execute_avoidance_with_single_obstacle(save_figure=False, create_animation=True)
-    execute_avoidance_through_gap(save_figure=False, create_animation=True)
+    execute_avoidance_with_single_obstacle(save_figure=False, create_animation=True)
+    # execute_avoidance_through_gap(save_figure=False, create_animation=True)
 
     print("Done.")

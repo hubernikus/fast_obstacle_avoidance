@@ -180,7 +180,9 @@ def explore_specific_point(
     return ax
 
 
-def execute_avoidance_with_single_obstacle(save_figure=False, create_animation=False):
+def execute_avoidance_with_single_obstacle(
+    save_figure=False, create_animation=False, it_max=200
+):
     """Visualizes
     (1) the repulsion from a specific point
     (2) the resulting vector-field."""
@@ -188,7 +190,6 @@ def execute_avoidance_with_single_obstacle(save_figure=False, create_animation=F
     start_point = np.array([-2.5, 3])
     x_lim = [-4, 4.5]
     y_lim = [-1.0, 5.6]
-
     # dynamical_system = ConstantValue(velocity=[0, 1])
     initial_dynamics = LinearSystem(
         attractor_position=np.array([3.5, 1.3]), maximum_velocity=1.0
@@ -223,9 +224,10 @@ def execute_avoidance_with_single_obstacle(save_figure=False, create_animation=F
         simu_bot.pose.position = np.array([-2.5, 1])
 
         my_animator = LaserscanAnimator(
-            it_max=400,
+            it_max=it_max,
             dt_simulation=0.05,
             # dt_pause=0.1,
+            file_type=".gif",
             animation_name="single_obstacle_avoidance_sampled",
         )
 
@@ -304,7 +306,9 @@ def execute_avoidance_with_single_obstacle(save_figure=False, create_animation=F
         plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
 
 
-def vectorfield_with_many_obstacles(save_figure=False, create_animation=True):
+def vectorfield_with_many_obstacles(
+    save_figure=False, create_animation=True, it_max=270
+):
     start_point = np.array([-1, 1])
     x_lim = [-8, 4]
     y_lim = [-0.9, 5.6]
@@ -343,10 +347,16 @@ def vectorfield_with_many_obstacles(save_figure=False, create_animation=True):
     fast_avoider = SampledAvoider(
         robot=robot,
         weight_max_norm=1e8,
-        weight_factor=0.1,
-        weight_power=3.0,
-        evaluate_velocity_weight=True,
+        weight_factor=2 * np.pi / main_environment.n_samples * 2,
+        weight_power=1.5,
     )
+    # fast_avoider = SampledAvoider(
+    #     robot=robot,
+    #     weight_max_norm=1e7,
+    #     weight_factor=1.0,
+    #     weight_power=3.0,
+    #     evaluate_velocity_weight=True,
+    # )
 
     if create_animation:
         simu_environment = copy.deepcopy(main_environment)
@@ -356,12 +366,16 @@ def vectorfield_with_many_obstacles(save_figure=False, create_animation=True):
         simu_bot.pose.position = np.array([-7.5, 0.8])
 
         my_animator = LaserscanAnimator(
-            it_max=400,
+            it_max=it_max,
             dt_simulation=0.05,
+            file_type=".gif",
             animation_name="multi_obstacle_avoidance_sampled",
         )
 
         fast_avoider.robot = simu_bot
+        fast_avoider.weight_factor = 2 * np.pi / main_environment.n_samples * 1
+        fast_avoider.weight_power = 1.5
+        fast_avoider.weight_max_norm = 1e7
 
         my_animator.setup(
             robot=simu_bot,
@@ -412,78 +426,10 @@ def vectorfield_with_many_obstacles(save_figure=False, create_animation=True):
         plt.savefig("figures/" + figure_name + ".png", bbox_inches="tight")
 
 
-def multiple_random_circles():
-    np.random.seed(8)
-
-    human_radius = 0.7
-
-    attractor_position = np.array([5.5, 4])
-
-    # start_point = np.array([0.5, 1.4])
-    x_lim = [-6, 6]
-    y_lim = [-4.5, 4.5]
-
-    # dynamical_system = ConstantValue(velocity=[0, 1])
-    initial_dynamics = LinearSystem(
-        attractor_position=attractor_position, maximum_velocity=1.0
-    )
-
-    robot = QoloRobot(pose=ObjectPose(position=np.zeros([0, 0]), orientation=0))
-    robot.control_point = [0, 0]
-    robot.control_radius = 0.6
-
-    delta_dist = robot.control_radius + human_radius
-    x_lim_obs = [x_lim[0] + delta_dist, attractor_position[1] - delta_dist]
-    # y_lim_obs = [y_lim[0]+delta_dist , y_lim[1]-delta_dist]
-
-    n_humans = 5
-
-    main_environment = ShapelySamplingContainer(n_samples=50)
-    for ii in range(n_humans):
-        # Random ellipse
-        position = get_random_position(x_lim=x_lim_obs, y_lim=y_lim)
-        main_environment.create_sphere(position=position, radius=human_radius)
-
-    fast_avoider = SampledAvoider(
-        robot=robot,
-        weight_max_norm=1e10,
-        weight_factor=1.0,
-        weight_power=1.0,
-    )
-
-    main_environment.n_samples = 100
-
-    # fig, ax = plt.subplots(1, 1, figsize=(12, 9))
-    fig, axs = plt.subplots(1, 2, figsize=(16, 9))
-
-    static_visualization_of_sample_avoidance(
-        robot=robot,
-        n_resolution=40,
-        dynamical_system=initial_dynamics,
-        fast_avoider=fast_avoider,
-        plot_initial_robot=False,
-        main_environment=main_environment,
-        show_ticks=True,
-        x_lim=x_lim,
-        y_lim=y_lim,
-        ax=axs[0],
-        plot_quiver=True,
-        ax_ref=axs[1],
-    )
-
-
 if (__name__) == "__main__":
     plt.ion()
     plt.close("all")
 
-    execute_avoidance_with_single_obstacle(save_figure=False, create_animation=True)
-
-    # test_multi_obstacles()
-    # vectorfield_with_many_obstacles(create_animation=True, save_figure=False)
-    # vectorfield_with_many_obstacles(create_animation=True, save_figure=False)
-    # vectorfield_with_many_obstacles(save_figure=False)
-
-    # test_various_surface_points()
-    # multiple_random_circles()
-
+    # execute_avoidance_with_single_obstacle(save_figure=True, create_animation=True)
+    # vectorfield_with_many_obstacles(create_animation=True, save_figure=True)
     print("Done.")

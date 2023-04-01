@@ -114,8 +114,8 @@ class BaseFastAnimator(Animator):
         # Reference points of the 'analytical' obstacles
         self.show_reference_points = show_reference_points
 
-        if hasattr(self, "fig"):
-            self._restore_figsize()
+        # if hasattr(self, "fig"):
+        #     self._restore_figsize()
 
     def has_converged(self, ii):
         """Return values:
@@ -198,7 +198,7 @@ class BaseFastAnimator(Animator):
             self.ax.axes.xaxis.set_visible(False)
             self.ax.axes.yaxis.set_visible(False)
 
-        self._restore_figsize()
+        # self._restore_figsize()
 
     def _plot_sampled_environment(self, ii):
         data_points = self.avoider.datapoints

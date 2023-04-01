@@ -24,7 +24,7 @@ from fast_obstacle_avoidance.control_robot import BaseRobot
 
 from .stretching_matrix import StretchingMatrixTrigonometric
 from ._base import SingleModulationAvoider
-from .lidar_avoider import SampledAvoider
+from .lidar_avoider import SampledAvoider, get_relative_positions_and_dists
 
 
 class SampledClusterAvoider:
@@ -38,13 +38,14 @@ class SampledClusterAvoider:
 
     def __init__(
         self,
-        robot: BaseRobot,
+        robot: Optional[BaseRobot] = None,
         evaluate_normal: bool = False,
         cluster_params: dict = None,
         stretching_matrix=None,
         weight_max_norm=1e5,
-        weight_factor=2 * np.pi / 10,
-        weight_power=2.0,
+        weight_factor: float = 2 * np.pi / 10,
+        weight_power: float = 2.0,
+        control_radius: float = 1.0
         # delta_sampling: float = delta_sampling
         # *args,
         # **kwargs,
@@ -65,10 +66,18 @@ class SampledClusterAvoider:
         else:
             self.stretching_matrix = stretching_matrix
 
-        self._laserscan_in_robot_frame = True
+        if robot is None:
+            self._laserscan_in_robot_frame = False
+            if control_radius is None:
+                raise Exception("control_radius is needed.")
+
+            self.control_radius = control_radius
+        else:
+            self._laserscan_in_robot_frame = True
+            self.control_radius = self.robot.control_radius
 
         if cluster_params is None:
-            cluster_params = {"eps": 2 * self.robot.control_radius, "min_samples": 3}
+            cluster_params = {"eps": 2 * self.control_radius, "min_samples": 3}
 
         self.clusterer = DBSCAN(**cluster_params)
 
@@ -94,10 +103,10 @@ class SampledClusterAvoider:
     def dimension(self) -> int:
         return self.datapoints.shape[0]
 
-    @property
-    def control_radius(self) -> float:
-        """Assumption of a nonzero radius, to not fall into the measurement gaps."""
-        return self.robot.control_radius
+    # @property
+    # def control_radius(self) -> float:
+    #     """Assumption of a nonzero radius, to not fall into the measurement gaps."""
+    #     return self.robot.control_radius
 
     @property
     def datapoints(self) -> np.ndarray:
@@ -146,7 +155,7 @@ class SampledClusterAvoider:
                 self._datapoints[:, label == self.clusterer.labels_], axis=1
             )
 
-    def _cluster_close_outliers(self, position) -> Optional(np.ndarray):
+    def _cluster_close_outliers(self, position: np.ndarray) -> Optional(np.ndarray):
         # TODO: check if there are outliers closer than the closest cluster
         # TODO: should you ever redo the clustering (?)
 
@@ -206,12 +215,11 @@ class SampledClusterAvoider:
 
         self._cluster_close_outliers(position)
 
-        (
-            laser_scan,
-            ref_dirs,
-            relative_distances,
-        ) = self.robot.get_relative_positions_and_dists(
-            self.datapoints, in_robot_frame=False
+        (laser_scan, ref_dirs, relative_distances,) = get_relative_positions_and_dists(
+            center_position=position,
+            control_radius=self.control_radius,
+            datapoints=self.datapoints,
+            in_local_frame=False,
         )
 
         local_weights = self.sample_handler.get_weight_from_distances(

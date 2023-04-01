@@ -224,6 +224,7 @@ def execute_avoidance_with_two_obstacles(
     save_figure=False,
     create_animation=False,
     algorithmtype: AlgorithmType = AlgorithmType.SAMPLED,
+    it_max: int = 170,
 ):
     """Visualizes
     (1) the repulsion from a specific point
@@ -304,9 +305,10 @@ def execute_avoidance_with_two_obstacles(
         simu_bot.pose.position = np.array([-2.5, 1])
 
         my_animator = LaserscanAnimator(
-            it_max=400,
+            it_max=it_max,
             dt_simulation=0.05,
             # dt_pause=0.1,
+            file_type=".gif",
             animation_name="two_obstacle_avoidance" + "_" + algoname,
         )
 
@@ -376,7 +378,7 @@ if (__name__) == "__main__":
         # str(Path("src") / "fast_obstacle_avoidance" / "comparison" / "matlab")
 
     execute_avoidance_with_two_obstacles(
-        save_figure=False,
+        save_figure=True,
         create_animation=True,
         # algorithmtype=AlgorithmType.SAMPLED,
         algorithmtype=AlgorithmType.CLUSTERSAMPLED,

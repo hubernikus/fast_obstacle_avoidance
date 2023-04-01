@@ -23,6 +23,26 @@ from ._base import SingleModulationAvoider
 from .stretching_matrix import StretchingMatrixTrigonometric
 
 
+def get_relative_positions_and_dists(
+    center_position: np.ndarray,
+    control_radius: float,
+    datapoints: np.ndarray,
+    in_local_frame: bool = True,
+) -> np.ndarray:
+    """Get normalized (relative) position and (relative) surface distance."""
+    if in_local_frame:
+        rel_pos = datapoints
+    else:
+        rel_pos = datapoints - np.tile(center_position, (datapoints.shape[1], 1)).T
+
+    rel_dist = LA.norm(rel_pos, axis=0)
+
+    rel_dir = rel_pos / np.tile(rel_dist, (rel_pos.shape[0], 1))
+    rel_dist = rel_dist - control_radius
+
+    return rel_pos, rel_dir, rel_dist
+
+
 class SampledAvoider(SingleModulationAvoider):
     """
     To proof:
@@ -51,17 +71,15 @@ class SampledAvoider(SingleModulationAvoider):
 
         # For the moment, delta_sampling is not used
         # self.delta_sampling = delta_sampling
-
         super().__init__(
             *args,
             **kwargs,
         )
 
-        self._laserscan_in_robot_frame = True
-
-    # @property
-    # def norm_angle(self):
-    # return np.
+        if robot is None:
+            self._laserscan_in_robot_frame = False
+        else:
+            self._laserscan_in_robot_frame = True
 
     @property
     def datapoints(self):
@@ -116,12 +134,18 @@ class SampledAvoider(SingleModulationAvoider):
             self.reference_direction = np.zeros(self.robot.pose.position.shape)
             return self.reference_direction
         # TODO: position is currently unused...
-        (
-            laser_scan,
-            ref_dirs,
-            relative_distances,
-        ) = self.robot.get_relative_positions_and_dists(
-            laser_scan, in_robot_frame=self._laserscan_in_robot_frame
+        # (
+        #     laser_scan,
+        #     ref_dirs,
+        #     relative_distances,
+        # ) = self.robot.get_relative_positions_and_dists(
+        #     laser_scan, in_robot_frame=self._laserscan_in_robot_frame
+        # )
+        (laser_scan, ref_dirs, relative_distances,) = get_relative_positions_and_dists(
+            center_position=position,
+            control_radius=self.control_radius,
+            datapoints=self.datapoints,
+            in_local_frame=False,
         )
 
         self.weights = self.get_weight_from_distances(
