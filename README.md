@@ -4,8 +4,22 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 ---
 
-A video describing the algorithm can be found here:     
+## Introduction
+This work describes a Fast Obstacles Avoidance (FOA) which can be used, when the known input data is sampled (unstructured), or in the presence of many obstacles.
+The algorithm is able to input sampled data, as well as a desired velocity, and outputs the collision free velocity.
 
+<p align="center">
+<img src="https://github.com/hubernikus/fast_obstacle_avoidance/blob/main/media/single_obstacle_avoidance_sampled.gif?raw=true"  width="550"></>
+
+Since the input to the algorithm is raw sensor data (in the cartesian frame), it can directly be applied to an arbitrary number of data points. 
+<p align="center">
+<img src="https://github.com/hubernikus/fast_obstacle_avoidance/blob/main/media/multi_obstacle_avoidance_sampled.gif?raw=true"  width="550"></>
+
+Improved performance can be achieved by first clustering the datapoints with commonly used techniques, here we use DBSCAN.
+<p align="center">
+<img src="https://github.com/hubernikus/fast_obstacle_avoidance/blob/main/media/two_obstacle_avoidance_clustersampled.gif?raw=true"  width="550"></>
+
+A video describing the algorithm in depth can be found under:     
 [![Alt text](https://img.youtube.com/vi/kr7R_cJoaYI/0.jpg)](https://youtu.be/kr7R_cJoaYI)
 
 # Create Custom Python Environment
