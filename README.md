@@ -94,6 +94,9 @@ You forgot to add the submodules, add them with:
 git submodule update --init --recursive
 ```
 
+## Issues
+The current repository does not have any test for CI/CD. This will be added if desired for future uses.
+
 
 **References**   
 > [1] L. Huber, J. -J. Slotine and A. Billard, "Fast Obstacle Avoidance Based on Real-Time Sensing," in IEEE Robotics and Automation Letters, doi: 10.1109/LRA.2022.3232271.
