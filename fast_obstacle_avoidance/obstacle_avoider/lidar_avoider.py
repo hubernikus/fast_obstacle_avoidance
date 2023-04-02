@@ -58,13 +58,19 @@ class SampledAvoider(SingleModulationAvoider):
 
     def __init__(
         self,
-        robot: BaseRobot,
+        robot: Optional[BaseRobot] = None,
         evaluate_normal: bool = False,
+        control_radius: float = 0.0,
         # delta_sampling: float = delta_sampling
         *args,
         **kwargs,
     ) -> None:
         self.robot = robot
+
+        if self.robot is None:
+            self.control_radius = control_radius
+        else:
+            self.control_radius = self.robot.control_radius
 
         self.evaluate_normal = evaluate_normal
         self.max_angle_ref_norm = 80 * np.pi / 180

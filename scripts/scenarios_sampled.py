@@ -181,7 +181,11 @@ def explore_specific_point(
 
 
 def execute_avoidance_with_single_obstacle(
-    save_figure=False, create_animation=False, it_max=200
+    save_figure=False,
+    create_animation=False,
+    it_max=200,
+    figsize=(16.0, 10),
+    dt_simulation=0.05,
 ):
     """Visualizes
     (1) the repulsion from a specific point
@@ -225,7 +229,7 @@ def execute_avoidance_with_single_obstacle(
 
         my_animator = LaserscanAnimator(
             it_max=it_max,
-            dt_simulation=0.05,
+            dt_simulation=dt_simulation,
             # dt_pause=0.1,
             file_type=".gif",
             animation_name="single_obstacle_avoidance_sampled",
@@ -246,6 +250,7 @@ def execute_avoidance_with_single_obstacle(
             plot_lidarlines=True,
             show_reference=True,
             show_lidarweight=True,
+            figsize=figsize,
         )
 
         my_animator.run(save_animation=save_figure)
@@ -307,7 +312,11 @@ def execute_avoidance_with_single_obstacle(
 
 
 def vectorfield_with_many_obstacles(
-    save_figure=False, create_animation=True, it_max=270
+    save_figure=False,
+    create_animation=True,
+    it_max=270,
+    figsize=(16.0, 10),
+    dt_simulation=0.05,
 ):
     start_point = np.array([-1, 1])
     x_lim = [-8, 4]
@@ -367,7 +376,7 @@ def vectorfield_with_many_obstacles(
 
         my_animator = LaserscanAnimator(
             it_max=it_max,
-            dt_simulation=0.05,
+            dt_simulation=dt_simulation,
             file_type=".gif",
             animation_name="multi_obstacle_avoidance_sampled",
         )
@@ -387,6 +396,7 @@ def vectorfield_with_many_obstacles(
             show_reference=True,
             show_lidarweight=True,
             colobar_pos=[0.74, 0.75, 0.14, 0.02],
+            figsize=figsize,
         )
 
         my_animator.run(save_animation=save_figure)
@@ -431,5 +441,19 @@ if (__name__) == "__main__":
     plt.close("all")
 
     # execute_avoidance_with_single_obstacle(save_figure=True, create_animation=True)
+    execute_avoidance_with_single_obstacle(
+        save_figure=True,
+        create_animation=True,
+        figsize=(8, 6),
+        dt_simulation=0.2,
+        it_max=50,
+    )
     # vectorfield_with_many_obstacles(create_animation=True, save_figure=True)
+    vectorfield_with_many_obstacles(
+        create_animation=True,
+        save_figure=True,
+        figsize=(8, 6),
+        dt_simulation=0.2,
+        it_max=70,
+    )
     print("Done.")

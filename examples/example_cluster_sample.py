@@ -42,7 +42,7 @@ def get_two_obstacle_sampler():
 
 
 class GapPassingAnimator(Animator):
-    def setup(self, start_point=np.array([-2.5, 1])):
+    def setup(self, start_point=np.array([-2.5, 1]), it_max=300):
         self.environment = get_two_obstacle_sampler()
 
         self.robot = QoloRobot(pose=ObjectPose(position=start_point, orientation=0))
@@ -75,6 +75,7 @@ class GapPassingAnimator(Animator):
             plot_lidarlines=True,
             show_reference=True,
             show_lidarweight=False,
+            figsize=(8, 6),
         )
 
     @property
@@ -107,6 +108,9 @@ class GapPassingAnimator(Animator):
         self.visualizer._plot_general(ii=ii)
 
     def update_step(self, ii: int):
+
+        if not ii % 10:
+            print(f"Step {ii}")
         self.initial_velocity = self.initial_dynamics.evaluate(self.position)
 
         # Retrieve data-points from sampler (cartesian representation)
@@ -132,13 +136,14 @@ class GapPassingAnimator(Animator):
 if (__name__) == "__main__":
     plt.ion()
     plt.close("all")
-    # execute_avoidance_with_two_obstacles(
-    #     save_figure=False,
-    #     create_animation=True,
-    # )
 
-    my_animator = GapPassingAnimator()
+    my_animator = GapPassingAnimator(
+        it_max=80,
+        dt_simulation=0.10,
+        file_type=".gif",
+        animation_name="two_obstacle_avoidance_clustersampled",
+    )
     my_animator.setup()
-    my_animator.run()
+    my_animator.run(save_animation=True)
 
     print("Done all.")

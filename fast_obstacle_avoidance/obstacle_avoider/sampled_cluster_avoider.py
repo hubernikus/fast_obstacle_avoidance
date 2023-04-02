@@ -86,6 +86,7 @@ class SampledClusterAvoider:
             weight_max_norm=weight_max_norm,
             weight_factor=weight_factor,
             weight_power=weight_power,
+            control_radius=self.control_radius,
         )
 
     @classmethod

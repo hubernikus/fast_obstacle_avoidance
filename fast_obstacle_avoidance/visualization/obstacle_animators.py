@@ -95,6 +95,8 @@ class BaseFastAnimator(Animator):
 
             self.colorbar_pos = colobar_pos
 
+            self.fig.tight_layout()
+
         self.velocity_command = np.zeros(self.dimension)
 
         # Margins
