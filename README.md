@@ -58,8 +58,8 @@ pip install -r requirements.txt && python setup.py develop
 
 Install submodules:
 ``` bash
-cd src/various_tools && pip install -r requirements.txt && python setup.py develop && cd ../..
-cd src/dynamic_obstacle_avoidance && pip install -r requirements.txt && python setup.py develop && cd ../..
+cd src/various_tools && pip install -r requirements.txt && pip install -e .&& cd ../..
+cd src/dynamic_obstacle_avoidance && pip install -r requirements.txt && pip install -e . && cd ../..
 ```
 
 ## Get Started
