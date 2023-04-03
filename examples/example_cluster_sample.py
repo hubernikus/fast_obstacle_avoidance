@@ -144,6 +144,6 @@ if (__name__) == "__main__":
         animation_name="two_obstacle_avoidance_clustersampled",
     )
     my_animator.setup()
-    my_animator.run(save_animation=True)
+    my_animator.run(save_animation=False)
 
     print("Done all.")
