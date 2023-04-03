@@ -43,7 +43,7 @@ Setup virtual environment (use whatever compatible environment manager that you 
 ``` bash
 python3.10 -m venv .venv
 ```
-with python -V > 3.7
+with python -V >= 3.10
 
 Activate your environment
 ``` sh
