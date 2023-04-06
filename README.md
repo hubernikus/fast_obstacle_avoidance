@@ -38,12 +38,11 @@ cd fast_obstacle_avoidance
 
 Setup your environment, with Python>3.7 (here Python 3.9):
 Choose your favorite python-environment. I recommend to use [virtual environment venv](https://docs.python.org/3/library/venv.html).
-Setup virtual environment (use whatever compatible environment manager that you have with Python >3.7).
+Setup virtual environment (use whatever compatible environment manager that you have with python -V >= 3.10).
 
 ``` bash
 python3.10 -m venv .venv
 ```
-with python -V >= 3.10
 
 Activate your environment
 ``` sh
