@@ -94,8 +94,9 @@ You forgot to add the submodules, add them with:
 git submodule update --init --recursive
 ```
 
-## Issues
-The current repository does not have any test for CI/CD. This will be added if desired for future uses.
+## Issues / Imrovements
+- The current repository does not have any test for CI/CD. This will be added if desired for future uses.
+- The clustering is based on DBSCAN (which has simple hyperparameter choice), however it does not scale well with the number of dimensions or number of datapoints. Faster approaches should be adapted to be useful for the current method.
 
 
 **References**   
