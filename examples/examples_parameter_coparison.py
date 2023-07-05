@@ -18,27 +18,37 @@ from fast_obstacle_avoidance.sampling_container import ShapelySamplingContainer
 
 from fast_obstacle_avoidance.visualization import LaserscanAnimator
 
+def trajectory_integration(position_start, it_max, avoider, convergence_error: float = 1e-1):
+    positions = np.array(position_starts.shape[0])
 
-def get_two_obstacle_sampler():
-    main_environment = ShapelySamplingContainer(n_samples=100)
-    main_environment.add_obstacle(
-        # SampledEllipse.from_obstacle(
-        SampledCuboid.from_obstacle(
-            position=np.array([0.5, 0.0]),
-            orientation_in_degree=90,
-            axes_length=np.array([4.0, 3.0]),
-        )
-    )
+    for ii in range(it_max):
+        self.initial_velocity = self.initial_dynamics.evaluate(self.position)
 
-    main_environment.add_obstacle(
-        # SampledEllipse.from_obstacle(
-        SampledCuboid.from_obstacle(
-            position=np.array([0.5, 5.0]),
-            orientation_in_degree=90,
-            axes_length=np.array([4.0, 3.0]),
+        # Retrieve data-points from sampler (cartesian representation)
+        data_points = self.environment.get_surface_points(
+            center_position=self.position,
+            null_direction=self.initial_velocity,
         )
-    )
-    return main_environment
+
+        # Update the avoider
+        self.fast_avoider.update_laserscan(data_points, in_robot_frame=False)
+
+        # Modulate initial velocity
+        self.modulated_velocity = self.fast_avoider.avoid(
+            self.initial_velocity, self.position
+        )
+
+        # Time step
+        self.position = self.position + self.modulated_velocity * self.dt_simulation
+
+        velocity = 
+    return
+
+def comparision_weight_factor():
+    weight_factors = [0.1, 1, 10]
+    self.initial_dynamics = LinearSystem(
+            attractor_position=np.array([3.5, 1.3]), maximum_velocity=1.0
+        )
 
 
 class GapPassingAnimator(Animator):

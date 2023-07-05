@@ -62,7 +62,7 @@ class SampledClusterAvoider:
         weight_factor: float = 2 * np.pi / 10,
         weight_power: float = 2.0,
         control_radius: float = 1.0,
-        clusterer: Clusterer | ClustererType = ClustererType.DIRECTIONAL_SOFT_KMEANS,
+        clusterer: Clusterer | ClustererType = ClustererType.DBSCAN,
         # delta_sampling: float = delta_sampling
         # *args,
         # **kwargs,
