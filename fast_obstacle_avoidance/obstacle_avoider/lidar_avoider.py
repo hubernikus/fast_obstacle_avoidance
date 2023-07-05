@@ -73,7 +73,7 @@ class SampledAvoider(SingleModulationAvoider):
             self.control_radius = self.robot.control_radius
 
         self.evaluate_normal = evaluate_normal
-        self.max_angle_ref_norm = 80 * np.pi / 180
+        self.max_angle_ref_norm = 80 * np.pi / 180  # I think this is outdated...
 
         # For the moment, delta_sampling is not used
         # self.delta_sampling = delta_sampling

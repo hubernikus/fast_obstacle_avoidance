@@ -5,7 +5,8 @@ Obstacle Avoider Dedicated to Lidar Data
 from __future__ import annotations
 
 import warnings
-from typing import Optional
+from typing import Optional, Protocol
+from enum import Enum, auto
 
 from timeit import default_timer as timer
 
@@ -21,10 +22,25 @@ from vartools.directional_space import get_directional_weighted_sum
 from vartools.vector_rotation import VectorRotationXd
 
 from fast_obstacle_avoidance.control_robot import BaseRobot
+from fast_obstacle_avoidance.directional_learning import DirectionalSoftKMeans
 
 from .stretching_matrix import StretchingMatrixTrigonometric
 from ._base import SingleModulationAvoider
 from .lidar_avoider import SampledAvoider, get_relative_positions_and_dists
+
+
+class Clusterer(Protocol):
+    @property
+    def labels_(self) -> np.ndarray:
+        pass
+
+    def fit(self, XX: np.ndarray) -> np.ndarray:
+        pass
+
+
+class ClustererType(Enum):
+    DBSCAN = auto()
+    DIRECTIONAL_SOFT_KMEANS = auto()
 
 
 class SampledClusterAvoider:
@@ -42,10 +58,11 @@ class SampledClusterAvoider:
         evaluate_normal: bool = False,
         cluster_params: dict = None,
         stretching_matrix=None,
-        weight_max_norm=1e5,
+        weight_max_norm: float = 1e5,
         weight_factor: float = 2 * np.pi / 10,
         weight_power: float = 2.0,
-        control_radius: float = 1.0
+        control_radius: float = 1.0,
+        clusterer: Clusterer | ClustererType = ClustererType.DIRECTIONAL_SOFT_KMEANS,
         # delta_sampling: float = delta_sampling
         # *args,
         # **kwargs,
@@ -76,10 +93,24 @@ class SampledClusterAvoider:
             self._laserscan_in_robot_frame = True
             self.control_radius = self.robot.control_radius
 
-        if cluster_params is None:
-            cluster_params = {"eps": 2 * self.control_radius, "min_samples": 3}
+        if clusterer == ClustererType.DIRECTIONAL_SOFT_KMEANS:
 
-        self.clusterer = DBSCAN(**cluster_params)
+            self.clusterer = DirectionalSoftKMeans(stiffness=5.0)
+            print(
+                f"Using DirectionalSoftKmeans with stiffness={self.clusterer.stiffness}"
+            )
+
+        elif clusterer == ClustererType.DBSCAN:
+            # WARNING: DBSCAN has been observed to lead to 'fast' switching.
+            # mabye it could be used with (fading) memory perception of the environment
+            # However this would lead to increase in the computational cost
+            if cluster_params is None:
+                cluster_params = {"eps": 2 * self.control_radius, "min_samples": 3}
+            self.clusterer = DBSCAN(**cluster_params)
+            print(f"Using DBSCAN.")
+
+        else:
+            self.clusterer = clusterer
 
         self.sample_handler = SampledAvoider(
             self.robot,
@@ -149,12 +180,15 @@ class SampledClusterAvoider:
         self.unique_labels = np.unique(self.clusterer.labels_)
         self.unique_labels = np.delete(self.unique_labels, self.unique_labels == -1)
 
+        # Set centers
         self._cluster_centers = np.zeros((self.dimension, len(self.unique_labels)))
-
         for ii, label in enumerate(self.unique_labels):
             self._cluster_centers[:, ii] = np.mean(
                 self._datapoints[:, label == self.clusterer.labels_], axis=1
             )
+
+    def get_cluster_centers(self) -> np.ndarray:
+        return self._cluster_centers
 
     def _cluster_close_outliers(self, position: np.ndarray) -> Optional(np.ndarray):
         # TODO: check if there are outliers closer than the closest cluster
@@ -203,16 +237,18 @@ class SampledClusterAvoider:
         if np.sum(center_dir.T @ self._close_outliers):
             warnings.warn("TODO: Investigate clustering of the close-outliers.")
 
-    def avoid(self, velocity: np.ndarray, position: np.ndarray = None) -> np.ndarray:
+    def avoid(
+        self, initial_velocity: np.ndarray, position: np.ndarray = None
+    ) -> np.ndarray:
         if position is None:
             position = self.robot.pose.position
 
-        velocity_norm = LA.norm(velocity)
+        velocity_norm = LA.norm(initial_velocity)
         if not velocity_norm:
             # Zero velocity -> no modulation needed
-            return velocity
+            return initial_velocity
 
-        velocity_direction = velocity / velocity_norm
+        velocity_direction = initial_velocity / velocity_norm
 
         self._cluster_close_outliers(position)
 
@@ -234,7 +270,7 @@ class SampledClusterAvoider:
         self.normal_directions = np.zeros((self.dimension, self.n_obstacles))
 
         global_weights = np.zeros(self.n_obstacles)
-        modulated_velocities = np.zeros((self.dimension, self.n_obstacles))
+        self.modulated_velocities = np.zeros((self.dimension, self.n_obstacles))
 
         # For all cluster
         for ii in range(self.n_obstacles):
@@ -265,7 +301,7 @@ class SampledClusterAvoider:
                 velocity_direction,
             )
 
-            modulated_velocities[:, ii] = self.modulate(
+            self.modulated_velocities[:, ii] = self.modulate(
                 velocity_direction,
                 decomposition_matrix=basis_matrix,
                 stretching_matrix=stretch_matrix,
@@ -303,8 +339,8 @@ class SampledClusterAvoider:
                     decomposition_matrix=basis_matrix,
                     stretching_matrix=stretch_matrix,
                 )
-                modulated_velocities = np.append(
-                    modulated_velocities,
+                self.modulated_velocities = np.append(
+                    self.modulated_velocities,
                     mod_vel.reshape(self.dimension, 1),
                     axis=1,
                 )
@@ -325,13 +361,66 @@ class SampledClusterAvoider:
         if not (weight_sum := np.sum(global_weights)):
             return velocity
 
+        self.normalized_weights = global_weights / weight_sum
         velocity = get_directional_weighted_sum(
             null_direction=velocity_direction,
-            weights=global_weights / weight_sum,
-            directions=modulated_velocities,
+            weights=self.normalized_weights,
+            directions=self.modulated_velocities,
         )
 
-        return velocity * velocity_norm
+        max_weight = np.max(global_weights)
+        if max_weight > 0:
+            averaged_normal = np.sum(
+                self.normal_directions
+                * np.tile(self.normalized_weights, (self.dimension, 1)),
+                axis=1,
+            )
+            min_distance = np.min(relative_distances)
+            scaling = self.compute_velocity_scaling(
+                initial_velocity,
+                averaged_normal,
+                min_distance,
+                max_distance=2 * self.control_radius + 1,
+            )
+            # print("scaling", scaling)
+            # print("min_distance", min_distance)
+        else:
+            scaling = 1.0
+
+        return velocity * velocity_norm * scaling
+
+    def compute_velocity_scaling(
+        self,
+        velocity: np.ndarray,
+        normal: np.ndarray,
+        distance: float,
+        dot_scaling: float = 0.8,
+        power_root: float = 3,
+        max_distance: float = 1e6,
+    ) -> float:
+        # TODO: very similar to 'compute_safe_magnitude' -> can they be merged (?!)
+        if not (rotated_norm := np.linalg.norm(velocity)):
+            return 1.0
+
+        dot_product = np.dot(velocity, normal)
+        normal_norm = np.linalg.norm(normal)
+
+        if dot_product > 0 or np.isclose(normal_norm, 0):
+            return 1.0
+
+        elif distance <= 0.0:
+            if dot_product < (-1e-3):
+                return 0.0
+            return 1.0
+
+        elif distance >= max_distance:
+            return 1.0
+
+        # At this stage, the dot product is negative
+        power_factor = ((max_distance - distance) / (distance) * normal_norm) ** (
+            1.0 / power_root
+        )
+        return ((1.0 + dot_scaling * dot_product)) ** power_factor
 
     def modulate(
         self,
@@ -351,12 +440,14 @@ class SampledClusterAvoider:
         #         stretching_matrix = np.eye(stretching_matrix.shape[0]) * new_eigenvalues
         #     breakpoint()
 
-        return (
+        modulated_velocity = (
             decomposition_matrix
             @ stretching_matrix
             @ LA.pinv(decomposition_matrix)
             @ velocity
         )
+
+        return modulated_velocity
 
     def limit_reference_from_offset(self, normal_direction, reference_direction):
         """The offset of the reference direction is limited to ensure convergence."""

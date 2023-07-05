@@ -65,7 +65,7 @@ class SingleModulationAvoider(ABC):
         self.weight_max_norm = weight_max_norm
         self.weight_factor = weight_factor
         self.weight_power = weight_power
-        self.margin_weight = margin_weight
+        self.margin_weight = margin_weight  # OUTDATED?!
 
         self.relative_velocity = None
 
@@ -162,7 +162,6 @@ class SingleModulationAvoider(ABC):
         ) / (LA.norm(directions, axis=0) * LA.norm(initial_velocity))
 
         dir_weights = dir_weights * 0.5
-
         ind_nonzero = dir_weights > 0
 
         weight_fact = weights / np.sum(weights)

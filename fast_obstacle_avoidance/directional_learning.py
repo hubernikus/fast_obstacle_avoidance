@@ -1,6 +1,7 @@
 import copy
 import warnings
 from typing import Optional
+from enum import Enum, auto
 
 import numpy as np
 
@@ -92,6 +93,26 @@ def map_infinite_stereographic_to_cartesian(
     return directions @ basis.T
 
 
+class DistanceWeightType(Enum):
+    QUADRATIC = auto()
+    EXPONENTIAL = auto()
+
+
+def get_inverse_square_distance_weight(distances: np.ndarray) -> np.ndarray:
+    weights = 1 / distances**2
+    weights = weights / np.sum(weights)
+    # return weights
+    raise ValueError("This will lead to exploding values (!)")
+
+
+def get_exponential_stiffness_weight(
+    distances: np.ndarray, beta: float = 1.0
+) -> np.ndarray:
+    weights = np.exp(-beta * distances)
+    weights = weights / np.sum(weights)
+    return weights
+
+
 class DirectionalKMeans:
     def __init__(
         self,
@@ -146,14 +167,16 @@ class DirectionalKMeans:
     def fit(
         self,
         XX: np.ndarray,
-        base_direction: np.ndarray,
+        # base_direction: np.ndarray,
         sample_weights: Optional[np.ndarray] = None,
+        do_initialization: bool = False,
     ) -> None:
         self.n_samples_ = XX.shape[0]
         self.n_features_ = XX.shape[1]
 
         # self.cluster_centers_ = self.initialize_centers(XX, base_direction)
-        self.cluster_centers_ = self.initialize_from_points(XX)
+        if do_initialization or not hasattr(self, "cluster_centers_"):
+            self.cluster_centers_ = self.initialize_from_points(XX)
 
         old_error = self.update_step_hard_boundary(XX, sample_weights=sample_weights)
         for ii in range(self.max_iter - 1):
@@ -191,12 +214,12 @@ class DirectionalKMeans:
                 axis=1,
             )
 
-        cluster_labels = np.argmin(distances, axis=1)
+        self.labels_ = np.argmin(distances, axis=1)
         it_empty = 0
         mean_squared_distance = 0
 
         for kk in range(self.n_clusters):
-            ind_label = cluster_labels == kk
+            ind_label = self.labels_ == kk
 
             if not np.sum(ind_label):
                 warnings.warn("Assigning empty cluster to far away point.")
@@ -257,9 +280,220 @@ class DirectionalKMeans:
                 axis=1,
             )
 
-        cluster_labels = np.argmin(distances, axis=1)
+        self.labels_ = np.argmin(distances, axis=1)
 
-        return cluster_labels
+        return self.labels_
+
+
+class DirectionalSoftKMeans:
+    def __init__(
+        self,
+        max_iter: int = 100,
+        conv_tol: float = 1e-4,
+        n_clusters: int = 4,
+        stiffness: float = 1.0,
+        distance_type: DistanceWeightType = DistanceWeightType.EXPONENTIAL,
+    ) -> None:
+        self.max_iter = max_iter
+        self.conv_tol = conv_tol
+
+        self.distance_type = distance_type
+
+        # TODO: automatically update if too big / too small
+        self.n_clusters = n_clusters
+        # self.cluster_centers_: np.ndarray
+
+        self.n_samples_: int = 0
+        self.n_features_: int = 0
+        self.labels_: np.ndarray = np.array((0, 0))
+
+        self.stiffness = stiffness
+
+        # Counter to introduce a new cluster every 10 iterationsg
+        self._it_fit = 0
+        self.new_cluster_frequency = 10
+
+    def get_stereographic_center(self, kk: int) -> np.ndarray:
+        """The stereographic center is always lying on the y = 0 axis, as it
+        only has the radius."""
+        center = np.zeros(self.n_features_)
+        center[0] = np.linalg.norm(self.cluster_centers_[kk, :])
+        return center
+
+    def initialize_from_points(self, XX):
+        ind_clusters = np.random.randint(
+            low=0, high=XX.shape[0], size=(self.n_clusters)
+        )
+        return XX[ind_clusters, :]
+
+    def fit(
+        self,
+        XX: np.ndarray,
+        sample_weights: Optional[np.ndarray] = None,
+        do_initialization: bool = False,
+    ) -> None:
+        self.n_samples_ = XX.shape[0]
+        self.n_features_ = XX.shape[1]
+
+        # self.cluster_centers_ = self.initialize_centers(XX, base_direction)
+        if do_initialization or not hasattr(self, "cluster_centers_"):
+            self.cluster_centers_ = self.initialize_from_points(XX)
+
+        self._it_fit += 1
+        if not self._it_fit % self.new_cluster_frequency:
+            print("Adding a new cluster.")
+            self.add_cluster(XX)
+
+        old_error = self.update_step_soft_boundary(XX, sample_weights=sample_weights)
+        for ii in range(self.max_iter - 1):
+            error = self.update_step_soft_boundary(XX, sample_weights=sample_weights)
+
+            if abs(error - old_error) < self.conv_tol:
+                print(f"Converged at {ii}")
+                return
+
+            old_error = error
+
+        print("Ended without convergence.")
+
+    def add_cluster(self, XX: np.ndarray) -> None:
+        # TODO: maybe this could be integrated in the update_step to reduce computation
+        distances = self.get_cluster_distances(XX)
+        closest_distance = np.min(distances, axis=1)
+        ind_furthest = np.argmax(closest_distance)
+
+        self.cluster_centers_ = np.append(
+            self.cluster_centers_, XX[ind_furthest, :].reshape(1, -1), axis=0
+        )
+        self.labels_[ind_furthest] = self.n_clusters
+        self.n_clusters += 1
+
+    def get_cluster_distances(self, XX) -> np.ndarray:
+        distances = np.zeros((self.n_samples_, self.n_clusters))
+        transformed_positions = np.zeros(
+            (self.n_samples_, self.n_features_, self.n_clusters)
+        )
+        bases = np.zeros((self.n_features_, self.n_features_, self.n_clusters))
+        for kk in range(self.n_clusters):
+            bases[:, :, kk] = get_orthogonal_basis(self.cluster_centers_[kk, :])
+            transformed_positions[:, :, kk] = map_cartesian_to_infite_stereographic(
+                bases[:, :, kk], XX
+            )
+            distances[:, kk] = np.linalg.norm(
+                transformed_positions[:, :, kk]
+                - np.tile(self.get_stereographic_center(kk), (self.n_samples_, 1)),
+                axis=1,
+            )
+        return distances
+
+    def update_step_soft_boundary(
+        self, XX: np.ndarray, sample_weights: Optional[np.ndarray] = None
+    ) -> float:
+        """Returns proximity-metric (mean-weighted-distances)"""
+        transformed_positions = np.zeros(
+            (self.n_samples_, self.n_features_, self.n_clusters)
+        )
+        bases = np.zeros((self.n_features_, self.n_features_, self.n_clusters))
+        distances = np.zeros((self.n_samples_, self.n_clusters))
+        self.weights = np.zeros((self.n_samples_, self.n_clusters))
+
+        for kk in range(self.n_clusters):
+            bases[:, :, kk] = get_orthogonal_basis(self.cluster_centers_[kk, :])
+
+            transformed_positions[:, :, kk] = map_cartesian_to_infite_stereographic(
+                bases[:, :, kk], XX
+            )
+
+            distances[:, kk] = np.linalg.norm(
+                transformed_positions[:, :, kk]
+                - np.tile(self.get_stereographic_center(kk), (self.n_samples_, 1)),
+                axis=1,
+            )
+
+            if self.distance_type == DistanceWeightType.EXPONENTIAL:
+                self.weights[:, kk] = get_exponential_stiffness_weight(
+                    self.weights[:, kk], self.stiffness
+                )
+
+            elif self.distance_type == DistanceWeightType.QUADRATIC:
+                self.weights[:, kk] = get_inverse_square_distance_weight(
+                    distances[:, kk]
+                )
+            else:
+                raise ValueError(f"Unkown type {self.distance_type}.")
+
+            if sample_weights is not None:
+                self.weights[:, kk] = self.weights[:, kk] * sample_weights
+                self.weights[:, kk] = self.weights[:, kk] / np.sum(self.weights[:, kk])
+                raise NotImplementedError("Make consistent summing")
+
+        self.labels_ = np.argmin(distances, axis=1)
+        mean_squared_distance = 0.0
+
+        # Remove redundant clusters
+        it_kk = 0
+        it_label = 0
+        for _ in range(self.n_clusters):
+            ind = self.labels_ == it_kk
+            if not np.sum(ind):
+                print(f"Removing cluster #{it_label}.")
+                ind_large = self.labels_ > it_kk
+
+                self.labels_[ind_large] = self.labels_[ind_large] - 1
+                self.cluster_centers_ = np.delete(self.cluster_centers_, it_kk, axis=0)
+                self.n_clusters -= 1
+
+            else:
+                it_kk += 1
+
+            it_label += 1
+
+        for kk in range(self.n_clusters):
+            mapped_center = np.mean(
+                transformed_positions[:, :, kk]
+                * np.tile(self.weights[:, kk], (self.n_features_, 1)).T,
+                axis=0,
+            )
+            weighted_dist = distances[:, kk] * self.weights[:, kk]
+            mean_squared_distance = mean_squared_distance + np.sum(
+                weighted_dist * weighted_dist
+            )
+
+            self.cluster_centers_[kk, :] = map_infinite_stereographic_to_cartesian(
+                bases[:, :, kk], mapped_center.reshape(1, self.n_features_)
+            )
+
+            if np.any(np.isnan(self.cluster_centers_)):
+                breakpoint()
+
+        return mean_squared_distance / self.n_samples_
+
+    def predict(self, XX: np.ndarray) -> np.ndarray[int]:
+        if XX.shape[1] != self.n_features_:
+            raise ValueError(f"Wrong data-dimension of {XX.shape}")
+
+        transformed_positions = np.zeros(
+            (XX.shape[0], self.n_features_, self.n_clusters)
+        )
+        distances = np.zeros((XX.shape[0], self.n_clusters))
+        bases = np.zeros((self.n_features_, self.n_features_, self.n_clusters))
+
+        for kk in range(self.n_clusters):
+            bases[:, :, kk] = get_orthogonal_basis(self.cluster_centers_[kk, :])
+
+            transformed_positions[:, :, kk] = map_cartesian_to_infite_stereographic(
+                bases[:, :, kk], XX
+            )
+
+            distances[:, kk] = np.linalg.norm(
+                transformed_positions[:, :, kk]
+                - np.tile(self.get_stereographic_center(kk), (XX.shape[0], 1)),
+                axis=1,
+            )
+
+        self.labels_ = np.argmin(distances, axis=1)
+
+        return self.labels_
 
 
 def test_stereographic_mapping():
@@ -320,7 +554,7 @@ def test_prediction(visualize=False):
     XX = np.vstack((radii * np.cos(angle), radii * np.sin(angle))).T
 
     kmeans = DirectionalKMeans(n_clusters=4)
-    kmeans.fit(XX, base_direction=np.array([1, 0.0]))
+    kmeans.fit(XX)
 
     # Set points
     kmeans.cluster_centers_ = copy.deepcopy(XX)
@@ -377,7 +611,7 @@ def test_circular_fitting(visualize=False):
     XX = np.vstack((radii * np.cos(angle), radii * np.sin(angle))).T
 
     kmeans = DirectionalKMeans()
-    kmeans.fit(XX, base_direction=np.array([1, 0.0]))
+    kmeans.fit(XX)
 
     if visualize:
         x_lim = [-3, 3]
@@ -423,7 +657,7 @@ if (__name__) == "__main__":
     plt.ion()
     # np.set_printoptions(precision=3)
 
-    # test_circular_fitting(visualize=True)
+    test_circular_fitting(visualize=True)
     # test_point_rotated()
     # test_rotated_mapping()
     # test_stereographic_mapping()
