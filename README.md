@@ -23,14 +23,48 @@ A video describing the algorithm in depth can be found under:
 [![Alt text](https://img.youtube.com/vi/kr7R_cJoaYI/0.jpg)](https://youtu.be/kr7R_cJoaYI)
 
 
-### Parameter Tuning
+### Controller Parameters
 The algorithm has several free parameters which can be tuned to adapt the performance based on the environment.
 
-#### Control Radius
+The distance to an data point is calculated as follows:
+$$ 
+ \Gamma_o(\xi) = \| \xi - \xi \| / R_0
+$$
+where $R_0$ is the control radius, which accounts for the robots geometry.
+
+Crucial is for the function of the algorithm is the  influence weight that each point $o$ has on the agent. This is calculated with this formula:
+
+$$ 	 
+\hat{w}_o(\xi) = \left( \frac{D^{\mathrm{scal}}}{D_o(\xi)} \right)^s
+	\qquad \text{with} \quad
+	D_o (\xi) = \Gamma_o(\xi) - 1
+$$
+
 
 #### Control Radius
+A larger control radius $R_0$ increases the distance at which the obstacle is avoided. This can increase safe operation and take into account a larger robot geometry:
 
-#### Control Radius
+| <img src="./media/comparison_control_radius_0.1.svg">  | <img src="./media/comparison_control_radius_1.0.svg"> | <img src="./media/comparison_control_radius_2.0.svg"> |
+|:---:|:---:|:---:|
+| $D_0 = 0.1$ | $D_0 = 1.0$ | $D_0 = 2.0$ |
+
+
+#### Weight Factor $D^{\mathrm{scal}}$
+The weight factor is a simple scaling on the weight. An increased value results in increased avoidance effect (higher modulation) further away from the obstacle. This results in safer avoidance, but in lower similarity to the original trajectory. 
+
+| <img src="./media/comparison_weight_factor_1.svg">  | <img src="./media/comparison_weight_factor_3.svg"> | <img src="./media/comparison_weight_factor_10.svg"> |
+|:---:|:---:|:---:|
+| $D^{\mathrm{scal}} = 1$ | $D^{\mathrm{scal}} = 3$ | $D^{\mathrm{scal}} = 10$ |
+
+
+#### Weight Power $s$
+The weight power increases weights above one, but decreases weights below zero. Note, that most weights have a value below one. Hence, with an increased scaling value, the effect on the surrounding is lower. However, when getting close to the obstacle this effect is inverted (as we get weights larger than one).
+
+| <img src="./media/comparison_weight_power_1.0.svg">  | <img src="./media/comparison_weight_power_1.5.svg"> | <img src="./media/comparison_weight_power_2.0.svg"> |
+|:---:|:---:|:---:|
+| $s = 1.0$ | $s = 1.5$ | $s = 2.0$ |
+
+
 
 # Create Custom Python Environment
 

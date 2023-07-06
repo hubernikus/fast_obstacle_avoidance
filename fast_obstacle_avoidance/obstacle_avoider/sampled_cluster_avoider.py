@@ -144,6 +144,17 @@ class SampledClusterAvoider:
     def weight_max_norm(self, value: float) -> None:
         self.sample_handler.weight_max_norm = value
 
+    @property
+    def control_radius(self) -> float:
+        return self._control_radius
+
+    @control_radius.setter
+    def control_radius(self, value: float) -> None:
+        # TODO: maybe remove the robot
+        self._control_radius = value
+        if self.robot is not None:
+            self.robot.control_radius = self._control_radius
+
     @classmethod
     def from_kmeans(cls, *args, **kwargs) -> SampledClusterAvoider:
         new_inst = cls(*args, **kwargs)

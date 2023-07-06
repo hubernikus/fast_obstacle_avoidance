@@ -96,7 +96,7 @@ def comparison_weight_factor(n_points, save_figure=True):
     # Setup avoider + parameters
     fast_avoider = SampledClusterAvoider(control_radius=robot.control_radius)
 
-    fast_avoider.weight_power = 1.0 / 2
+    fast_avoider.weight_power = 1.2
     fast_avoider.weight_max_norm = 1e7
 
     controller = AvoidanceController(
@@ -347,7 +347,7 @@ def comparison_weight_control_radius(n_points, save_figure=True):
     # Setup avoider + parameters
     fast_avoider = SampledClusterAvoider(control_radius=robot.control_radius)
 
-    fast_avoider.weight_power = 1.5
+    fast_avoider.weight_power = 1.2
     fast_avoider.weight_max_norm = 1e7
     fast_avoider.weight_factor = 2 * np.pi / environment.n_samples * 3
 
@@ -358,9 +358,9 @@ def comparison_weight_control_radius(n_points, save_figure=True):
     )
 
     # weight_max_norms = [1e1, 1e2, 1e3]
-    control_radii = [0.1, 0.4, 1.0]
+    control_radii = [0.1, 1.0, 2.0]
     for ii, control_radius in enumerate(control_radii):
-        robot.control_radius = control_radius
+        fast_avoider.control_radius = control_radius
 
         fig, ax = plt.subplots(figsize=(4, 3))
         visualize_obstacles(container=environment, ax=ax, x_lim=x_lim, y_lim=y_lim)
@@ -378,7 +378,7 @@ def comparison_weight_control_radius(n_points, save_figure=True):
             # robot.pose.position = start_positions[:, ii]
 
             positions = trajectory_integration(
-                start_positions[:, jj], controller=controller, it_max=200
+                start_positions[:, jj], controller=controller, it_max=400
             )
 
             ax.plot(positions[0, :], positions[1, :], color="blue")
@@ -399,7 +399,8 @@ def comparison_weight_control_radius(n_points, save_figure=True):
 
 
 if (__name__) == "__main__":
-    figtype = ".pdf"
+    # figtype = ".pdf"
+    figtype = ".svg"
 
     plt.ion()
     plt.close("all")
@@ -407,6 +408,6 @@ if (__name__) == "__main__":
     # comparison_weight_factor(n_points=7)
     # comparison_weight_power(n_points=7)
     # comparison_weight_max_norm(n_points=7)
-    comparison_weight_control_radius(n_points=3)
+    comparison_weight_control_radius(n_points=7)
 
     print("Done all.")
