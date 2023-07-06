@@ -22,6 +22,16 @@ Improved performance can be achieved by first clustering the datapoints with com
 A video describing the algorithm in depth can be found under:     
 [![Alt text](https://img.youtube.com/vi/kr7R_cJoaYI/0.jpg)](https://youtu.be/kr7R_cJoaYI)
 
+
+### Parameter Tuning
+The algorithm has several free parameters which can be tuned to adapt the performance based on the environment.
+
+#### Control Radius
+
+#### Control Radius
+
+#### Control Radius
+
 # Create Custom Python Environment
 
 ## Installation / Setup

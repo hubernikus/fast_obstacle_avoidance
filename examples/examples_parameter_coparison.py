@@ -316,8 +316,8 @@ def comparison_weight_max_norm(n_points, save_figure=True):
 
 
 def comparison_weight_control_radius(n_points, save_figure=True):
-    x_lim = [-4, 4]
-    y_lim = [-3, 3]
+    x_lim = [-6, 6]
+    y_lim = [-5, 5]
 
     start_positions = np.vstack(
         (
@@ -342,7 +342,7 @@ def comparison_weight_control_radius(n_points, save_figure=True):
 
     robot = QoloRobot(pose=ObjectPose(position=np.zeros(2), orientation=0))
     robot.control_point = [0, 0]
-    robot.control_radius = 0.4
+    # robot.control_radius = 0.4
 
     # Setup avoider + parameters
     fast_avoider = SampledClusterAvoider(control_radius=robot.control_radius)
@@ -357,9 +357,10 @@ def comparison_weight_control_radius(n_points, save_figure=True):
         environment=environment,
     )
 
-    weight_max_norms = [1e1, 1e2, 1e3]
-    for ii, weight_max_norm in enumerate(weight_max_norms):
-        fast_avoider.weight_max_norm = weight_max_norm
+    # weight_max_norms = [1e1, 1e2, 1e3]
+    control_radii = [0.1, 0.4, 1.0]
+    for ii, control_radius in enumerate(control_radii):
+        robot.control_radius = control_radius
 
         fig, ax = plt.subplots(figsize=(4, 3))
         visualize_obstacles(container=environment, ax=ax, x_lim=x_lim, y_lim=y_lim)
@@ -390,7 +391,7 @@ def comparison_weight_control_radius(n_points, save_figure=True):
         ax.set_aspect("equal")
 
         if save_figure:
-            figname = f"comparison_weight_max_{weight_max_norm}"
+            figname = f"comparison_control_radius_{control_radius}"
             plt.savefig(
                 "figures/" + figname + figtype,
                 bbox_inches="tight",
@@ -405,6 +406,7 @@ if (__name__) == "__main__":
 
     # comparison_weight_factor(n_points=7)
     # comparison_weight_power(n_points=7)
-    comparison_weight_max_norm(n_points=7)
+    # comparison_weight_max_norm(n_points=7)
+    comparison_weight_control_radius(n_points=3)
 
     print("Done all.")
