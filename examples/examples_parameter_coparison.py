@@ -3,6 +3,8 @@
 # Created: 2023-04-01
 # Email: lukas.huber@epfl.ch
 
+from attrs import define, field
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -18,142 +20,391 @@ from fast_obstacle_avoidance.sampling_container import ShapelySamplingContainer
 
 from fast_obstacle_avoidance.visualization import LaserscanAnimator
 
-def trajectory_integration(position_start, it_max, avoider, convergence_error: float = 1e-1):
-    positions = np.array(position_starts.shape[0])
+from fast_obstacle_avoidance.sampling_container import visualize_obstacles
+
+
+@define
+class AvoidanceController:
+    avoider: SampledClusterAvoider
+    dynamics: LinearSystem
+    environment: ShapelySamplingContainer
+
+
+def trajectory_integration(
+    position_start,
+    controller,
+    time_step: float = 0.1,
+    it_max: int = 100,
+    convergence_error: float = 1e-2,
+):
+    positions = np.zeros((position_start.shape[0], it_max + 1))
+    positions[:, 0] = position_start
 
     for ii in range(it_max):
-        self.initial_velocity = self.initial_dynamics.evaluate(self.position)
+        initial_velocity = controller.dynamics.evaluate(positions[:, ii])
 
         # Retrieve data-points from sampler (cartesian representation)
-        data_points = self.environment.get_surface_points(
-            center_position=self.position,
-            null_direction=self.initial_velocity,
+        datapoints = controller.environment.get_surface_points(
+            center_position=positions[:, ii],
+            null_direction=initial_velocity,
         )
-
-        # Update the avoider
-        self.fast_avoider.update_laserscan(data_points, in_robot_frame=False)
+        controller.avoider.update_laserscan(datapoints, in_robot_frame=False)
 
         # Modulate initial velocity
-        self.modulated_velocity = self.fast_avoider.avoid(
-            self.initial_velocity, self.position
+        modulated_velocity = controller.avoider.avoid(
+            initial_velocity, positions[:, ii]
         )
 
-        # Time step
-        self.position = self.position + self.modulated_velocity * self.dt_simulation
+        if np.linalg.norm(modulated_velocity) < convergence_error:
+            print(f"Convergence at it={ii}")
+            return positions[:, : ii + 1]
 
-        velocity = 
-    return
+        positions[:, ii + 1] = positions[:, ii] + modulated_velocity * time_step
 
-def comparision_weight_factor():
-    weight_factors = [0.1, 1, 10]
-    self.initial_dynamics = LinearSystem(
-            attractor_position=np.array([3.5, 1.3]), maximum_velocity=1.0
+    return positions
+
+
+def comparison_weight_factor(n_points, save_figure=True):
+    x_lim = [-6, 6]
+    y_lim = [-5, 5]
+
+    start_positions = np.vstack(
+        (
+            np.ones(n_points) * x_lim[0],
+            np.linspace(y_lim[0], y_lim[1], n_points),
+        )
+    )
+
+    environment = ShapelySamplingContainer(n_samples=100)
+    environment.add_obstacle(
+        # SampledEllipse.from_obstacle(
+        SampledCuboid.from_obstacle(
+            position=np.array([0.0, 0.0]),
+            orientation_in_degree=00,
+            axes_length=np.array([2.0, 2.0]),
+        )
+    )
+
+    initial_dynamics = LinearSystem(
+        attractor_position=np.array([5.0, 0.0]), maximum_velocity=1.0
+    )
+
+    robot = QoloRobot(pose=ObjectPose(position=np.zeros(2), orientation=0))
+    robot.control_point = [0, 0]
+    robot.control_radius = 0.4
+
+    # Setup avoider + parameters
+    fast_avoider = SampledClusterAvoider(control_radius=robot.control_radius)
+
+    fast_avoider.weight_power = 1.0 / 2
+    fast_avoider.weight_max_norm = 1e7
+
+    controller = AvoidanceController(
+        avoider=fast_avoider,
+        dynamics=initial_dynamics,
+        environment=environment,
+    )
+
+    ii = 1  # TODO: for loop
+    weight_factors = [1, 3, 10]
+    for ii, weight_factor in enumerate(weight_factors):
+
+        fast_avoider.weight_factor = (
+            2 * np.pi / environment.n_samples * weight_factors[ii]
         )
 
+        fig, ax = plt.subplots(figsize=(4, 3))
+        visualize_obstacles(container=environment, ax=ax, x_lim=x_lim, y_lim=y_lim)
 
-class GapPassingAnimator(Animator):
-    def setup(self, start_point=np.array([-2.5, 1])):
-        self.environment = get_two_obstacle_sampler()
-
-        self.robot = QoloRobot(pose=ObjectPose(position=start_point, orientation=0))
-        self.robot.control_point = [0, 0]
-        self.robot.control_radius = 0.4
-        self.robot.pose.position = np.array([-2.5, 1])
-
-        # Create Initial Dynamics
-        self.initial_dynamics = LinearSystem(
-            attractor_position=np.array([3.5, 1.3]), maximum_velocity=1.0
+        ax.plot(
+            controller.dynamics.attractor_position[0],
+            controller.dynamics.attractor_position[1],
+            "k*",
+            linewidth=18.0,
+            markersize=18,
+            zorder=5,
         )
 
-        # Setup avoider + parameters
-        self.fast_avoider = SampledClusterAvoider(
-            control_radius=self.robot.control_radius
+        for jj in range(start_positions.shape[1]):
+            # robot.pose.position = start_positions[:, ii]
+
+            positions = trajectory_integration(
+                start_positions[:, jj], controller=controller, it_max=300
+            )
+
+            ax.plot(positions[0, :], positions[1, :], color="blue")
+            ax.plot(positions[0, 0], positions[1, 0], "o", color="black")
+
+        ax.set_xlim(x_lim)
+        ax.set_ylim(y_lim)
+        ax.axes.xaxis.set_visible(False)
+        ax.axes.yaxis.set_visible(False)
+        ax.set_aspect("equal")
+
+        if save_figure:
+            figname = f"comparison_weight_factor_{weight_factor}"
+            plt.savefig(
+                "figures/" + figname + figtype,
+                bbox_inches="tight",
+            )
+
+
+def comparison_weight_power(n_points, save_figure=True):
+    x_lim = [-6, 6]
+    y_lim = [-5, 5]
+
+    start_positions = np.vstack(
+        (
+            np.ones(n_points) * x_lim[0],
+            np.linspace(y_lim[0], y_lim[1], n_points),
         )
-        self.fast_avoider.weight_factor = 2 * np.pi / self.environment.n_samples * 1
-        self.fast_avoider.weight_power = 1.0 / 2
-        self.fast_avoider.weight_max_norm = 1e7
+    )
 
-        # Setup visualizer
-        self.visualizer = LaserscanAnimator(it_max=self.it_max)
-        self.visualizer.setup(
-            robot=self.robot,
-            initial_dynamics=self.initial_dynamics,
-            avoider=self.fast_avoider,
-            environment=self.environment,
-            x_lim=[-4, 4.5],
-            y_lim=[-1.0, 5.6],
-            plot_lidarlines=True,
-            show_reference=True,
-            show_lidarweight=False,
-            figsize=(8, 6),
+    environment = ShapelySamplingContainer(n_samples=100)
+    environment.add_obstacle(
+        # SampledEllipse.from_obstacle(
+        SampledCuboid.from_obstacle(
+            position=np.array([0.0, 0.0]),
+            orientation_in_degree=00,
+            axes_length=np.array([2.0, 2.0]),
+        )
+    )
+
+    initial_dynamics = LinearSystem(
+        attractor_position=np.array([5.0, 0.0]), maximum_velocity=1.0
+    )
+
+    robot = QoloRobot(pose=ObjectPose(position=np.zeros(2), orientation=0))
+    robot.control_point = [0, 0]
+    robot.control_radius = 0.4
+
+    # Setup avoider + parameters
+    fast_avoider = SampledClusterAvoider(control_radius=robot.control_radius)
+
+    # fast_avoider.weight_power = 1.0 / 2
+    fast_avoider.weight_max_norm = 1e7
+    fast_avoider.weight_factor = 2 * np.pi / environment.n_samples * 3
+
+    controller = AvoidanceController(
+        avoider=fast_avoider,
+        dynamics=initial_dynamics,
+        environment=environment,
+    )
+
+    ii = 1  # TODO: for loop
+    # weight_factors = [0.1, 1, 10]
+    weight_powers = [1.0, 1.5, 2.0]
+    for ii, weight_power in enumerate(weight_powers):
+        fast_avoider.weight_power = weight_power
+
+        fig, ax = plt.subplots(figsize=(4, 3))
+        visualize_obstacles(container=environment, ax=ax, x_lim=x_lim, y_lim=y_lim)
+
+        ax.plot(
+            controller.dynamics.attractor_position[0],
+            controller.dynamics.attractor_position[1],
+            "k*",
+            linewidth=18.0,
+            markersize=18,
+            zorder=5,
         )
 
-    @property
-    def fig(self):
-        return self.visualizer.fig
+        for jj in range(start_positions.shape[1]):
+            # robot.pose.position = start_positions[:, ii]
 
-    @property
-    def ax(self):
-        return self.visualizer.ax
+            positions = trajectory_integration(
+                start_positions[:, jj], controller=controller, it_max=200
+            )
 
-    @property
-    def position(self):
-        return self.robot.pose.position
+            ax.plot(positions[0, :], positions[1, :], color="blue")
+            ax.plot(positions[0, 0], positions[1, 0], "o", color="black")
 
-    @position.setter
-    def position(self, value):
-        self.robot.pose.position = value
+        ax.set_xlim(x_lim)
+        ax.set_ylim(y_lim)
+        ax.axes.xaxis.set_visible(False)
+        ax.axes.yaxis.set_visible(False)
+        ax.set_aspect("equal")
 
-    def visualize(self, ii: int):
-        self.ax.clear()
+        if save_figure:
+            figname = f"comparison_weight_power_{weight_power}"
+            plt.savefig(
+                "figures/" + figname + figtype,
+                bbox_inches="tight",
+            )
 
-        # Update visualizer
-        self.visualizer.ii = ii
-        self.visualizer.positions[:, ii + 1] = self.robot.pose.position
-        self.visualizer.initial_velocity = self.initial_velocity
-        self.visualizer.modulated_velocity = self.modulated_velocity
 
-        self.visualizer._plot_specific(ii=ii)
-        self.visualizer._plot_sampled_environment(ii=ii)
-        self.visualizer._plot_general(ii=ii)
+def comparison_weight_max_norm(n_points, save_figure=True):
+    x_lim = [-4, 4]
+    y_lim = [-3, 3]
 
-    def update_step(self, ii: int):
+    start_positions = np.vstack(
+        (
+            np.ones(n_points) * x_lim[0],
+            np.linspace(y_lim[0], y_lim[1], n_points),
+        )
+    )
 
-        if not ii % 10:
-            print(f"Step {ii}")
-        self.initial_velocity = self.initial_dynamics.evaluate(self.position)
+    environment = ShapelySamplingContainer(n_samples=100)
+    environment.add_obstacle(
+        # SampledEllipse.from_obstacle(
+        SampledCuboid.from_obstacle(
+            position=np.array([0.0, 0.0]),
+            orientation_in_degree=00,
+            axes_length=np.array([2.0, 2.0]),
+        )
+    )
 
-        # Retrieve data-points from sampler (cartesian representation)
-        data_points = self.environment.get_surface_points(
-            center_position=self.position,
-            null_direction=self.initial_velocity,
+    initial_dynamics = LinearSystem(
+        attractor_position=np.array([5.0, 0.0]), maximum_velocity=1.0
+    )
+
+    robot = QoloRobot(pose=ObjectPose(position=np.zeros(2), orientation=0))
+    robot.control_point = [0, 0]
+    robot.control_radius = 0.4
+
+    # Setup avoider + parameters
+    fast_avoider = SampledClusterAvoider(control_radius=robot.control_radius)
+
+    fast_avoider.weight_power = 1.5
+    # fast_avoider.weight_max_norm = 1e7
+    fast_avoider.weight_factor = 2 * np.pi / environment.n_samples * 3
+
+    controller = AvoidanceController(
+        avoider=fast_avoider,
+        dynamics=initial_dynamics,
+        environment=environment,
+    )
+
+    weight_max_norms = [1e1, 1e2, 1e3]
+    for ii, weight_max_norm in enumerate(weight_max_norms):
+        fast_avoider.weight_max_norm = weight_max_norm
+
+        fig, ax = plt.subplots(figsize=(4, 3))
+        visualize_obstacles(container=environment, ax=ax, x_lim=x_lim, y_lim=y_lim)
+
+        ax.plot(
+            controller.dynamics.attractor_position[0],
+            controller.dynamics.attractor_position[1],
+            "k*",
+            linewidth=18.0,
+            markersize=18,
+            zorder=5,
         )
 
-        # Update the avoider
-        self.fast_avoider.update_laserscan(data_points, in_robot_frame=False)
+        for jj in range(start_positions.shape[1]):
+            # robot.pose.position = start_positions[:, ii]
 
-        # Modulate initial velocity
-        self.modulated_velocity = self.fast_avoider.avoid(
-            self.initial_velocity, self.position
+            positions = trajectory_integration(
+                start_positions[:, jj], controller=controller, it_max=200
+            )
+
+            ax.plot(positions[0, :], positions[1, :], color="blue")
+            ax.plot(positions[0, 0], positions[1, 0], "o", color="black")
+
+        ax.set_xlim(x_lim)
+        ax.set_ylim(y_lim)
+        ax.axes.xaxis.set_visible(False)
+        ax.axes.yaxis.set_visible(False)
+        ax.set_aspect("equal")
+
+        if save_figure:
+            figname = f"comparison_weight_max_{weight_max_norm}"
+            plt.savefig(
+                "figures/" + figname + figtype,
+                bbox_inches="tight",
+            )
+
+
+def comparison_weight_control_radius(n_points, save_figure=True):
+    x_lim = [-4, 4]
+    y_lim = [-3, 3]
+
+    start_positions = np.vstack(
+        (
+            np.ones(n_points) * x_lim[0],
+            np.linspace(y_lim[0], y_lim[1], n_points),
+        )
+    )
+
+    environment = ShapelySamplingContainer(n_samples=100)
+    environment.add_obstacle(
+        # SampledEllipse.from_obstacle(
+        SampledCuboid.from_obstacle(
+            position=np.array([0.0, 0.0]),
+            orientation_in_degree=00,
+            axes_length=np.array([2.0, 2.0]),
+        )
+    )
+
+    initial_dynamics = LinearSystem(
+        attractor_position=np.array([5.0, 0.0]), maximum_velocity=1.0
+    )
+
+    robot = QoloRobot(pose=ObjectPose(position=np.zeros(2), orientation=0))
+    robot.control_point = [0, 0]
+    robot.control_radius = 0.4
+
+    # Setup avoider + parameters
+    fast_avoider = SampledClusterAvoider(control_radius=robot.control_radius)
+
+    fast_avoider.weight_power = 1.5
+    fast_avoider.weight_max_norm = 1e7
+    fast_avoider.weight_factor = 2 * np.pi / environment.n_samples * 3
+
+    controller = AvoidanceController(
+        avoider=fast_avoider,
+        dynamics=initial_dynamics,
+        environment=environment,
+    )
+
+    weight_max_norms = [1e1, 1e2, 1e3]
+    for ii, weight_max_norm in enumerate(weight_max_norms):
+        fast_avoider.weight_max_norm = weight_max_norm
+
+        fig, ax = plt.subplots(figsize=(4, 3))
+        visualize_obstacles(container=environment, ax=ax, x_lim=x_lim, y_lim=y_lim)
+
+        ax.plot(
+            controller.dynamics.attractor_position[0],
+            controller.dynamics.attractor_position[1],
+            "k*",
+            linewidth=18.0,
+            markersize=18,
+            zorder=5,
         )
 
-        # Time step
-        self.position = self.position + self.modulated_velocity * self.dt_simulation
+        for jj in range(start_positions.shape[1]):
+            # robot.pose.position = start_positions[:, ii]
 
-        self.visualize(ii=ii)
+            positions = trajectory_integration(
+                start_positions[:, jj], controller=controller, it_max=200
+            )
+
+            ax.plot(positions[0, :], positions[1, :], color="blue")
+            ax.plot(positions[0, 0], positions[1, 0], "o", color="black")
+
+        ax.set_xlim(x_lim)
+        ax.set_ylim(y_lim)
+        ax.axes.xaxis.set_visible(False)
+        ax.axes.yaxis.set_visible(False)
+        ax.set_aspect("equal")
+
+        if save_figure:
+            figname = f"comparison_weight_max_{weight_max_norm}"
+            plt.savefig(
+                "figures/" + figname + figtype,
+                bbox_inches="tight",
+            )
 
 
 if (__name__) == "__main__":
+    figtype = ".pdf"
+
     plt.ion()
     plt.close("all")
 
-    my_animator = GapPassingAnimator(
-        it_max=1000,
-        dt_simulation=0.10,
-        file_type=".gif",
-        animation_name="two_obstacle_avoidance_clustersampled",
-    )
-    my_animator.setup()
-    my_animator.run(save_animation=False)
+    # comparison_weight_factor(n_points=7)
+    # comparison_weight_power(n_points=7)
+    comparison_weight_max_norm(n_points=7)
 
     print("Done all.")

@@ -120,6 +120,30 @@ class SampledClusterAvoider:
             control_radius=self.control_radius,
         )
 
+    @property
+    def weight_factor(self) -> float:
+        return self.sample_handler.weight_factor
+
+    @weight_factor.setter
+    def weight_factor(self, value: float) -> None:
+        self.sample_handler.weight_factor = value
+
+    @property
+    def weight_power(self) -> float:
+        return self.sample_handler.weight_power
+
+    @weight_power.setter
+    def weight_power(self, value: float) -> None:
+        self.sample_handler.weight_power = value
+
+    @property
+    def weight_max_norm(self) -> float:
+        return self.sample_handler.weight_max_norm
+
+    @weight_max_norm.setter
+    def weight_max_norm(self, value: float) -> None:
+        self.sample_handler.weight_max_norm = value
+
     @classmethod
     def from_kmeans(cls, *args, **kwargs) -> SampledClusterAvoider:
         new_inst = cls(*args, **kwargs)
