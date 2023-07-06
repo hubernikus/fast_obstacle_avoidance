@@ -26,10 +26,12 @@ A video describing the algorithm in depth can be found under:
 ### Controller Parameters
 The algorithm has several free parameters which can be tuned to adapt the performance based on the environment.
 
-The distance to an data point is calculated as follows:
+The distance for each data point $o$ is calculated as follows:
+
 $$ 
- \Gamma_o(\xi) = \| \xi - \xi \| / R_0
+ \Gamma_o(\xi) = \| \xi - \xi_o \| / R_0
 $$
+
 where $R_0$ is the control radius, which accounts for the robots geometry.
 
 Crucial is for the function of the algorithm is the  influence weight that each point $o$ has on the agent. This is calculated with this formula:
@@ -40,6 +42,8 @@ $$
 	D_o (\xi) = \Gamma_o(\xi) - 1
 $$
 
+An example script which analyses the different parameters can be found in `./examples/example_parameter_comparison.py`
+
 
 #### Control Radius
 A larger control radius $R_0$ increases the distance at which the obstacle is avoided. This can increase safe operation and take into account a larger robot geometry:
@@ -48,13 +52,19 @@ A larger control radius $R_0$ increases the distance at which the obstacle is av
 |:---:|:---:|:---:|
 | $D_0 = 0.1$ | $D_0 = 1.0$ | $D_0 = 2.0$ |
 
+Attribute name: `control_radius`
+
 
 #### Weight Factor $D^{\mathrm{scal}}$
 The weight factor is a simple scaling on the weight. An increased value results in increased avoidance effect (higher modulation) further away from the obstacle. This results in safer avoidance, but in lower similarity to the original trajectory. 
 
 | <img src="./media/comparison_weight_factor_1.svg">  | <img src="./media/comparison_weight_factor_3.svg"> | <img src="./media/comparison_weight_factor_10.svg"> |
 |:---:|:---:|:---:|
-| $D^{\mathrm{scal}} = 1$ | $D^{\mathrm{scal}} = 3$ | $D^{\mathrm{scal}} = 10$ |
+| $D^{\mathrm{scal}} = 1 \delta $ | $D^{\mathrm{scal}} = 3 \delta$ | $D^{\mathrm{scal}} = 10 \delta$ |
+
+where $\delta = 2 \pi / N^{\mathrm{samples}}$ is the sampling angle, with which the agent observes the space.
+
+Attribute name: `weight_factor`
 
 
 #### Weight Power $s$
@@ -64,7 +74,7 @@ The weight power increases weights above one, but decreases weights below zero. 
 |:---:|:---:|:---:|
 | $s = 1.0$ | $s = 1.5$ | $s = 2.0$ |
 
-
+Attribute name: `weight_power`
 
 # Create Custom Python Environment
 
