@@ -87,9 +87,9 @@ class ClusterinAnimator(Animator):
             clusterer=ClustererType.DBSCAN,
         )
         # self.fast_avoider.weight_factor = 2 * np.pi / self.environment.n_samples * 1
-        self.fast_avoider.weight_factor = 2 * np.pi / self.environment.n_samples * 10
-        self.fast_avoider.weight_power = 1.0 / 2
-        self.fast_avoider.weight_max_norm = 1e7
+        # self.fast_avoider.weight_factor = 2 * np.pi / self.environment.n_samples * 10
+        # self.fast_avoider.weight_power = 1.0 / 2
+        # self.fast_avoider.weight_max_norm = 1e7
 
         # Initialize clusterer with first data points
         self.initial_velocity = self.initial_dynamics.evaluate(self.position)

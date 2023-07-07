@@ -59,9 +59,9 @@ class GapPassingAnimator(Animator):
         self.fast_avoider = SampledClusterAvoider(
             control_radius=self.robot.control_radius
         )
-        self.fast_avoider.weight_factor = 2 * np.pi / self.environment.n_samples * 1
-        self.fast_avoider.weight_power = 1.0 / 2
-        self.fast_avoider.weight_max_norm = 1e7
+        # self.fast_avoider.weight_factor = 2 * np.pi / self.environment.n_samples * 1
+        # self.fast_avoider.weight_power = 1.0 / 2
+        # self.fast_avoider.weight_max_norm = 1e7
 
         # Setup visualizer
         self.visualizer = LaserscanAnimator(it_max=self.it_max)
