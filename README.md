@@ -48,9 +48,21 @@ An example script which analyses the different parameters can be found in `./exa
 #### Control Radius
 A larger control radius $R_0$ increases the distance at which the obstacle is avoided. This can increase safe operation and take into account a larger robot geometry:
 
-| <img src="./media/comparison_control_radius_0.1.svg">  | <img src="./media/comparison_control_radius_1.0.svg"> | <img src="./media/comparison_control_radius_2.0.svg"> |
-|:---:|:---:|:---:|
-| $D_0 = 0.1$ | $D_0 = 1.0$ | $D_0 = 2.0$ |
+<table>
+  <tr>
+  <td> <img src="./media/comparison_control_radius_01.svg"> </td>
+  <td> <img src="./media/comparison_control_radius_10.svg"> </td>
+  <td> <img src="./media/comparison_control_radius_20.svg"> </td>
+  </tr>
+</table>
+
+<table>
+ <tr>
+ 	<td> $$D_0 = 0.1 $$ </td>
+	<td> $$D_0 = 1.0$$ </td>
+	<td> $$D_0 = 2.0$$ </td>
+  </tr>
+</table>
 
 Attribute name: `control_radius`
 
@@ -58,9 +70,26 @@ Attribute name: `control_radius`
 #### Weight Factor $D^{\mathrm{scal}}$
 The weight factor is a simple scaling on the weight. An increased value results in increased avoidance effect (higher modulation) further away from the obstacle. This results in safer avoidance, but in lower similarity to the original trajectory. 
 
-| <img src="./media/comparison_weight_factor_1.svg">  | <img src="./media/comparison_weight_factor_3.svg"> | <img src="./media/comparison_weight_factor_10.svg"> |
-|:---:|:---:|:---:|
-| $D^{\mathrm{scal}} = 1 \delta $ | $D^{\mathrm{scal}} = 3 \delta$ | $D^{\mathrm{scal}} = 10 \delta$ |
+<!-- | <img src="./media/comparison_weight_factor_1.svg">  | <img src="./media/comparison_weight_factor_3.svg"> | <img src="./media/comparison_weight_factor_10.svg"> | -->
+<table>
+  <tr>
+  <td> <img src="./media/comparison_weight_factor_1.svg"> </td>
+  <td> <img src="./media/comparison_weight_factor_3.svg"> </td>
+  <td> <img src="./media/comparison_weight_factor_10.svg"> </td>
+  </tr>
+</table>
+<!-- <tr>  -->
+<!-- 	<td> </td> -->
+<!-- 	<td> </td> -->
+<!-- 	<td> </td> -->
+<!-- </tr> -->
+<table>
+ <tr>
+	<td> $$D^{\mathrm{scal}} = 1 \delta $$ </td>
+	<td> $$D^{\mathrm{scal}} = 3 \delta$$ </td>
+	<td> $$D^{\mathrm{scal}} = 10 \delta$$ </td>
+  </tr>
+</table>
 
 where $\delta = 2 \pi / N^{\mathrm{samples}}$ is the sampling angle, with which the agent observes the space.
 
@@ -70,9 +99,26 @@ Attribute name: `weight_factor`
 #### Weight Power $s$
 The weight power increases weights above one, but decreases weights below zero. Note, that most weights have a value below one. Hence, with an increased scaling value, the effect on the surrounding is lower. However, when getting close to the obstacle this effect is inverted (as we get weights larger than one).
 
-| <img src="./media/comparison_weight_power_1.0.svg">  | <img src="./media/comparison_weight_power_1.5.svg"> | <img src="./media/comparison_weight_power_2.0.svg"> |
-|:---:|:---:|:---:|
-| $s = 1.0$ | $s = 1.5$ | $s = 2.0$ |
+<!-- | <img src="./fast_obstacle_avoidance/media/comparison_weight_power_10.svg">  | <img src="./fast_obstacle_avoi -->
+<!-- dance/media/comparison_weight_power_15.svg"> | <img src="./fast_obstacle_avoidance/media/comparison_weight_power_20.svg"> | -->
+<!-- |:---:|:---:|:---:| -->
+<!-- | $s = 1.0$ | $s = 1.5$ | $s = 2.0$ | -->
+<table>
+  <tr>
+  <td> <img src="./media/comparison_weight_power_10.svg"> </td>
+  <td> <img src="./media/comparison_weight_power_15.svg"> </td>
+  <td> <img src="./media/comparison_weight_power_20.svg"> </td>
+  </tr>
+</table>
+
+<table>
+ <tr>
+ 	<td> $$D_0 = 0.1 $$ </td>
+	<td> $$D_0 = 1.0$$ </td>
+	<td> $$D_0 = 2.0$$ </td>
+  </tr>
+</table>
+
 
 Attribute name: `weight_power`
 
