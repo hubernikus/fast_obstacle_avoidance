@@ -6,7 +6,7 @@
 
 ## Introduction
 This work describes a Fast Obstacles Avoidance (FOA) which can be used, when the known input data is sampled (unstructured), or in the presence of many obstacles.
-The algorithm is able to input sampled data, as well as a desired velocity, and outputs the collision free velocity.
+The algorithm is able to input sampled data, as well as a desired velocity, and outputs the collision-free velocity.
 
 <p align="center">
 <img src="https://github.com/hubernikus/fast_obstacle_avoidance/blob/main/media/single_obstacle_avoidance_sampled.gif?raw=true"  width="550"></>
@@ -15,7 +15,7 @@ Since the input to the algorithm is raw sensor data (in the cartesian frame), it
 <p align="center">
 <img src="https://github.com/hubernikus/fast_obstacle_avoidance/blob/main/media/multi_obstacle_avoidance_sampled.gif?raw=true"  width="550"></>
 
-Improved performance can be achieved by first clustering the datapoints with commonly used techniques, here we use DBSCAN.
+Improved performance can be achieved by first clustering the data points with commonly used techniques, here we use DBSCAN.
 <p align="center">
 <img src="https://github.com/hubernikus/fast_obstacle_avoidance/blob/main/media/two_obstacle_avoidance_clustersampled.gif?raw=true"  width="550"></>
 
@@ -32,9 +32,9 @@ $$
  \Gamma_o(\xi) = \| \xi - \xi_o \| / R_0
 $$
 
-where $R_0$ is the control radius, which accounts for the robots geometry.
+where $R_0$ is the control radius, which accounts for the robot geometry.
 
-Crucial is for the function of the algorithm is the  influence weight that each point $o$ has on the agent. This is calculated with this formula:
+Crucial for the function of the algorithm is the  influence weight that each point $o$ has on the agent. This is calculated with this formula:
 
 $$ 	 
 \hat{w}_o(\xi) = \left( \frac{D^{\mathrm{scal}}}{D_o(\xi)} \right)^s
@@ -42,7 +42,7 @@ $$
 	D_o (\xi) = \Gamma_o(\xi) - 1
 $$
 
-An example script which analyses the different parameters can be found in `./examples/example_parameter_comparison.py`
+An example script that analyses the different parameters can be found in `./examples/example_parameter_comparison.py`
 
 
 #### Control Radius
@@ -68,7 +68,7 @@ Attribute name: `control_radius`
 
 
 #### Weight Factor $D^{\mathrm{scal}}$
-The weight factor is a simple scaling on the weight. An increased value results in increased avoidance effect (higher modulation) further away from the obstacle. This results in safer avoidance, but in lower similarity to the original trajectory. 
+The weight factor is a simple scaling on the weight. An increased value results in an increased avoidance effect (higher modulation) further away from the obstacle. This results in safer avoidance, but with lower similarity to the original trajectory. 
 
 <!-- | <img src="./media/comparison_weight_factor_1.svg">  | <img src="./media/comparison_weight_factor_3.svg"> | <img src="./media/comparison_weight_factor_10.svg"> | -->
 <table>
@@ -97,7 +97,7 @@ Attribute name: `weight_factor`
 
 
 #### Weight Power $s$
-The weight power increases weights above one, but decreases weights below zero. Note, that most weights have a value below one. Hence, with an increased scaling value, the effect on the surrounding is lower. However, when getting close to the obstacle this effect is inverted (as we get weights larger than one).
+The weight power increases weights above one but decreases weights below zero. Note, that most weights have a value below one. Hence, with an increased scaling value, the effect on the surroundings is lower. However, when getting close to the obstacle this effect is inverted (as we get weights larger than one).
 
 <!-- | <img src="./fast_obstacle_avoidance/media/comparison_weight_power_10.svg">  | <img src="./fast_obstacle_avoi -->
 <!-- dance/media/comparison_weight_power_15.svg"> | <img src="./fast_obstacle_avoidance/media/comparison_weight_power_20.svg"> | -->
@@ -125,20 +125,20 @@ Attribute name: `weight_power`
 # Create Custom Python Environment
 
 ## Installation / Setup
-To setup got to your install/code directory, and type:
+To set it, go to your install/code directory, and type:
 ```sh
 git clone --recurse-submodules https://github.com/hubernikus/fast_obstacle_avoidance.git
 ```
-(Make sure submodules are there if various_tools librarys is not installed.)
+(Make sure submodules are there if various_tools library is not installed.)
 
-Go to file directory:
+Go to the file directory:
 ```sh
 cd fast_obstacle_avoidance
 ``` 
 
 Setup your environment, with Python>3.7 (here Python 3.9):
-Choose your favorite python-environment. I recommend to use [virtual environment venv](https://docs.python.org/3/library/venv.html).
-Setup virtual environment (use whatever compatible environment manager that you have with python -V >= 3.10).
+Choose your favorite python environment. I recommend using [virtual environment venv](https://docs.python.org/3/library/venv.html).
+Set up the virtual environment (use whatever compatible environment manager that you have with python -V >= 3.10).
 
 ``` bash
 python3.10 -m venv .venv
@@ -163,7 +163,7 @@ https://github.com/hubernikus/dynamic_obstacle_avoidance.git
 Various Tools
 https://github.com/hubernikus/various_tools.git
 
-Make sure you have these installed, otherwise this can be done by:
+Make sure you have these installed, otherwise, this can be done by:
 
 ``` sh
 mkdir src && cd src
@@ -205,21 +205,33 @@ You forgot to add the submodules, add them with:
 git submodule update --init --recursive
 ```
 
-## Issues / Imrovements
+## Issues / Improvements
 - The current repository does not have any test for CI/CD. This will be added if desired for future uses.
-- The clustering is based on DBSCAN (which has simple hyperparameter choice), however it does not scale well with the number of dimensions or number of datapoints. Faster approaches should be adapted to be useful for the current method.
+- The clustering is based on DBSCAN (which has a simple hyperparameter choice), however, it does not scale well with the number of dimensions or the number of datapoints. Faster approaches should be adapted to be useful for the current method.
 
 
-**References**   
-> [1] L. Huber, J. -J. Slotine and A. Billard, "Fast Obstacle Avoidance Based on Real-Time Sensing," in IEEE Robotics and Automation Letters, doi: 10.1109/LRA.2022.3232271.
+## Debug
+You forgot to add the submodules, add them with:
+``` sh
+git submodule update --init --recursive
+```
 
-> [2] Huber, Lukas, Aude Billard, and Jean-Jacques E. Slotine. "Avoidance of Convex and Concave Obstacles with Convergence ensured through Contraction." IEEE Robotics and Automation Letters (2019).  
+## Citing Repository
+If you use this repository in a scientific publication, please use the following citation:
 
-> [3] Huber, Lukas, Jean-Jacques Slotine, and Aude Billard. "Avoiding Dense and Dynamic Obstacles in Enclosed Spaces: Application to Moving in Crowds." IEEE Transactions on Robotics (2022). 
+Huber, Lukas. _Exact Obstacle Avoidance for Robots in Complex and Dynamic Environments Using Local Modulation._ No. 10373., EPFL, 2024.
 
-**Contact**: [Lukas Huber] (https://people.epfl.ch/lukas.huber?lang=en) (lukas.huber AT epfl dot ch)
-
-**Acknowledgments**  
-This work was funded in part by the SAHR Project.
+Bibtex entry:
+``` bibtex
+@phdthesis{huber2024exact,
+  title={Exact Obstacle Avoidance for Robots in Complex and Dynamic Environments Using Local Modulation},
+  author={Huber, Lukas},
+  year={2024},
+  month={April},
+  address={Lausanne, Switzerland},
+  school={EPFL},
+  type={PhD thesis}
+}
+```
 
 (c) hubernikus
