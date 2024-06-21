@@ -167,9 +167,9 @@ Make sure you have these installed, otherwise, this can be done by:
 
 ``` sh
 mkdir src && cd src
-git clone git@github.com:hubernikus/dynamic_obstacle_avoidance.git && cd dynamic_obstacle_avoidance
+git clone https://github.com/hubernikus/dynamic_obstacle_avoidance.git && cd dynamic_obstacle_avoidance
 pip install -r requirements.txt && python setup.py develop && cd ..
-https://github.com/hubernikus/various_tools.git && cd various_tools
+git clone https://github.com/hubernikus/various_tools.git && cd various_tools
 pip install -r requirements.txt && python setup.py develop && cd ../..
 ```
 
